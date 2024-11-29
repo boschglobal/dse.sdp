@@ -1,6 +1,6 @@
 # Dynamic Simulation Environment - Simulation Development Platform
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)]([URL](https://codespaces.new/boschglobal/dse.sdp?quickstart=1))
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/boschglobal/dse.sdp?quickstart=1)
 
 
 ## Introduction
