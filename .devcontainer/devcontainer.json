@@ -5,4 +5,13 @@
     },
     "features": {
     },
+    "runArgs": [
+        "--env-file",".devcontainer/devcontainer.env"
+    ],
+    "remoteEnv": {
+    },
+    "onCreateCommand": [
+    ],
+    "postCreateCommand": [
+    ]
 }
