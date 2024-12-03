@@ -21,12 +21,20 @@ L- licenses       Third Party Licenses.
 
 ## Usage
 
+> Hint: Codespaces is known to work with Chrome and Edge browsers. Firefox may prevention operation via Firefox's Setting "Enhanced Tracking Protection" (try setting to Standard to resolve the issue).
+
+
 ### Running ModelC Example Simulations
 
 Start a Codespace, then type the following commands in the terminal window.
 
 ```bash
-# Setup the examples (will download ModelC examples),
+# Check your environment.
+$ dse-env
+DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
+DSE_MODELC_VERSION=2.1.13
+
+# Setup the examples (will download ModelC examples).
 $ make examples
 $ ls out/examples/modelc/
 benchmark/  binary/  extended/  gateway/  gdb/  minimal/  ncodec/  runtime/  simer/  transform/
@@ -90,6 +98,16 @@ codespace ➜ /workspaces/dse.sdp (main) $
 
 
 After that, the container will build ... and eventually you will have the Codespace avaiable in your Terminal Window.
+
+
+### Proxy Setup when running _inside_ a DevContainer
+
+https://docs.docker.com/engine/cli/proxy/
+
+~/git/working/dse.sdp$ cat ~/.docker/config.json
+
+
+
 ## Additional Resources
 
 * [Chevrotain](https://chevrotain.io/docs/) Parser
