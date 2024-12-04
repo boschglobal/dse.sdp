@@ -13,5 +13,13 @@
     "onCreateCommand": [
     ],
     "postCreateCommand": [
-    ]
+    ],
+    "portsAttributes": {
+        "2159": {
+            "label": "gdb"
+        },
+        "6379": {
+            "label": "redis"
+        }
+    }
 }
