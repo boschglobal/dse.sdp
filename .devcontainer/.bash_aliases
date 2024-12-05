@@ -9,5 +9,7 @@ function dse-simer-host() {
 }
 export -f dse-simer-host
 
-alias dse-env='env | grep ^DSE'
+alias dse-env='env | grep ^DSE | sort'
 alias simer=dse-simer
+alias h='history'
+alias hi='history | grep $1'

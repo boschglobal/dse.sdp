@@ -32,7 +32,7 @@ Start a Codespace, then type the following commands in the terminal window.
 # Check your environment.
 $ dse-env
 DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-DSE_MODELC_VERSION=2.1.13
+DSE_MODELC_VERSION=2.1.14
 
 # Setup the examples (will download ModelC examples).
 $ make examples
@@ -45,6 +45,85 @@ $ dse-simer out/examples/minimal
 
 > Hint: Find more information about the Simer [command options here](https://boschglobal.github.io/dse.doc/docs/user/simer/#options).
 
+
+### Connect a Remote Gateway Model to a Simulation running in Cloudspace
+
+A Cloudspace can forward ports to allow remote connections to services running in that Cloudspace. 
+In particular these scenarios exist:
+
+1. Cloudspace running in a Web Browser: ports are forwarded via HTTP endpoints (i.e. URLs). This is not suitable for Simer based simuations as there is no support for HTTP endpoints (at this time).
+2. Cloudspace running in VS Code: ports are forwarded to local host. Local applications can connect to these ports and acces services running in the Cloudspace. This **is** suitable for Simer based simulations.
+
+#### Connect VS Code to a Cloudspace
+
+> Hint: Start the Codespace in a Web Browser first, then connect to the running Codespace from VS Code.
+
+1. Start VS Code, refresh the Remote Explorer, select Github Codespaces (from the dropdown).
+2. Add a Codespace for the repo; https://github.com/boschglobal/dse.sdp ; you will need to authenticate the connection to GitHub and the Repo.
+3. Connect to the Codespace.
+4. Open a Terminal.
+
+
+#### Run the ModelC Gateway Example Simulation
+
+__Local WSL__
+```bash
+# Build a local version of the ModelC library for Windows (or download).
+$ git clone https://github.com/boschglobal/dse.modelc
+$ cd dse.modelc
+$ PACKAGE_ARCH=windows-x64 make
+```
+
+__Cloudspace Terminal__
+```bash
+# Check your environment.
+$ dse-env 
+DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
+DSE_MODELC_VERSION=2.1.14
+
+# Build the examples and start the Gateway Example.
+$ make examples
+
+# Run the simulation, in **host** network mode, selecting the **local** stack only.
+$ dse-simer-host out/examples/modelc/gateway/ -stack local
+```
+
+> Note: The port mapping (under PORTS tab) may be different if the local port was already in use. Note the forwarded address.
+
+__Local Powershell__
+```
+# Locate the Gateway example, adjust the gateway.yaml file for the mapped port if necesary.
+PS> cd working\dse.modelc\dse\modelc\build\_out\examples\gateway
+
+# Run the Gateway.
+PS> .\bin\gateway.exe 0.0005 0.02 .\data\gateway.yaml
+Load YAML File: .\data\gateway.yaml←[0m
+...
+Create the Endpoint object ...←[0m
+  Redis:←[0m
+    path: (null)←[0m
+    hostname: localhost←[0m
+    port: 6380←[0m
+    major version: 6←[0m
+    minor version: 0←[0m
+  Endpoint: ←[0m
+    Model UID: 6←[0m
+    Push Endpoint: dse.simbus←[0m
+Create the Controller object ...←[0m
+Create the Adapter object ...←[0m
+Load endpoint create function: adapter_create_msg_vtable←[0m
+Load and configure the Simulation Models ...←[0m
+Using gateway symbols: ...←[0m
+...
+Setup for async Simulation Model run ...←[0m
+    Pull Endpoint: dse.model.42←[0m
+←[0m[INFO]   [0.000000] binary[0] = <0:0>(null) (binary_foo) (main:56)←[0m
+←[0m[INFO]   [0.000000] binary[1] = <0:0>(null) (binary_bar) (main:56)←[0m
+←[0m[INFO]   [0.000000] scalar[0] = 0.000000 (scalar_foo) (main:69)←[0m
+←[0m[INFO]   [0.000000] scalar[1] = 0.000000 (scalar_bar) (main:69)←[0m
+←[0m[INFO]   [0.000500] binary[0] = <20:20>st=0.000000,index=0 (binary_foo) (main:56)←[0m
+←[0m[INFO]   [0.000500] binary[1] = <20:20>st=0.000000,index=1 (binary_bar) (main:56)←[0m
+```
 
 
 ## Build
@@ -61,9 +140,11 @@ $ dse-simer out/examples/minimal
 
 2. Install the WSL extension (Ctrl-Shift-X, then search "WSL").
 
-3. From the Remote Explorer, select a WSL Target and then click `Connect in New Window`. A new VS Code editor will open.
+3. Install the Codespaces extension (Ctrl-Shift-X, then search "Codespace").
 
-4. Press `F1` to bring up the Command Palette and type `Dev Containers reopen`. You may be prompted to install docker into WSL. Even if already installed, proceed to install Docker again (in your WSL)
+4. From the Remote Explorer, select a WSL Target and then click `Connect in New Window`. A new VS Code editor will open.
+
+5. Press `F1` to bring up the Command Palette and type `Dev Containers reopen`. You may be prompted to install docker into WSL. Even if already installed, proceed to install Docker again (in your WSL)
 
 
 WSL indicator shows in the bottom left corner of the VS Code window.
