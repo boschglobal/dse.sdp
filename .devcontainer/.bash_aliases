@@ -4,5 +4,10 @@ function dse-simer() {
 }
 export -f dse-simer
 
+function dse-simer-host() {
+    ( if test -d "$1"; then cd "$1" && shift; fi && docker run -it --rm --network=host -v $(pwd):/sim $DSE_SIMER_IMAGE "$@"; )
+}
+export -f dse-simer-host
+
 alias dse-env='env | grep ^DSE'
 alias simer=dse-simer
