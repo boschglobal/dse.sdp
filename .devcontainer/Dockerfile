@@ -15,10 +15,7 @@ RUN GOBIN=/usr/local/bin go install github.com/go-task/task/v3/cmd/task@latest
 FROM mcr.microsoft.com/devcontainers/universal:2
 RUN set -eux; \
     wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq; \
-    chmod +x /usr/bin/yq
-    && \
-    apt-get clean; \
-    rm -rf /var/lib/apt/lists/*;
+    chmod +x /usr/bin/yq;
 COPY .devcontainer/.bash_aliases /home/codespace/.bash_aliases
 COPY --from=go /usr/local/bin/testscript /usr/local/bin/testscript
 COPY --from=go /usr/local/bin/task /usr/local/bin/task
