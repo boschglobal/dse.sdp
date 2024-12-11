@@ -153,7 +153,7 @@ Parsing ...
 Writing to file: single_fmu.json
 
 # Use some test scripts to review the generated AST.
-$ tests/scripts/ast_stats.sh single_fmu.json
+$ sh tests/scripts/ast_stats.sh single_fmu.json
 Statistics for file : single_fmu.json
 sims = 1
 channels = 4
@@ -161,7 +161,7 @@ networks = 1
 uses = 2
 models = 1
 stacks = 0
-$ tests/scripts/ast_paths.sh single_fmu.json | grep "\.value:"
+$ sh tests/scripts/ast_paths.sh single_fmu.json | grep "\.value:"
 object.payload.simulation_arch.value: "linux-amd64" :
 children.channels.0.object.payload.channel_name.value: "physical" :
 children.channels.0.object.payload.channel_alias.value: "" :
