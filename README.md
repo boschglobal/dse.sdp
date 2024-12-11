@@ -138,7 +138,7 @@ Start a Codespace, then type the following commands in the terminal window.
 # Build and install the DSE DSL Parser.
 $ cd dsl
 $ make
-$ sudo make install
+$ make install
 
 # Parse one of the sample Simulations written in the DSE DSL and generate an AST.
 $ dse-parse2ast examples/dsl/single_fmu.dse single_fmu.json
