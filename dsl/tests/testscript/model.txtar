@@ -1,0 +1,41 @@
+# Setup the environment.
+env PATH=$ENTRYDIR/tests/scripts:$PATH
+
+# Generate the AST.
+# exec parse2ast dsl_fmu.txt ast_fmu.json
+cp $ENTRYDIR/Generated_AST.json ast_fmu.json  # FIXME replace with parse2ast command.
+
+# Evaluate the AST.
+exec ast_stats.sh ast_fmu.json
+stdout 'sims = 1'
+stdout 'channels = 9'
+stdout 'networks = 2'
+stdout 'uses = 7'
+stdout 'models = 5'
+stdout 'stacks = 1'
+
+exec ast_paths.sh ast_fmu.json
+stdout 'children.stacked_models.1.children.models.1.object.image: "model FMU_2 dse.fmi.mcl" :'
+
+
+
+-- dsl_fmu.txt --
+simulation arch=linux-amd64
+channel physical
+channel network
+network CAN 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+
+uses
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8
+fmu https://artifactory.bosch/examples/fmu.zip v1.0.0
+
+model FMU dse.fmi.mcl
+channel physical scalar_vector
+channel network network_vector
+workflow generate-fmimcl
+var FMU_DIR uses fmu
+var MCL_PATH some/path
+var OUT_DIR {{.model.name}}
+
+
+# FIXME add dsl_network.txt

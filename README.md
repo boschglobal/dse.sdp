@@ -48,7 +48,7 @@ $ dse-simer out/examples/minimal
 
 ### Connect a Remote Gateway Model to a Simulation running in Cloudspace
 
-A Cloudspace can forward ports to allow remote connections to services running in that Cloudspace. 
+A Cloudspace can forward ports to allow remote connections to services running in that Cloudspace.
 In particular these scenarios exist:
 
 1. Cloudspace running in a Web Browser: ports are forwarded via HTTP endpoints (i.e. URLs). This is not suitable for Simer based simuations as there is no support for HTTP endpoints (at this time).
@@ -77,7 +77,7 @@ $ PACKAGE_ARCH=windows-x64 make
 __Cloudspace Terminal__
 ```bash
 # Check your environment.
-$ dse-env 
+$ dse-env
 DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
 DSE_MODELC_VERSION=2.1.14
 
@@ -123,6 +123,56 @@ Setup for async Simulation Model run ...←[0m
 ←[0m[INFO]   [0.000000] scalar[1] = 0.000000 (scalar_bar) (main:69)←[0m
 ←[0m[INFO]   [0.000500] binary[0] = <20:20>st=0.000000,index=0 (binary_foo) (main:56)←[0m
 ←[0m[INFO]   [0.000500] binary[1] = <20:20>st=0.000000,index=1 (binary_bar) (main:56)←[0m
+```
+
+
+### Generate an AST from a Simulation defined in the DSE DSL
+
+> Definitions:<br/>
+  AST : Abstract Syntax Tree<br/>
+  DSL : Domain Specific Language
+
+Start a Codespace, then type the following commands in the terminal window.
+
+```bash
+# Build and install the DSE DSL Parser.
+$ cd dsl
+$ make
+$ sudo make install
+
+# Parse one of the sample Simulations written in the DSE DSL and generate an AST.
+$ dse-parse2ast examples/dsl/single_fmu.dse single_fmu.json
+parse2ast
+---------
+Version: devel
+Parameters:
+  input_file = examples/dsl/single_fmu.dse
+  output_file = single_fmu.json
+Read from file: examples/dsl/single_fmu.dse
+Parsing ...
+Writing to file: single_fmu.json
+
+# Use some test scripts to review the generated AST.
+$ tests/scripts/ast_stats.sh single_fmu.json
+Statistics for file : single_fmu.json
+sims = 1
+channels = 4
+networks = 1
+uses = 2
+models = 1
+stacks = 0
+$ tests/scripts/ast_paths.sh single_fmu.json | grep "\.value:"
+object.payload.simulation_arch.value: "linux-amd64" :
+children.channels.0.object.payload.channel_name.value: "physical" :
+children.channels.0.object.payload.channel_alias.value: "" :
+children.channels.1.object.payload.channel_name.value: "network" :
+children.channels.1.object.payload.channel_alias.value: "" :
+children.networks.0.object.payload.network_name.value: "CAN" :
+children.networks.0.object.payload.mime_type.value: "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1" :
+children.uses.0.object.payload.use_item.value: "dse.fmi" :
+children.uses.0.object.payload.link.value: "https://github.com/boschglobal/dse.fmi" :
+children.uses.0.object.payload.version.value: "v1.1.8" :
+...
 ```
 
 

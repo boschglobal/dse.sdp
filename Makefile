@@ -6,6 +6,9 @@ export DSE_MODELC_VERSION ?= 2.1.14
 export DSE_MODELC_URL ?= https://github.com/boschglobal/dse.modelc/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
 
 
+SUBDIRS = dsl
+
+
 default: build
 
 
@@ -22,13 +25,26 @@ examples: downloads
 
 .PHONY: build
 build:
+	@for d in $(SUBDIRS); do ($(MAKE) -C $$d build ); done
+
+
+.PHONY: test
+test:
+	@for d in $(SUBDIRS); do ($(MAKE) -C $$d test ); done
+
+
+.PHONY: install
+install:
+	@for d in $(SUBDIRS); do ($(MAKE) -C $$d install ); done
 
 
 .PHONY: clean
 clean:
+	@for d in $(SUBDIRS); do ($(MAKE) -C $$d clean ); done
 	rm -rf out
 
 
 .PHONY: cleanall
 cleanall: clean
+	@for d in $(SUBDIRS); do ($(MAKE) -C $$d cleanall ); done
 	rm -rf build

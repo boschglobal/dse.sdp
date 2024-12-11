@@ -1,0 +1,24 @@
+{
+    "name": "@dse/dsl-parser",
+    "version": "1.0.0",
+    "description": "DSL Parser for DSE Simulation Definition, part of the Dynamic Simulation Environment",
+    "homepage": "https://github.com/boschglobal/dse.sdp.git",
+    "license": "Apache-2.0",
+    "author": "Robert Bosch GmbH",
+    "type": "module",
+    "main": "bin/parse2ast.js",
+    "preferGlobal": true,
+    "bin": {
+        "dse-parse2ast": "./bin/parse2ast.js"
+    },
+    "directories": {
+        "lib": "./lib"
+    },
+    "dependencies": {
+        "chevrotain": "^11.0.3"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.1",
+        "tsx": "^4.19.2"
+    }
+}
