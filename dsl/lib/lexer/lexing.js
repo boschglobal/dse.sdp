@@ -118,18 +118,28 @@ export const Uses = createToken({
 });
 
 function matchUseItem(text) {
-    const useItemPattern = /^(\S+)([ ]+https\:\/\/\S+)([ ]+v\d+(?:\.\d+)*)$/;
+    const useItemPattern = /^^(\S+)([ ]+https\:\/\/\S+)([ ]+v\d+(?:\.\d+)*)(?:[ ]+(path\=\S+))?$/;
     const execResult = useItemPattern.exec(text);
     if (execResult !== null) {
         const useItem = execResult[1];
         const link = execResult[2];
         const version = execResult[3];
+        let path = '';
+        if (execResult[4] !== undefined) {
+            path = execResult[4];
+        }
         const useItemStart = execResult.index + 1;
         const useItemEnd = useItemStart + useItem.length;
         const linkStart = execResult.index + useItem.length + 1;
         const linkEnd = linkStart + link.length;
         const versionStart = execResult.index + useItem.length + link.length + 1;
         const versionEnd = versionStart + version.length;
+        let pathStart = null;
+        let pathEnd = null;
+        if (path !== '') {
+            pathStart = execResult.index + useItem.length + link.length + version.length + 1;
+            pathEnd = pathStart + path.length;
+        }
         execResult.payload = {
             use_item: {
                 value: useItem.trim(),
@@ -148,6 +158,12 @@ function matchUseItem(text) {
                 token_type: 'version',
                 start_offset: versionStart,
                 end_offset: versionEnd
+            },
+            path: {
+                value: path.replace('path=', '').trim(),
+                token_type: 'path',
+                start_offset: pathStart,
+                end_offset: pathEnd
             }
         }
     }

@@ -32,7 +32,8 @@ $ make
 ## Run
 ```bash
 # parse2ast <input_file> <output_file>
-$ parse2ast examples/input.fsil ./out
+$ parse2ast examples/dsl/detailed.dse AST.json
+
 ```
 
 
@@ -41,29 +42,21 @@ $ parse2ast examples/input.fsil ./out
 ### Input File
 ```bash
 # Input file.
-$ cd dse.sdp/dsl/examples
-$ ls
-input.fsil
+$ ls dse.sdp/dsl/examples/dsl
+detailed.dse
 ```
 
 ### Lexer
 ```bash
-$ cd lexer
+$ cd dse.sdp/dsl/examples/scripts
 
 # Test lexer.
 $ node lexer.js
-$ cd ..
 ```
 
 ### Parser
 ```bash
-$ cd parser
-
 # Test parser.
 # Parses and generates an AST object.
 $ npx tsx parser.ts
-
-# Output file.
-$ cd ..
-$ cat AST.json
 ```

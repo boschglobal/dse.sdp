@@ -14,6 +14,7 @@ import {
 
 const cliName = "parse2ast"
 const version = "<devel>"
+
 function printUsage() {
     console.log(cliName);
     console.log("-".repeat(cliName.length));
