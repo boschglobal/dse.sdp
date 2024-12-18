@@ -1,0 +1,65 @@
+---
+kind: Stack
+metadata:
+  name: openloop
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 5
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 5
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: physical
+          expectedModelCount: 2
+        - name: Network
+          expectedModelCount: 1
+
+    - name: input
+      uid: 24
+      model:
+        name: Csv
+      channels:
+        - name: physical
+          alias: scalar
+          selectors:
+            model: input
+            channel: signal_vector
+      runtime:
+        env:
+          # These values can be set by simer option: simer -env input:CSV_FILE=somefile.csv
+          CSV_FILE: model/input/data/input.csv
+          SIMBUS_LOGLEVEL: 2
+        files:
+          - model/input/data/signalgroup.yaml
+
+    - name: linear
+      uid: 42
+      model:
+        name: linear
+      channels:
+        - name: physical
+          alias: signal_channel
+          selectors:
+            model: linear
+            channel: signal_vector
+        - name: Network
+          alias: network_channel
+          selectors:
+            model: linear
+            channel: network_vector
+      runtime:
+        env:
+          SIMBUS_LOGLEVEL: 2
+        files:
+          - model/linear/data/signalgroup.yaml
+---
+kind: Model
+metadata:
+  name: simbus

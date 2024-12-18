@@ -3,5 +3,6 @@
 build/
 out/
 node_modules/
+.task/
 
 package-lock.json
