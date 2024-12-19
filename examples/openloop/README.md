@@ -4,6 +4,8 @@
 
 Use a simple CSV file, via an input model, to operate an Open Loop simulation which represents an Linear Equation.
 
+![VS Code Simulation Dashboard](image.png)
+
 
 ## Usage
 
@@ -19,7 +21,7 @@ __Cloudspace Terminal__
 ```bash
 $ cd examples/openloop
 
-# Install python package ASAMMDF (MDF Reader).
+# Install python package ASAMMDF.
 $ pip install asammdf[gui]
 
 # Run the example openloop simulation.
