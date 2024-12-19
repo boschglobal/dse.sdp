@@ -35,7 +35,7 @@ spec:
         env:
           # These values can be set by simer option: simer -env input:CSV_FILE=somefile.csv
           CSV_FILE: model/input/data/input.csv
-          SIMBUS_LOGLEVEL: 2
+          SIMBUS_LOGLEVEL: 5
         files:
           - model/input/data/signalgroup.yaml
 
@@ -56,7 +56,7 @@ spec:
             channel: network_vector
       runtime:
         env:
-          SIMBUS_LOGLEVEL: 2
+          SIMBUS_LOGLEVEL: 4
         files:
           - model/linear/data/signalgroup.yaml
 ---

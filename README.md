@@ -15,6 +15,8 @@ L- .devcontainer  Devcontainer used by Codespaces.
   L- Dockerfile   Dockerfile used by Codespaces.
 L- dsl            DSL parser (usingChevrotain).
 L- lsp            VS Code Language Server.
+L- examples       Examples for learning about the DSE DSP.
+  L- openloop     Open Loop simulation, using FMU based Linear Equation model.
 L- licenses       Third Party Licenses.
 ```
 
@@ -22,6 +24,11 @@ L- licenses       Third Party Licenses.
 ## Usage
 
 > Hint: Codespaces is known to work with Chrome and Edge browsers. Firefox may prevention operation via Firefox's Setting "Enhanced Tracking Protection" (try setting to Standard to resolve the issue).
+
+
+### Examples
+
+* [Open Loop Simulation Example](examples/openloop/README.md)
 
 
 ### Running ModelC Example Simulations
