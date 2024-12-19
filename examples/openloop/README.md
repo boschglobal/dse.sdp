@@ -51,7 +51,7 @@ $ cd examples/openloop
 
 # Manually run the simulation using task.
 $ cd examples/openloop
-$ TASK_X_REMOTE_TASKFILES=1
+$ export TASK_X_REMOTE_TASKFILES=1
 $ task -y build
 ...
 $ dse-simer out/sim -env linear:MEASUREMENT_FILE=/sim/measurement.mf4

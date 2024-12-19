@@ -201,6 +201,10 @@ tasks:
     status:
       - test -f {{.FILE}}
 
+  clean:
+    cmds:
+      - find ./out -mindepth 1 -maxdepth 1 ! -name downloads -exec rm -rf {} +
+
   cleanall:
-      cmds:
-        - sudo rm -r out
+    cmds:
+      - rm -rf ./out
