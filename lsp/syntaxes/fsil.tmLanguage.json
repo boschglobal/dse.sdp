@@ -1,0 +1,21 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "fsil",
+    "scopeName": "source.fsil",
+    "patterns": [{
+            "include": "#keywords"
+        },
+        {
+            "include": "#strings"
+        }
+    ],
+    "repository": {
+        "keywords": {
+            "patterns": [{
+                "name": "keyword.control.fsil",
+                "match": "\\b(simulation|env|model|channel|uses|workflow|from|as|stack|network|var|arch)\\b",
+                "scope": "keyword.control"
+            }]
+        }
+    }
+}

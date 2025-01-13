@@ -1,0 +1,21 @@
+{
+    "name": "fsil-server",
+    "description": "",
+    "version": "1.0.0",
+    "author": "",
+    "license": "",
+    "engines": {
+        "node": "*"
+    },
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "dependencies": {
+        "https-proxy-agent": "^7.0.5",
+        "js-yaml": "^4.1.0",
+        "vscode-languageserver": "^9.0.1",
+        "vscode-languageserver-textdocument": "^1.0.11"
+    },
+    "scripts": {}
+}
