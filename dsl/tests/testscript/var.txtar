@@ -1,0 +1,112 @@
+# Setup the environment.
+env PATH=$ENTRYDIR/tests/scripts:$PATH
+
+# Generate the AST.
+exec parse2ast dsl_fmu.txt ast_fmu.json
+
+# Evaluate the AST.
+exec ast_stats.sh ast_fmu.json
+
+stdout 'sims = 1'
+stdout 'channels = 5'
+stdout 'networks = 2'
+stdout 'uses = 1'
+stdout 'models = 3'
+stdout 'stacks = 2'
+stdout 'vars = 12'
+stdout 'envar = 0'
+
+# Evaluate the AST path/structure.
+exec ast_paths.sh ast_fmu.json
+
+stdout 'object.image: "simulation arch=linux-amd64" :'
+stdout 'object.payload.simulation_arch.value: "linux-amd64" :'
+
+stdout 'children.vars.0.type: "Var" :'
+stdout 'children.vars.0.object.image: "var key_name var_value" :'
+stdout 'children.vars.0.object.payload.var_name.value: "key_name" :'
+stdout 'children.vars.0.object.payload.var_name.token_type: "variable_name" :'
+stdout 'children.vars.0.object.payload.var_value.value: "var_value" :'
+stdout 'children.vars.0.object.payload.var_value.token_type: "variable_value" :'
+
+stdout 'children.vars.1.type: "Var" :'
+stdout 'children.vars.1.object.image: "var key_name2 var_value2" :'
+stdout 'children.vars.1.object.payload.var_name.value: "key_name2" :'
+stdout 'children.vars.1.object.payload.var_name.token_type: "variable_name" :'
+stdout 'children.vars.1.object.payload.var_value.value: "var_value2" :'
+stdout 'children.vars.1.object.payload.var_value.token_type: "variable_value" :'
+
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.type: "Var" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.image: "var FMU_DIR uses fmu" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_name.value: "FMU_DIR" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_name.token_type: "variable_name" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_reference_type.value: "uses" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_reference_type.token_type: "variable_reference_type" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_value.value: "fmu" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_value.token_type: "variable_value" :'
+
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.type: "Var" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.image: "var MCL_PATH some/path" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.payload.var_name.value: "MCL_PATH" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.payload.var_name.token_type: "variable_name" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.payload.var_value.value: "some/path" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.payload.var_value.token_type: "variable_value" :'
+
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.2.type: "Var" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.2.object.image: "var OUT_DIR {{.model.name}}" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.2.object.payload.var_name.value: "OUT_DIR" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.2.object.payload.var_name.token_type: "variable_name" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.2.object.payload.var_value.value: "{{.model.name}}" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.2.object.payload.var_value.token_type: "variable_value" :'
+
+stdout 'children.stacks.1.children.models.0.children.workflow.0.children.workflow_vars.0.type: "Var" :'
+stdout 'children.stacks.1.children.models.0.children.workflow.0.children.workflow_vars.0.object.image: "var FMU_DIR uses fmu_1" :'
+stdout 'children.stacks.1.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_name.value: "FMU_DIR" :'
+stdout 'children.stacks.1.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_name.token_type: "variable_name" :'
+stdout 'children.stacks.1.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_value.value: "fmu_1" :'
+
+stdout 'children.stacks.1.children.models.1.children.workflow.0.children.workflow_vars.0.type: "Var" :'
+stdout 'children.stacks.1.children.models.1.children.workflow.0.children.workflow_vars.0.object.image: "  var FMU_DIR uses fmu_2" :'
+stdout 'children.stacks.1.children.models.1.children.workflow.0.children.workflow_vars.0.object.payload.var_name.value: "FMU_DIR" :'
+stdout 'children.stacks.1.children.models.1.children.workflow.0.children.workflow_vars.1.object.image: "  var MCL_PATH some/path" :'
+stdout 'children.stacks.1.children.models.1.children.workflow.0.children.workflow_vars.1.object.payload.var_name.value: "MCL_PATH" :'
+stdout 'children.stacks.1.children.models.1.children.workflow.0.children.workflow_vars.1.object.payload.var_name.token_type: "variable_name" :'
+
+
+-- dsl_fmu.txt --
+simulation arch=linux-amd64
+channel physical
+channel network_ch
+network CAN_1 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+network CAN_2 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=2'
+
+uses
+dse.network https://github.com/boschglobal/dse.network v1.0.7
+
+var key_name var_value
+var key_name2 var_value2
+
+model FMU dse.fmi.mcl
+channel physical scalar_vector
+workflow generate-fmimcl
+var FMU_DIR uses fmu
+var MCL_PATH some/path
+var OUT_DIR {{.model.name}}
+
+stack fmu-stacked stacked=true arch=linux-x86
+
+model FMU_1 dse.fmi.mcl
+channel physical scalar_vector
+workflow generate-fmimcl
+var FMU_DIR uses fmu_1
+var MCL_PATH some/path
+var OUT_DIR {{.model.name}}
+
+model FMU_2 dse.fmi.mcl
+channel physical scalar_vector
+workflow generate-fmimcl
+  var FMU_DIR uses fmu_2
+  var MCL_PATH some/path
+  var OUT_DIR {{.model.name}}
+workflow patch-some-file
+var PATCHFILE uses patchfile_proj

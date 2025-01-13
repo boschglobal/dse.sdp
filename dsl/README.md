@@ -27,6 +27,9 @@ $ cd dse.sdp/dsl
 
 # Build.
 $ make
+
+# Run tests.
+$ make test
 ```
 
 ## Run

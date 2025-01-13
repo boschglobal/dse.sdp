@@ -38,6 +38,7 @@ do-test_testscript:
 #   Retain work folder: add '-work' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -work \).
 	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
 	do \
+		echo "Running Test: $$t" ;\
 		testscript \
 			-e ENTRYDIR=$(HOST_ENTRYDIR) \
 			-e REPODIR=$(HOST_DOCKER_WORKSPACE) \

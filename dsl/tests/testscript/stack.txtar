@@ -2,10 +2,81 @@
 env PATH=$ENTRYDIR/tests/scripts:$PATH
 
 # Generate the AST.
-# exec parse2ast dsl_fmu.txt ast_fmu.json
+exec parse2ast dsl_fmu.txt ast_fmu.json
 
+# Evaluate the AST.
+exec ast_stats.sh ast_fmu.json
 
-# TODO check path/structure ... 2 stacks, 1 model each.
+stdout 'sims = 1'
+stdout 'channels = 9'
+stdout 'networks = 1'
+stdout 'uses = 6'
+stdout 'models = 5'
+stdout 'stacks = 4'
+stdout 'vars = 12'
+stdout 'envar = 4'
+
+# Evaluate the AST path/structure.
+exec ast_paths.sh ast_fmu.json
+
+stdout 'object.image: "simulation arch=linux-amd64" :'
+stdout 'object.payload.simulation_arch.value: "linux-amd64" :'
+
+stdout 'children.channels.0.object.image: "channel physical" :'
+stdout 'children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.channels.1.children.networks.0.type: "Network" :'
+stdout 'children.channels.1.children.networks.0.object.payload.network_name.value: "CAN" :'
+stdout 'children.channels.1.children.networks.0.object.payload.mime_type.value: "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1" :'
+
+stdout 'children.uses.0.object.image: "dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8" :'
+stdout 'children.uses.0.object.payload.use_item.value: "dse.fmi" :'
+stdout 'children.uses.0.object.payload.link.value: "https://github.com/boschglobal/dse.fmi" :'
+stdout 'children.uses.0.object.payload.version.value: "v1.1.8" :'
+
+stdout 'children.stacks.0.name: "unnamed" :'
+stdout 'children.stacks.0.children.models.0.object.image: "model FMU dse.fmi.mcl arch=linux-x86" :'
+stdout 'children.stacks.0.children.models.0.object.payload.model_name.value: "FMU" :'
+stdout 'children.stacks.0.children.models.0.object.payload.model_repo_name.value: "dse.fmi.mcl" :'
+stdout 'children.stacks.0.children.models.0.object.payload.model_arch.value: "linux-x86" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_alias.value: "scalar_vector" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.object.image: "workflow generate-fmimcl" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.object.payload.workflow_name.value: "generate-fmimcl" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.image: "var FMU_DIR uses fmu" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_name.value: "FMU_DIR" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_value.value: "fmu" :'
+
+stdout 'children.stacks.2.object.image: "stack fmu-remote" :'
+stdout 'children.stacks.2.object.payload.stack_name.value: "fmu-remote" :'
+stdout 'children.stacks.2.env_vars.0.object.image: "envar foo stack_foo" :'
+stdout 'children.stacks.2.env_vars.0.object.payload.env_var_name.value: "foo" :'
+stdout 'children.stacks.2.env_vars.0.object.payload.env_var_value.value: "stack_foo" :'
+stdout 'children.stacks.2.env_vars.1.object.image: "envar bar stack_bar" :'
+stdout 'children.stacks.2.env_vars.1.object.payload.env_var_name.value: "bar" :'
+stdout 'children.stacks.2.env_vars.1.object.payload.env_var_value.value: "stack_bar" :'
+stdout 'children.stacks.2.children.models.0.object.image: "model GW dse.fmi.gateway" :'
+stdout 'children.stacks.2.children.models.0.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.2.children.models.0.children.env_vars.0.object.image: "envar foo model_foo" :'
+stdout 'children.stacks.2.children.models.0.children.env_vars.0.object.payload.env_var_name.value: "foo" :'
+stdout 'children.stacks.2.children.models.0.children.env_vars.0.object.payload.env_var_value.value: "model_foo" :'
+stdout 'children.stacks.2.children.models.0.children.workflow.0.object.image: "workflow generate-gateway" :'
+
+stdout 'children.stacks.3.name: "fmu-stack" :'
+stdout 'children.stacks.3.object.image: "stack fmu-stack stacked=true arch=linux-i386" :'
+stdout 'children.stacks.3.object.payload.stack_name.value: "fmu-stack" :'
+stdout 'children.stacks.3.object.payload.stack_arch.value: "linux-i386" :'
+stdout 'children.stacks.3.children.models.0.object.image: "model FMU_S1 dse.fmi.mcl" :'
+stdout 'children.stacks.3.children.models.0.object.payload.model_name.value: "FMU_S1" :'
+stdout 'children.stacks.3.children.models.0.object.payload.model_repo_name.value: "dse.fmi.mcl" :'
+stdout 'children.stacks.3.children.models.0.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.3.children.models.0.children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.stacks.3.children.models.0.children.channels.0.object.payload.channel_alias.value: "scalar_vector" :'
+stdout 'children.stacks.3.children.models.0.children.workflow.0.object.image: "workflow generate-fmimcl" :'
+stdout 'children.stacks.3.children.models.0.children.workflow.0.object.payload.workflow_name.value: "generate-fmimcl" :'
+stdout 'children.stacks.3.children.models.0.children.workflow.0.children.workflow_vars.2.object.image: "var OUT_DIR {{.model.name}}" :'
+stdout 'children.stacks.3.children.models.0.children.workflow.0.children.workflow_vars.2.object.payload.var_name.value: "OUT_DIR" :'
+stdout 'children.stacks.3.children.models.0.children.workflow.0.children.workflow_vars.2.object.payload.var_value.token_type: "variable_value" :'
 
 
 -- dsl_fmu.txt --
@@ -42,6 +113,16 @@ var SIGNAL network CAN
 var NET_DIR uses CAN_dbc
 var OUT_DIR var {{.model.name}}
 
+
+stack fmu-remote
+
+envar foo stack_foo
+envar bar stack_bar
+model GW dse.fmi.gateway
+channel physical scalar_vector
+envar foo model_foo
+envar bar model_bar
+workflow generate-gateway
 
 stack fmu-stack stacked=true arch=linux-i386
 

@@ -1,0 +1,104 @@
+# Setup the environment.
+env PATH=$ENTRYDIR/tests/scripts:$PATH
+
+# Generate the AST.
+exec parse2ast dsl_fmu.txt ast_fmu.json
+
+# Evaluate the AST.
+exec ast_stats.sh ast_fmu.json
+
+stdout 'sims = 1'
+stdout 'channels = 5'
+stdout 'networks = 1'
+stdout 'uses = 1'
+stdout 'models = 4'
+stdout 'stacks = 3'
+stdout 'vars = 5'
+stdout 'envar = 6'
+
+# Evaluate the AST path/structure.
+exec ast_paths.sh ast_fmu.json
+
+stdout 'object.image: "simulation arch=linux-amd64" :'
+stdout 'object.payload.simulation_arch.value: "linux-amd64" :'
+
+stdout 'children.stacks.0.children.models.0.children.env_vars.0.type: "EnvVar" :'
+stdout 'children.stacks.0.children.models.0.children.env_vars.0.object.image: "envar SIMBUS_LOGLEVEL 3" :'
+stdout 'children.stacks.0.children.models.0.children.env_vars.0.object.payload.env_var_name.value: "SIMBUS_LOGLEVEL" :'
+stdout 'children.stacks.0.children.models.0.children.env_vars.0.object.payload.env_var_name.token_type: "env_variable_name" :'
+stdout 'children.stacks.0.children.models.0.children.env_vars.0.object.payload.env_var_value.value: "3" :'
+stdout 'children.stacks.0.children.models.0.children.env_vars.0.object.payload.env_var_value.token_type: "env_variable_value" :'
+
+stdout 'children.stacks.1.env_vars.0.type: "EnvVar" :'
+stdout 'children.stacks.1.env_vars.0.object.image: "envar foo stack_foo" :'
+stdout 'children.stacks.1.env_vars.0.object.payload.env_var_name.value: "foo" :'
+stdout 'children.stacks.1.env_vars.0.object.payload.env_var_name.token_type: "env_variable_name" :'
+stdout 'children.stacks.1.env_vars.0.object.payload.env_var_value.value: "stack_foo" :'
+stdout 'children.stacks.1.env_vars.0.object.payload.env_var_value.token_type: "env_variable_value" :'
+
+stdout 'children.stacks.1.env_vars.1.type: "EnvVar" :'
+stdout 'children.stacks.1.env_vars.1.object.image: "envar bar stack_bar" :'
+stdout 'children.stacks.1.env_vars.1.object.payload.env_var_name.value: "bar" :'
+stdout 'children.stacks.1.env_vars.1.object.payload.env_var_name.token_type: "env_variable_name" :'
+stdout 'children.stacks.1.env_vars.1.object.payload.env_var_value.value: "stack_bar" :'
+stdout 'children.stacks.1.env_vars.1.object.payload.env_var_value.token_type: "env_variable_value" :'
+
+stdout 'children.stacks.1.children.models.0.children.env_vars.0.type: "EnvVar" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.0.object.image: "envar foo model_foo" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.0.object.payload.env_var_name.value: "foo" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.0.object.payload.env_var_name.token_type: "env_variable_name" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.0.object.payload.env_var_value.value: "model_foo" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.0.object.payload.env_var_value.token_type: "env_variable_value" :'
+
+stdout 'children.stacks.1.children.models.0.children.env_vars.1.type: "EnvVar" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.1.object.image: "envar bar model_bar" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.1.object.payload.env_var_name.value: "bar" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.1.object.payload.env_var_name.token_type: "env_variable_name" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.1.object.payload.env_var_value.value: "model_bar" :'
+stdout 'children.stacks.1.children.models.0.children.env_vars.1.object.payload.env_var_value.token_type: "env_variable_value" :'
+
+stdout 'children.stacks.2.children.models.0.children.env_vars.0.type: "EnvVar" :'
+stdout 'children.stacks.2.children.models.0.children.env_vars.0.object.image: "envar foo model_foo" :'
+stdout 'children.stacks.2.children.models.0.children.env_vars.0.object.payload.env_var_name.value: "foo" :'
+stdout 'children.stacks.2.children.models.0.children.env_vars.0.object.payload.env_var_name.token_type: "env_variable_name" :'
+stdout 'children.stacks.2.children.models.0.children.env_vars.0.object.payload.env_var_value.value: "model_foo" :'
+stdout 'children.stacks.2.children.models.0.children.env_vars.0.object.payload.env_var_value.token_type: "env_variable_value" :'
+
+
+-- dsl_fmu.txt --
+simulation arch=linux-amd64
+channel network_ch
+network CAN_1 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+
+uses
+dse.network https://github.com/boschglobal/dse.network v1.0.7
+
+model FMU dse.fmi.mcl
+channel network_ch network_vector
+envar SIMBUS_LOGLEVEL 3
+workflow generate-fmimcl
+var FMU_DIR uses fmu
+
+model NET dse.network arch=linux-x86
+channel network_ch network_vector
+workflow generate-network
+var SIGNAL network CAN_1
+
+stack fmu-remote
+envar foo stack_foo
+envar bar stack_bar
+model GW dse.fmi.gateway
+channel physical scalar_vector
+envar foo model_foo
+envar bar model_bar
+workflow generate-gateway
+
+stack fmu-stacked stacked=true arch=linux-x86
+
+model FMU_1 dse.fmi.mcl
+channel physical scalar_vector
+envar foo model_foo
+workflow generate-fmimcl
+var FMU_DIR uses fmu_1
+var MCL_PATH some/path
+var OUT_DIR {{.model.name}}

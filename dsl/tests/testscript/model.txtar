@@ -2,21 +2,55 @@
 env PATH=$ENTRYDIR/tests/scripts:$PATH
 
 # Generate the AST.
-# exec parse2ast dsl_fmu.txt ast_fmu.json
-cp $ENTRYDIR/Generated_AST.json ast_fmu.json  # FIXME replace with parse2ast command.
+exec parse2ast dsl_fmu.txt ast_fmu.json
 
 # Evaluate the AST.
 exec ast_stats.sh ast_fmu.json
+
 stdout 'sims = 1'
-stdout 'channels = 9'
-stdout 'networks = 2'
-stdout 'uses = 7'
-stdout 'models = 5'
+stdout 'channels = 4'
+stdout 'networks = 1'
+stdout 'uses = 2'
+stdout 'models = 1'
 stdout 'stacks = 1'
+stdout 'vars = 3'
+stdout 'envar = 0'
 
+# Evaluate the AST path/structure.
 exec ast_paths.sh ast_fmu.json
-stdout 'children.stacked_models.1.children.models.1.object.image: "model FMU_2 dse.fmi.mcl" :'
 
+stdout 'object.image: "simulation arch=linux-amd64" :'
+stdout 'object.payload.simulation_arch.value: "linux-amd64" :'
+
+stdout 'children.channels.0.object.image: "channel physical" :'
+stdout 'children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.channels.0.object.payload.channel_alias.value: "" :'
+stdout 'children.channels.1.children.networks.0.object.payload.network_name.value: "CAN" :'
+stdout 'children.channels.1.children.networks.0.object.payload.mime_type.value: "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1" :'
+
+stdout 'children.uses.0.object.image: "dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8" :'
+stdout 'children.uses.0.object.payload.use_item.value: "dse.fmi" :'
+stdout 'children.uses.0.object.payload.link.value: "https://github.com/boschglobal/dse.fmi" :'
+stdout 'children.uses.0.object.payload.version.value: "v1.1.8" :'
+stdout 'children.uses.0.object.payload.path.value: ""'
+
+stdout 'children.stacks.0.name: "unnamed" :'
+stdout 'children.stacks.0.children.models.0.object.image: "model FMU dse.fmi.mcl" :'
+stdout 'children.stacks.0.children.models.0.object.payload.model_name.value: "FMU" :'
+stdout 'children.stacks.0.children.models.0.object.payload.model_repo_name.value: "dse.fmi.mcl" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_alias.value: "scalar_vector" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.object.image: "workflow generate-fmimcl" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.object.payload.workflow_name.value: "generate-fmimcl" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.image: "var FMU_DIR uses fmu" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_name.value: "FMU_DIR" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_reference_type.value: "uses" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.payload.var_value.value: "fmu" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.image: "var MCL_PATH some/path" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.payload.var_name.value: "MCL_PATH" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.payload.var_reference_type.value: "" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.payload.var_value.value: "some/path" :'
 
 
 -- dsl_fmu.txt --
@@ -36,6 +70,3 @@ workflow generate-fmimcl
 var FMU_DIR uses fmu
 var MCL_PATH some/path
 var OUT_DIR {{.model.name}}
-
-
-# FIXME add dsl_network.txt

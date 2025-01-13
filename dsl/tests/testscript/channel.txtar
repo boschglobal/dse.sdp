@@ -1,0 +1,93 @@
+# Setup the environment.
+env PATH=$ENTRYDIR/tests/scripts:$PATH
+
+# Generate the AST.
+exec parse2ast dsl_fmu.txt ast_fmu.json
+
+# Evaluate the AST.
+exec ast_stats.sh ast_fmu.json
+
+stdout 'sims = 1'
+stdout 'channels = 5'
+stdout 'networks = 3'
+stdout 'uses = 1'
+stdout 'models = 2'
+stdout 'stacks = 2'
+stdout 'vars = 1'
+stdout 'envar = 2'
+
+# Evaluate the AST path/structure.
+exec ast_paths.sh ast_fmu.json
+
+stdout 'object.image: "simulation arch=linux-amd64" :'
+stdout 'object.payload.simulation_arch.value: "linux-amd64" :'
+
+stdout 'children.channels.0.type: "Channel" :'
+stdout 'children.channels.0.object.image: "channel physical" :'
+stdout 'children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.channels.0.object.payload.channel_name.token_type: "channel_name" :'
+stdout 'children.channels.0.children.networks.0.type: "Network" :'
+stdout 'children.channels.0.children.networks.0.object.payload.network_name.value: "CAN_1" :'
+stdout 'children.channels.0.children.networks.0.object.payload.network_name.token_type: "network_name" :'
+stdout 'children.channels.0.children.networks.0.object.payload.mime_type.value: "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1" :'
+stdout 'children.channels.0.children.networks.0.object.payload.mime_type.token_type: "mime_type" :'
+
+stdout 'children.channels.1.type: "Channel" :'
+stdout 'children.channels.1.object.image: "channel network_ch" :'
+stdout 'children.channels.1.object.payload.channel_name.value: "network_ch" :'
+stdout 'children.channels.1.object.payload.channel_name.token_type: "channel_name" :'
+stdout 'children.channels.1.children.networks.0.type: "Network" :'
+stdout 'children.channels.1.children.networks.0.object.payload.network_name.value: "CAN_2" :'
+stdout 'children.channels.1.children.networks.0.object.payload.network_name.token_type: "network_name" :'
+stdout 'children.channels.1.children.networks.0.object.payload.mime_type.value: "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1" :'
+stdout 'children.channels.1.children.networks.0.object.payload.mime_type.token_type: "mime_type" :'
+stdout 'children.channels.1.children.networks.1.type: "Network" :'
+stdout 'children.channels.1.children.networks.1.object.payload.network_name.value: "CAN_3" :'
+stdout 'children.channels.1.children.networks.1.object.payload.network_name.token_type: "network_name" :'
+stdout 'children.channels.1.children.networks.1.object.payload.mime_type.value: "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=2" :'
+stdout 'children.channels.1.children.networks.1.object.payload.mime_type.token_type: "mime_type" :'
+
+stdout 'children.stacks.0.children.models.0.children.channels.0.type: "Channel" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_name.token_type: "channel_name" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_alias.value: "scalar_vector" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_alias.token_type: "channel_alias" :'
+stdout 'children.stacks.0.children.models.0.children.channels.1.type: "Channel" :'
+stdout 'children.stacks.0.children.models.0.children.channels.1.object.image: "channel network_ch network_vector" :'
+stdout 'children.stacks.0.children.models.0.children.channels.1.object.payload.channel_name.value: "network_ch" :'
+stdout 'children.stacks.0.children.models.0.children.channels.1.object.payload.channel_name.token_type: "channel_name" :'
+stdout 'children.stacks.0.children.models.0.children.channels.1.object.payload.channel_alias.value: "network_vector" :'
+stdout 'children.stacks.0.children.models.0.children.channels.1.object.payload.channel_alias.token_type: "channel_alias" :'
+
+stdout 'children.stacks.1.children.models.0.children.channels.0.type: "Channel" :'
+stdout 'children.stacks.1.children.models.0.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.1.children.models.0.children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.stacks.1.children.models.0.children.channels.0.object.payload.channel_name.token_type: "channel_name" :'
+stdout 'children.stacks.1.children.models.0.children.channels.0.object.payload.channel_alias.value: "scalar_vector" :'
+stdout 'children.stacks.1.children.models.0.children.channels.0.object.payload.channel_alias.token_type: "channel_alias" :'
+
+
+-- dsl_fmu.txt --
+simulation arch=linux-amd64
+channel physical
+network CAN_1 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+channel network_ch
+network CAN_2 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+network CAN_3 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=2'
+
+uses
+dse.network https://github.com/boschglobal/dse.network v1.0.7
+
+model FMU dse.fmi.mcl
+channel physical scalar_vector
+channel network_ch network_vector
+workflow generate-fmimcl
+var FMU_DIR uses fmu
+
+stack fmu-remote
+model GW dse.fmi.gateway
+channel physical scalar_vector
+envar foo model_foo
+envar bar model_bar
+workflow generate-gateway

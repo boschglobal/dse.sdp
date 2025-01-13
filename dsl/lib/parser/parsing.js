@@ -36,11 +36,9 @@ class FsilParser extends EmbeddedActionsParser {
             const simulation = $.CONSUME(Simulation);
             const children = {};
             children.channels = $.SUBRULE($.channels);
-            children.networks = $.SUBRULE($.networks);
             children.uses = $.SUBRULE($.uses);
             children.vars = $.SUBRULE($.vars);
-            children.models = $.SUBRULE($.models);
-            children.stacked_models = $.SUBRULE($.stacked_models);
+            children.stacks = $.SUBRULE($.stacked_models);
             return {
                 type: simulation.tokenType.name,
                 simulation: simulation.image.replace('\n', ''),
@@ -55,9 +53,13 @@ class FsilParser extends EmbeddedActionsParser {
             $.MANY({
                 DEF: () => {
                     const channel = $.CONSUME(Channel);
+                    const networks = $.SUBRULE($.networks);
                     channels.push({
                         type: channel.tokenType.name.replace(' ', ''),
                         object: updateTokenObject(channel),
+                        children: {
+                            networks: networks
+                        }
                     });
                 }
             });
@@ -123,8 +125,7 @@ class FsilParser extends EmbeddedActionsParser {
             return env_vars;
         });
 
-        $.RULE("workflow", () => {
-            const workflow = $.CONSUME(Workflow);
+        $.RULE("workflow_vars", () => {
             const workflow_vars = [];
             $.MANY({
                 DEF: () => {
@@ -135,13 +136,25 @@ class FsilParser extends EmbeddedActionsParser {
                     })
                 }
             });
-            return {
-                type: workflow.tokenType.name.replace(' ', ''),
-                object: updateTokenObject(workflow),
-                children: {
-                    workflow_vars: workflow_vars,
+            return workflow_vars;
+        });
+
+        $.RULE("workflow", () => {
+            const workflows = [];
+            $.MANY({
+                DEF: () => {
+                    const workflow = $.CONSUME(Workflow);
+                    const workflow_vars = $.SUBRULE($.workflow_vars);
+                    workflows.push({
+                        type: workflow.tokenType.name.replace(' ', ''),
+                        object: updateTokenObject(workflow),
+                        children: {
+                            workflow_vars: workflow_vars,
+                        }
+                    })
                 }
-            };
+            });
+            return workflows;
         });
 
         $.RULE("models", () => {
@@ -166,19 +179,38 @@ class FsilParser extends EmbeddedActionsParser {
             return models;
         });
 
+        $.RULE("stack", () => {
+            let stack = '';
+            $.MANY({
+                DEF: () => {
+                    stack = $.CONSUME(Stack);
+                }
+            });
+            return stack;
+        });
+
         $.RULE("stacked_models", () => {
             let stacks = []
             $.MANY({
                 DEF: () => {
-                    const stack = $.CONSUME(Stack);
+                    const stack = $.SUBRULE($.stack);
+                    const env_vars = $.SUBRULE($.envvars);
+                    let name = 'unnamed'
+                    if (stack && 'tokenType' in stack) {
+                        name = stack.payload.stack_name.value;
+                    }
                     const stacked_models = $.SUBRULE($.models);
-                    stacks.push({
-                        type: stack.tokenType.name,
-                        object: updateTokenObject(stack),
-                        children: {
-                            models: stacked_models,
-                        }
-                    });
+                    if (stacked_models.length !== 0) {
+                        stacks.push({
+                            type: 'Stack',
+                            name: name,
+                            object: updateTokenObject(stack),
+                            env_vars: env_vars,
+                            children: {
+                                models: stacked_models,
+                            }
+                        });
+                    }
                 }
             });
             return stacks;

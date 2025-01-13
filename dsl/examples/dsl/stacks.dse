@@ -32,6 +32,16 @@ var NET_DIR uses CAN_dbc
 var OUT_DIR var {{.model.name}}
 
 
+stack fmu-remote
+
+envar foo stack_foo
+envar bar stack_bar
+model GW dse.fmi.gateway
+channel physical scalar_vector
+envar foo model_foo
+envar bar model_bar
+workflow generate-gateway
+
 stack fmu-stack stacked=true arch=linux-i386
 
 model FMU_S1 dse.fmi.mcl
