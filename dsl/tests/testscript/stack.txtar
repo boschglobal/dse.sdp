@@ -33,7 +33,7 @@ stdout 'children.uses.0.object.payload.use_item.value: "dse.fmi" :'
 stdout 'children.uses.0.object.payload.link.value: "https://github.com/boschglobal/dse.fmi" :'
 stdout 'children.uses.0.object.payload.version.value: "v1.1.8" :'
 
-stdout 'children.stacks.0.name: "unnamed" :'
+stdout 'children.stacks.0.name: "default" :'
 stdout 'children.stacks.0.children.models.0.object.image: "model FMU dse.fmi.mcl arch=linux-x86" :'
 stdout 'children.stacks.0.children.models.0.object.payload.model_name.value: "FMU" :'
 stdout 'children.stacks.0.children.models.0.object.payload.model_repo_name.value: "dse.fmi.mcl" :'

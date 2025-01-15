@@ -195,7 +195,7 @@ class FsilParser extends EmbeddedActionsParser {
                 DEF: () => {
                     const stack = $.SUBRULE($.stack);
                     const env_vars = $.SUBRULE($.envvars);
-                    let name = 'unnamed'
+                    let name = 'default'
                     if (stack && 'tokenType' in stack) {
                         name = stack.payload.stack_name.value;
                     }
