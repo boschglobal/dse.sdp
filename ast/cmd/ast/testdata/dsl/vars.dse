@@ -1,0 +1,14 @@
+simulation arch=linux-x86
+channel physical
+
+uses
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8
+
+var key_one val_one
+var key_two val_two
+
+model one dse.fmi.mcl arch=linux-amd64
+channel physical scalar
+workflow generate-fmimcl
+var key_three uses val_three
+var key_four val_four

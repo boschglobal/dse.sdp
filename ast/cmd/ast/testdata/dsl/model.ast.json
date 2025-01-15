@@ -1,0 +1,432 @@
+{
+  "type": "Simulation",
+  "simulation": "simulation arch=linux-amd64",
+  "object": {
+    "image": "simulation arch=linux-amd64",
+    "startOffset": 0,
+    "endOffset": 26,
+    "startLine": 1,
+    "endLine": 1,
+    "startColumn": 1,
+    "endColumn": 27,
+    "tokenTypeIdx": 3,
+    "payload": {
+      "simulation_arch": {
+        "value": "linux-amd64",
+        "token_type": "simulation_arch",
+        "start_offset": 11,
+        "end_offset": 28
+      }
+    }
+  },
+  "children": {
+    "channels": [
+      {
+        "type": "Channel",
+        "object": {
+          "image": "channel physical",
+          "startOffset": 0,
+          "endOffset": 15,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 16,
+          "tokenTypeIdx": 4,
+          "payload": {
+            "channel_name": {
+              "value": "physical",
+              "token_type": "channel_name",
+              "start_offset": 8,
+              "end_offset": 17
+            },
+            "channel_alias": {
+              "value": "",
+              "token_type": "channel_alias",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        },
+        "children": {
+          "networks": []
+        }
+      },
+      {
+        "type": "Channel",
+        "object": {
+          "image": "channel network",
+          "startOffset": 0,
+          "endOffset": 14,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 15,
+          "tokenTypeIdx": 4,
+          "payload": {
+            "channel_name": {
+              "value": "network",
+              "token_type": "channel_name",
+              "start_offset": 8,
+              "end_offset": 16
+            },
+            "channel_alias": {
+              "value": "",
+              "token_type": "channel_alias",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        },
+        "children": {
+          "networks": [
+            {
+              "type": "Network",
+              "object": {
+                "image": "network CAN 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'",
+                "startOffset": 0,
+                "endOffset": 97,
+                "startLine": 1,
+                "endLine": 1,
+                "startColumn": 1,
+                "endColumn": 98,
+                "tokenTypeIdx": 5,
+                "payload": {
+                  "network_name": {
+                    "value": "CAN",
+                    "token_type": "network_name",
+                    "start_offset": 8,
+                    "end_offset": 12
+                  },
+                  "mime_type": {
+                    "value": "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1",
+                    "token_type": "mime_type",
+                    "start_offset": 13,
+                    "end_offset": 100
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "uses": [
+      {
+        "type": "Uses",
+        "object": {
+          "image": "dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8",
+          "startOffset": 0,
+          "endOffset": 52,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 53,
+          "tokenTypeIdx": 7,
+          "payload": {
+            "use_item": {
+              "value": "dse.fmi",
+              "token_type": "use_item",
+              "start_offset": 1,
+              "end_offset": 8
+            },
+            "link": {
+              "value": "https://github.com/boschglobal/dse.fmi",
+              "token_type": "link",
+              "start_offset": 8,
+              "end_offset": 47
+            },
+            "version": {
+              "value": "v1.1.8",
+              "token_type": "version",
+              "start_offset": 47,
+              "end_offset": 54
+            },
+            "path": {
+              "value": "",
+              "token_type": "path",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        }
+      },
+      {
+        "type": "Uses",
+        "object": {
+          "image": "fmu https://artifactory.bosch/examples/fmu.zip v1.0.0",
+          "startOffset": 0,
+          "endOffset": 52,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 53,
+          "tokenTypeIdx": 7,
+          "payload": {
+            "use_item": {
+              "value": "fmu",
+              "token_type": "use_item",
+              "start_offset": 1,
+              "end_offset": 4
+            },
+            "link": {
+              "value": "https://artifactory.bosch/examples/fmu.zip",
+              "token_type": "link",
+              "start_offset": 4,
+              "end_offset": 47
+            },
+            "version": {
+              "value": "v1.0.0",
+              "token_type": "version",
+              "start_offset": 47,
+              "end_offset": 54
+            },
+            "path": {
+              "value": "",
+              "token_type": "path",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        }
+      }
+    ],
+    "vars": [
+      {
+        "type": "Var",
+        "object": {
+          "image": "var sim_key sim_value",
+          "startOffset": 0,
+          "endOffset": 20,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 21,
+          "tokenTypeIdx": 8,
+          "payload": {
+            "var_name": {
+              "value": "sim_key",
+              "token_type": "variable_name",
+              "start_offset": 4,
+              "end_offset": 12
+            },
+            "var_reference_type": {
+              "value": "",
+              "token_type": "variable_reference_type",
+              "start_offset": null,
+              "end_offset": null
+            },
+            "var_value": {
+              "value": "sim_value",
+              "token_type": "variable_value",
+              "start_offset": 12,
+              "end_offset": 22
+            }
+          }
+        }
+      }
+    ],
+    "stacks": [
+      {
+        "type": "Stack",
+        "name": "default",
+        "object": {},
+        "env_vars": [],
+        "children": {
+          "models": [
+            {
+              "type": "Model",
+              "object": {
+                "image": "model FMU dse.fmi.mcl",
+                "startOffset": 0,
+                "endOffset": 20,
+                "startLine": 1,
+                "endLine": 1,
+                "startColumn": 1,
+                "endColumn": 21,
+                "tokenTypeIdx": 9,
+                "payload": {
+                  "model_name": {
+                    "value": "FMU",
+                    "token_type": "model_name",
+                    "start_offset": 6,
+                    "end_offset": 10
+                  },
+                  "model_repo_name": {
+                    "value": "dse.fmi.mcl",
+                    "token_type": "model_repo_name",
+                    "start_offset": 11,
+                    "end_offset": 23
+                  },
+                  "model_arch": {
+                    "value": "",
+                    "token_type": "model_arch",
+                    "start_offset": null,
+                    "end_offset": null
+                  }
+                }
+              },
+              "children": {
+                "channels": [
+                  {
+                    "type": "Channel",
+                    "object": {
+                      "image": "channel physical scalar_vector",
+                      "startOffset": 0,
+                      "endOffset": 29,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 30,
+                      "tokenTypeIdx": 4,
+                      "payload": {
+                        "channel_name": {
+                          "value": "physical",
+                          "token_type": "channel_name",
+                          "start_offset": 8,
+                          "end_offset": 17
+                        },
+                        "channel_alias": {
+                          "value": "scalar_vector",
+                          "token_type": "channel_alias",
+                          "start_offset": 18,
+                          "end_offset": 32
+                        }
+                      }
+                    },
+                    "children": {
+                      "networks": []
+                    }
+                  },
+                  {
+                    "type": "Channel",
+                    "object": {
+                      "image": "channel network network_vector",
+                      "startOffset": 0,
+                      "endOffset": 29,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 30,
+                      "tokenTypeIdx": 4,
+                      "payload": {
+                        "channel_name": {
+                          "value": "network",
+                          "token_type": "channel_name",
+                          "start_offset": 8,
+                          "end_offset": 16
+                        },
+                        "channel_alias": {
+                          "value": "network_vector",
+                          "token_type": "channel_alias",
+                          "start_offset": 17,
+                          "end_offset": 32
+                        }
+                      }
+                    },
+                    "children": {
+                      "networks": []
+                    }
+                  }
+                ],
+                "env_vars": [],
+                "workflow": [
+                  {
+                    "type": "Workflow",
+                    "object": {
+                      "image": "workflow generate",
+                      "startOffset": 0,
+                      "endOffset": 16,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 17,
+                      "tokenTypeIdx": 11,
+                      "payload": {
+                        "workflow_name": {
+                          "value": "generate",
+                          "token_type": "workflow_name",
+                          "start_offset": 9,
+                          "end_offset": 18
+                        }
+                      }
+                    },
+                    "children": {
+                      "workflow_vars": [
+                        {
+                          "type": "Var",
+                          "object": {
+                            "image": "var model_uses uses fmu",
+                            "startOffset": 0,
+                            "endOffset": 22,
+                            "startLine": 1,
+                            "endLine": 1,
+                            "startColumn": 1,
+                            "endColumn": 23,
+                            "tokenTypeIdx": 8,
+                            "payload": {
+                              "var_name": {
+                                "value": "model_uses",
+                                "token_type": "variable_name",
+                                "start_offset": 4,
+                                "end_offset": 15
+                              },
+                              "var_reference_type": {
+                                "value": "uses",
+                                "token_type": "variable_reference_type",
+                                "start_offset": 15,
+                                "end_offset": 20
+                              },
+                              "var_value": {
+                                "value": "fmu",
+                                "token_type": "variable_value",
+                                "start_offset": 20,
+                                "end_offset": 24
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "Var",
+                          "object": {
+                            "image": "var model_key model_val",
+                            "startOffset": 0,
+                            "endOffset": 22,
+                            "startLine": 1,
+                            "endLine": 1,
+                            "startColumn": 1,
+                            "endColumn": 23,
+                            "tokenTypeIdx": 8,
+                            "payload": {
+                              "var_name": {
+                                "value": "model_key",
+                                "token_type": "variable_name",
+                                "start_offset": 4,
+                                "end_offset": 14
+                              },
+                              "var_reference_type": {
+                                "value": "",
+                                "token_type": "variable_reference_type",
+                                "start_offset": null,
+                                "end_offset": null
+                              },
+                              "var_value": {
+                                "value": "model_val",
+                                "token_type": "variable_value",
+                                "start_offset": 14,
+                                "end_offset": 24
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

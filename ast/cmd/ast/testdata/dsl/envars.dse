@@ -1,0 +1,11 @@
+simulation
+channel physical
+
+uses
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8
+
+stack remote
+envar key_one val_one
+model one dse.fmi.mcl
+channel physical scalar
+envar key_two val_two

@@ -7,12 +7,15 @@
 
 Simulation Development Platform for the Dynamic Simulation Environment (DSE) Core Platform.
 
+![DSE SDP Overview](doc/static/overview.png)
+
 
 ### Project Structure
 
 ```text
 L- .devcontainer  Devcontainer used by Codespaces.
   L- Dockerfile   Dockerfile used by Codespaces.
+L- ast            AST tools.
 L- dsl            DSL parser (usingChevrotain).
 L- lsp            VS Code Language Server.
 L- examples       Examples for learning about the DSE DSP.
@@ -142,13 +145,13 @@ Setup for async Simulation Model run ...←[0m
 Start a Codespace, then type the following commands in the terminal window.
 
 ```bash
-# Build and install the DSE DSL Parser.
-$ cd dsl
+
+# Build the project
 $ make
 $ make install
 
 # Parse one of the sample Simulations written in the DSE DSL and generate an AST.
-$ dse-parse2ast examples/dsl/single_fmu.dse single_fmu.json
+$ dse-dslparse examples/dsl/single_fmu.dse single_fmu.json
 parse2ast
 ---------
 Version: devel
@@ -159,27 +162,8 @@ Read from file: examples/dsl/single_fmu.dse
 Parsing ...
 Writing to file: single_fmu.json
 
-# Use some test scripts to review the generated AST.
-$ sh tests/scripts/ast_stats.sh single_fmu.json
-Statistics for file : single_fmu.json
-sims = 1
-channels = 4
-networks = 1
-uses = 2
-models = 1
-stacks = 0
-$ sh tests/scripts/ast_paths.sh single_fmu.json | grep "\.value:"
-object.payload.simulation_arch.value: "linux-amd64" :
-children.channels.0.object.payload.channel_name.value: "physical" :
-children.channels.0.object.payload.channel_alias.value: "" :
-children.channels.1.object.payload.channel_name.value: "network" :
-children.channels.1.object.payload.channel_alias.value: "" :
-children.networks.0.object.payload.network_name.value: "CAN" :
-children.networks.0.object.payload.mime_type.value: "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1" :
-children.uses.0.object.payload.use_item.value: "dse.fmi" :
-children.uses.0.object.payload.link.value: "https://github.com/boschglobal/dse.fmi" :
-children.uses.0.object.payload.version.value: "v1.1.8" :
-...
+# Convert the DSL AST to a Simulation AST file.
+$ dse-ast convert -input single_fmu.json -output ast.yaml
 ```
 
 

@@ -1,0 +1,264 @@
+{
+  "type": "Simulation",
+  "simulation": "simulation",
+  "object": {
+    "image": "simulation",
+    "startOffset": 0,
+    "endOffset": 9,
+    "startLine": 1,
+    "endLine": 1,
+    "startColumn": 1,
+    "endColumn": 10,
+    "tokenTypeIdx": 3,
+    "payload": {
+      "simulation_arch": {
+        "value": "linux-amd64",
+        "token_type": "simulation_arch",
+        "start_offset": 11,
+        "end_offset": 22
+      }
+    }
+  },
+  "children": {
+    "channels": [
+      {
+        "type": "Channel",
+        "object": {
+          "image": "channel physical",
+          "startOffset": 0,
+          "endOffset": 15,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 16,
+          "tokenTypeIdx": 4,
+          "payload": {
+            "channel_name": {
+              "value": "physical",
+              "token_type": "channel_name",
+              "start_offset": 8,
+              "end_offset": 17
+            },
+            "channel_alias": {
+              "value": "",
+              "token_type": "channel_alias",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        },
+        "children": {
+          "networks": []
+        }
+      }
+    ],
+    "uses": [
+      {
+        "type": "Uses",
+        "object": {
+          "image": "dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8",
+          "startOffset": 0,
+          "endOffset": 52,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 53,
+          "tokenTypeIdx": 7,
+          "payload": {
+            "use_item": {
+              "value": "dse.fmi",
+              "token_type": "use_item",
+              "start_offset": 1,
+              "end_offset": 8
+            },
+            "link": {
+              "value": "https://github.com/boschglobal/dse.fmi",
+              "token_type": "link",
+              "start_offset": 8,
+              "end_offset": 47
+            },
+            "version": {
+              "value": "v1.1.8",
+              "token_type": "version",
+              "start_offset": 47,
+              "end_offset": 54
+            },
+            "path": {
+              "value": "",
+              "token_type": "path",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        }
+      }
+    ],
+    "vars": [],
+    "stacks": [
+      {
+        "type": "Stack",
+        "name": "remote",
+        "object": {
+          "image": "stack remote",
+          "startOffset": 0,
+          "endOffset": 11,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 12,
+          "tokenTypeIdx": 12,
+          "payload": {
+            "stack_name": {
+              "value": "remote",
+              "token_type": "stack_name",
+              "start_offset": 6,
+              "end_offset": 13
+            },
+            "stacked": {
+              "value": "",
+              "token_type": "stacked",
+              "start_offset": 13,
+              "end_offset": 13
+            },
+            "stack_arch": {
+              "value": "",
+              "token_type": "stack_arch",
+              "start_offset": 13,
+              "end_offset": 13
+            }
+          }
+        },
+        "env_vars": [
+          {
+            "type": "EnvVar",
+            "object": {
+              "image": "envar key_one val_one",
+              "startOffset": 0,
+              "endOffset": 20,
+              "startLine": 1,
+              "endLine": 1,
+              "startColumn": 1,
+              "endColumn": 21,
+              "tokenTypeIdx": 10,
+              "payload": {
+                "env_var_name": {
+                  "value": "key_one",
+                  "token_type": "env_variable_name",
+                  "start_offset": 6,
+                  "end_offset": 14
+                },
+                "env_var_value": {
+                  "value": "val_one",
+                  "token_type": "env_variable_value",
+                  "start_offset": 14,
+                  "end_offset": 22
+                }
+              }
+            }
+          }
+        ],
+        "children": {
+          "models": [
+            {
+              "type": "Model",
+              "object": {
+                "image": "model one dse.fmi.mcl",
+                "startOffset": 0,
+                "endOffset": 20,
+                "startLine": 1,
+                "endLine": 1,
+                "startColumn": 1,
+                "endColumn": 21,
+                "tokenTypeIdx": 9,
+                "payload": {
+                  "model_name": {
+                    "value": "one",
+                    "token_type": "model_name",
+                    "start_offset": 6,
+                    "end_offset": 10
+                  },
+                  "model_repo_name": {
+                    "value": "dse.fmi.mcl",
+                    "token_type": "model_repo_name",
+                    "start_offset": 11,
+                    "end_offset": 23
+                  },
+                  "model_arch": {
+                    "value": "",
+                    "token_type": "model_arch",
+                    "start_offset": null,
+                    "end_offset": null
+                  }
+                }
+              },
+              "children": {
+                "channels": [
+                  {
+                    "type": "Channel",
+                    "object": {
+                      "image": "channel physical scalar",
+                      "startOffset": 0,
+                      "endOffset": 22,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 23,
+                      "tokenTypeIdx": 4,
+                      "payload": {
+                        "channel_name": {
+                          "value": "physical",
+                          "token_type": "channel_name",
+                          "start_offset": 8,
+                          "end_offset": 17
+                        },
+                        "channel_alias": {
+                          "value": "scalar",
+                          "token_type": "channel_alias",
+                          "start_offset": 18,
+                          "end_offset": 25
+                        }
+                      }
+                    },
+                    "children": {
+                      "networks": []
+                    }
+                  }
+                ],
+                "env_vars": [
+                  {
+                    "type": "EnvVar",
+                    "object": {
+                      "image": "envar key_two val_two",
+                      "startOffset": 0,
+                      "endOffset": 20,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 21,
+                      "tokenTypeIdx": 10,
+                      "payload": {
+                        "env_var_name": {
+                          "value": "key_two",
+                          "token_type": "env_variable_name",
+                          "start_offset": 6,
+                          "end_offset": 14
+                        },
+                        "env_var_value": {
+                          "value": "val_two",
+                          "token_type": "env_variable_value",
+                          "start_offset": 14,
+                          "end_offset": 22
+                        }
+                      }
+                    }
+                  }
+                ],
+                "workflow": []
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

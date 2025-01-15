@@ -1,0 +1,366 @@
+env
+exec ast convert -input $WORK/ast.json -output $WORK/ast.yaml
+exec ls -R $WORK
+exec cat ast.yaml
+
+yamlcontains ast.yaml $.kind Simulation
+
+yamlcontains ast.yaml $.spec.vars[0].name key_one
+yamlcontains ast.yaml $.spec.vars[0].value val_one
+yamlcontains ast.yaml $.spec.vars[1].name key_two
+yamlcontains ast.yaml $.spec.vars[1].value val_two
+
+yamlcontains ast.yaml $.spec.stacks[0].models[0].name one
+yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].name generate-fmimcl
+yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].name key_three
+! yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].uses
+yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].value val_three
+yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].name key_four
+yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].value val_four
+
+
+
+# Generate AST.JSON:
+#  cd dsl
+#  make
+#  parse2ast ../ast/cmd/ast/testdata/dsl/var.dse ../ast/cmd/ast/testdata/dsl/var.ast.json
+
+-- ast.json --
+{
+  "type": "Simulation",
+  "simulation": "simulation arch=linux-x86",
+  "object": {
+    "image": "simulation arch=linux-x86",
+    "startOffset": 0,
+    "endOffset": 24,
+    "startLine": 1,
+    "endLine": 1,
+    "startColumn": 1,
+    "endColumn": 25,
+    "tokenTypeIdx": 3,
+    "payload": {
+      "simulation_arch": {
+        "value": "linux-x86",
+        "token_type": "simulation_arch",
+        "start_offset": 11,
+        "end_offset": 26
+      }
+    }
+  },
+  "children": {
+    "channels": [
+      {
+        "type": "Channel",
+        "object": {
+          "image": "channel physical",
+          "startOffset": 0,
+          "endOffset": 15,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 16,
+          "tokenTypeIdx": 4,
+          "payload": {
+            "channel_name": {
+              "value": "physical",
+              "token_type": "channel_name",
+              "start_offset": 8,
+              "end_offset": 17
+            },
+            "channel_alias": {
+              "value": "",
+              "token_type": "channel_alias",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        },
+        "children": {
+          "networks": []
+        }
+      }
+    ],
+    "uses": [
+      {
+        "type": "Uses",
+        "object": {
+          "image": "dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8",
+          "startOffset": 0,
+          "endOffset": 52,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 53,
+          "tokenTypeIdx": 7,
+          "payload": {
+            "use_item": {
+              "value": "dse.fmi",
+              "token_type": "use_item",
+              "start_offset": 1,
+              "end_offset": 8
+            },
+            "link": {
+              "value": "https://github.com/boschglobal/dse.fmi",
+              "token_type": "link",
+              "start_offset": 8,
+              "end_offset": 47
+            },
+            "version": {
+              "value": "v1.1.8",
+              "token_type": "version",
+              "start_offset": 47,
+              "end_offset": 54
+            },
+            "path": {
+              "value": "",
+              "token_type": "path",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        }
+      }
+    ],
+    "vars": [
+      {
+        "type": "Var",
+        "object": {
+          "image": "var key_one val_one",
+          "startOffset": 0,
+          "endOffset": 18,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 19,
+          "tokenTypeIdx": 8,
+          "payload": {
+            "var_name": {
+              "value": "key_one",
+              "token_type": "variable_name",
+              "start_offset": 4,
+              "end_offset": 12
+            },
+            "var_reference_type": {
+              "value": "",
+              "token_type": "variable_reference_type",
+              "start_offset": null,
+              "end_offset": null
+            },
+            "var_value": {
+              "value": "val_one",
+              "token_type": "variable_value",
+              "start_offset": 12,
+              "end_offset": 20
+            }
+          }
+        }
+      },
+      {
+        "type": "Var",
+        "object": {
+          "image": "var key_two val_two",
+          "startOffset": 0,
+          "endOffset": 18,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 19,
+          "tokenTypeIdx": 8,
+          "payload": {
+            "var_name": {
+              "value": "key_two",
+              "token_type": "variable_name",
+              "start_offset": 4,
+              "end_offset": 12
+            },
+            "var_reference_type": {
+              "value": "",
+              "token_type": "variable_reference_type",
+              "start_offset": null,
+              "end_offset": null
+            },
+            "var_value": {
+              "value": "val_two",
+              "token_type": "variable_value",
+              "start_offset": 12,
+              "end_offset": 20
+            }
+          }
+        }
+      }
+    ],
+    "stacks": [
+      {
+        "type": "Stack",
+        "name": "default",
+        "object": {},
+        "env_vars": [],
+        "children": {
+          "models": [
+            {
+              "type": "Model",
+              "object": {
+                "image": "model one dse.fmi.mcl arch=linux-amd64",
+                "startOffset": 0,
+                "endOffset": 37,
+                "startLine": 1,
+                "endLine": 1,
+                "startColumn": 1,
+                "endColumn": 38,
+                "tokenTypeIdx": 9,
+                "payload": {
+                  "model_name": {
+                    "value": "one",
+                    "token_type": "model_name",
+                    "start_offset": 6,
+                    "end_offset": 10
+                  },
+                  "model_repo_name": {
+                    "value": "dse.fmi.mcl",
+                    "token_type": "model_repo_name",
+                    "start_offset": 11,
+                    "end_offset": 23
+                  },
+                  "model_arch": {
+                    "value": "linux-amd64",
+                    "token_type": "model_arch",
+                    "start_offset": 23,
+                    "end_offset": 52
+                  }
+                }
+              },
+              "children": {
+                "channels": [
+                  {
+                    "type": "Channel",
+                    "object": {
+                      "image": "channel physical scalar",
+                      "startOffset": 0,
+                      "endOffset": 22,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 23,
+                      "tokenTypeIdx": 4,
+                      "payload": {
+                        "channel_name": {
+                          "value": "physical",
+                          "token_type": "channel_name",
+                          "start_offset": 8,
+                          "end_offset": 17
+                        },
+                        "channel_alias": {
+                          "value": "scalar",
+                          "token_type": "channel_alias",
+                          "start_offset": 18,
+                          "end_offset": 25
+                        }
+                      }
+                    },
+                    "children": {
+                      "networks": []
+                    }
+                  }
+                ],
+                "env_vars": [],
+                "workflow": [
+                  {
+                    "type": "Workflow",
+                    "object": {
+                      "image": "workflow generate-fmimcl",
+                      "startOffset": 0,
+                      "endOffset": 23,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 24,
+                      "tokenTypeIdx": 11,
+                      "payload": {
+                        "workflow_name": {
+                          "value": "generate-fmimcl",
+                          "token_type": "workflow_name",
+                          "start_offset": 9,
+                          "end_offset": 25
+                        }
+                      }
+                    },
+                    "children": {
+                      "workflow_vars": [
+                        {
+                          "type": "Var",
+                          "object": {
+                            "image": "var key_three uses val_three",
+                            "startOffset": 0,
+                            "endOffset": 27,
+                            "startLine": 1,
+                            "endLine": 1,
+                            "startColumn": 1,
+                            "endColumn": 28,
+                            "tokenTypeIdx": 8,
+                            "payload": {
+                              "var_name": {
+                                "value": "key_three",
+                                "token_type": "variable_name",
+                                "start_offset": 4,
+                                "end_offset": 14
+                              },
+                              "var_reference_type": {
+                                "value": "uses",
+                                "token_type": "variable_reference_type",
+                                "start_offset": 14,
+                                "end_offset": 19
+                              },
+                              "var_value": {
+                                "value": "val_three",
+                                "token_type": "variable_value",
+                                "start_offset": 19,
+                                "end_offset": 29
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "Var",
+                          "object": {
+                            "image": "var key_four val_four",
+                            "startOffset": 0,
+                            "endOffset": 20,
+                            "startLine": 1,
+                            "endLine": 1,
+                            "startColumn": 1,
+                            "endColumn": 21,
+                            "tokenTypeIdx": 8,
+                            "payload": {
+                              "var_name": {
+                                "value": "key_four",
+                                "token_type": "variable_name",
+                                "start_offset": 4,
+                                "end_offset": 13
+                              },
+                              "var_reference_type": {
+                                "value": "",
+                                "token_type": "variable_reference_type",
+                                "start_offset": null,
+                                "end_offset": null
+                              },
+                              "var_value": {
+                                "value": "val_four",
+                                "token_type": "variable_value",
+                                "start_offset": 13,
+                                "end_offset": 22
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

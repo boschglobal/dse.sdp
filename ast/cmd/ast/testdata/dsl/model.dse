@@ -1,0 +1,17 @@
+simulation arch=linux-amd64
+channel physical
+channel network
+network CAN 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+
+uses
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8
+fmu https://artifactory.bosch/examples/fmu.zip v1.0.0
+
+var sim_key sim_value
+
+model FMU dse.fmi.mcl
+channel physical scalar_vector
+channel network network_vector
+workflow generate
+var model_uses uses fmu
+var model_key model_val

@@ -1,0 +1,19 @@
+simulation arch=linux-x86
+channel physical
+
+uses
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8
+
+
+model one dse.fmi.mcl arch=linux-amd64
+channel physical scalar
+
+
+stack stack-stacked stacked=true arch=win-x86
+model two dse.fmi.mcl
+channel physical scalar
+
+
+stack model-arch
+model three dse.fmi.mcl arch=linux-i386
+channel physical scalar
