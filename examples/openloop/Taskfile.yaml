@@ -60,7 +60,7 @@ tasks:
     cmds:
       - echo "SIM Model input -> {{.SIMDIR}}/{{.PATH}}"
       - mkdir -p '{{.SIMDIR}}/{{.PATH}}/data'
-      - cp {{.PWD}}/input__value_set.csv '{{.SIMDIR}}/{{.PATH}}/data/input.csv'
+      - cp {{.PWD}}/csv_input/input__value_set.csv '{{.SIMDIR}}/{{.PATH}}/data/input.csv'
       - cp {{.PWD}}/input__model.yaml '{{.SIMDIR}}/{{.PATH}}/data/model.yaml'
       - cp {{.PWD}}/input__signalgroup.yaml '{{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml'
       - task: unzip-file
@@ -69,7 +69,7 @@ tasks:
           ZIPFILE: '{{.MODEL_SO_ZIPPATH}}'
           FILE: '{{.SIMDIR}}/{{.MODEL_SO_FILE}}'
     sources:
-      - '{{.PWD}}/input__value_set.csv'
+      - '{{.PWD}}/csv_input/input__value_set.csv'
       - '{{.PWD}}/input__model.yaml'
       - '{{.PWD}}/input__signalgroup.yaml'
     generates:
