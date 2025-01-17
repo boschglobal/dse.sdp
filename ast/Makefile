@@ -22,6 +22,10 @@ cmd: $(CLI_TOOLS)
 $(CLI_TOOLS): $(SRC)
 	go build $(GOFLAGS) -o $@ ./cmd/$(subst $(BIN_DIR)/,,$@)
 
+.PHONY: install
+install: build
+	ln -sf $(BIN_DIR)/$(PACKAGE) ~/.local/bin/dse-$(PACKAGE)
+
 
 .PHONY: test
 test:

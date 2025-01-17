@@ -151,7 +151,7 @@ $ make
 $ make install
 
 # Parse one of the sample Simulations written in the DSE DSL and generate an AST.
-$ dse-dslparse examples/dsl/single_fmu.dse single_fmu.json
+$ parse2ast examples/dsl/single_fmu.dse single_fmu.json
 parse2ast
 ---------
 Version: devel

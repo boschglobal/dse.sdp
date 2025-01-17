@@ -19,13 +19,16 @@ var cmds = []command.CommandRunner{
 }
 
 var usage = `
-AST Tools
+AST Tools for generating and converting Simulation AST objects/files.
 
-	ast <command> [command options,]
+Usage:
+
+    ast <command> [option]
+
 `
 
 func printUsage() {
-	command.PrintUsage(usage, cmds)
+	command.PrintUsage(usage[1:], cmds)
 }
 
 func main() {
