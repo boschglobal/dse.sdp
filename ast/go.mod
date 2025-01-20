@@ -4,7 +4,7 @@ go 1.23.4
 
 require (
 	github.boschdevcloud.com/fsil/fsil.go/command v0.0.0-20250116142848-f4bd40a5babd
-	github.com/boschglobal/dse.schemas/code/go/dse v1.2.12
+	github.com/boschglobal/dse.schemas/code/go/dse v1.2.13
 	github.com/goccy/go-yaml v1.15.13
 	github.com/rogpeppe/go-internal v1.13.1
 	github.com/tidwall/gjson v1.18.0

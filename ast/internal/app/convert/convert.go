@@ -181,7 +181,7 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 			channelList := buildList(value, "children.channels", func(value gjson.Result) ast.ModelChannel {
 				channel := ast.ModelChannel{
 					Name:  value.Get("object.payload.channel_name.value").String(),
-					Alias: util.StringPtr(value.Get("object.payload.channel_alias.value").String()),
+					Alias: value.Get("object.payload.channel_alias.value").String(),
 				}
 				return channel
 			})

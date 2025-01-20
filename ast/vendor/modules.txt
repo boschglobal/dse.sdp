@@ -3,7 +3,7 @@
 github.boschdevcloud.com/fsil/fsil.go/command
 github.boschdevcloud.com/fsil/fsil.go/command/log
 github.boschdevcloud.com/fsil/fsil.go/command/util
-# github.com/boschglobal/dse.schemas/code/go/dse v1.2.12
+# github.com/boschglobal/dse.schemas/code/go/dse v1.2.13
 ## explicit; go 1.21.6
 github.com/boschglobal/dse.schemas/code/go/dse/ast
 # github.com/goccy/go-yaml v1.15.13
