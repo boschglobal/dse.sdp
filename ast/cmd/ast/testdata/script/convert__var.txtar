@@ -13,7 +13,7 @@ yamlcontains ast.yaml $.spec.vars[1].value val_two
 yamlcontains ast.yaml $.spec.stacks[0].models[0].name one
 yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].name generate-fmimcl
 yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].name key_three
-! yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].uses
+yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].reference uses
 yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].value val_three
 yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].name key_four
 yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].value val_four

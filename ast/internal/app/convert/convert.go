@@ -207,7 +207,14 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 					vars := ast.Var{
 						Name:  value.Get("object.payload.var_name.value").String(),
 						Value: value.Get("object.payload.var_value.value").String(),
-						// FIXME should uses be decoded here ? and what too ?
+						Reference: func() *ast.VarReference {
+							v := value.Get("object.payload.var_reference_type.value")
+							if v.Exists() == true {
+								return (*ast.VarReference)(util.StringPtr(v.String()))
+							} else {
+								return nil
+							}
+						}(),
 					}
 					return vars
 				})

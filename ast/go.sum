@@ -1,7 +1,7 @@
 github.boschdevcloud.com/fsil/fsil.go/command v0.0.0-20250116142848-f4bd40a5babd h1:l1fSHkztf3YivFgqNgh3pRT2ubjLi2ATQYBiPTKKrE8=
 github.boschdevcloud.com/fsil/fsil.go/command v0.0.0-20250116142848-f4bd40a5babd/go.mod h1:aMO+nGAfavJ8bXcEfl361MxmhxOd6+Ex+WXVo6yFaYA=
-github.com/boschglobal/dse.schemas/code/go/dse v1.2.11 h1:6zJGt3IgU63ixlrKUokmITMvbfLKx1Qw877ZHdo9cPA=
-github.com/boschglobal/dse.schemas/code/go/dse v1.2.11/go.mod h1:1pxTw2DGf81svt1NZrzbn7kE7l1fsOjEmDpqKdEHl2Q=
+github.com/boschglobal/dse.schemas/code/go/dse v1.2.12 h1:Jwg8ZE7+jl6hat5TnwXNR24hGYeKjUgEWdeasbSO+WE=
+github.com/boschglobal/dse.schemas/code/go/dse v1.2.12/go.mod h1:1pxTw2DGf81svt1NZrzbn7kE7l1fsOjEmDpqKdEHl2Q=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/goccy/go-yaml v1.15.13 h1:Xd87Yddmr2rC1SLLTm2MNDcTjeO/GYo0JGiww6gSTDg=
