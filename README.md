@@ -20,6 +20,7 @@ L- dsl            DSL parser (usingChevrotain).
 L- lsp            VS Code Language Server.
 L- examples       Examples for learning about the DSE DSP.
   L- openloop     Open Loop simulation, using FMU based Linear Equation model.
+  L- notebook     Notebook base simulation example, running the Open Loop simulation.
 L- licenses       Third Party Licenses.
 ```
 
@@ -32,6 +33,7 @@ L- licenses       Third Party Licenses.
 ### Examples
 
 * [Open Loop Simulation Example](examples/openloop/README.md)
+* [Notebook Based Simulation Example](examples/notebook/README.md)
 
 
 ### Running ModelC Example Simulations

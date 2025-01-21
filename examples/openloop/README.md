@@ -41,7 +41,38 @@ $ asammdf --measurements out/sim/measurement.mf4
 # 3. Run the simulation again.
 $ ./openloop.sh
 ```
+__Juypter Notebook__
 
+Install Jupyter Notebook in WSL
+
+Install Jupyter using `apt`:
+```bash
+sudo apt install jupyter-notebook
+```
+Verify the installation:
+```bash
+jupyter notebook --version
+```
+
+Install the following VS Code extensions:
+
+1. Install the "Jupyter" extension (Ctrl-Shift-X, then search "Jupyter").
+
+Run Jupyter Notebooks in VSCode
+
+1. Open the existing open_loop_simulation.ipynb Jupyter Notebook file.
+2. When prompted, select the Python interpreter to use (from WSL). You can also manually select it:
+   - Press `Ctrl+Shift+P` to open the Command Palette.
+   - Type `Python: Select Interpreter` and choose your preferred Python environment in WSL.
+3. Click on any cell to start editing.
+4. Use the toolbar at the top of the file to run individual cells or the entire notebook.
+
+Run Jupyter Notebooks in Browser
+
+```bash
+jupyter notebook --no-browser --ip=0.0.0.0
+```
+open a browser and copy and paste the URL printed in the terminal output. 
 
 ### Taskfile Automation
 
