@@ -1,0 +1,43 @@
+---
+kind: Simulation
+metadata:
+  labels:
+    generator: ast convert
+    input_file: cmd/ast/testdata/dsl/model.ast.json
+spec:
+  arch: linux-amd64
+  channels:
+    - name: physical
+      networks: []
+    - name: network
+      networks:
+        - mime_type: application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1
+          name: CAN
+  stacks:
+    - models:
+        - channels:
+            - alias: scalar_vector
+              name: physical
+            - alias: network_vector
+              name: network
+          model: dse.fmi.mcl
+          name: FMU
+          workflows:
+            - name: generate
+              vars:
+                - name: model_uses
+                  reference: uses
+                  value: fmu
+                - name: model_key
+                  value: model_val
+      name: default
+  uses:
+    - name: dse.fmi
+      url: https://github.com/boschglobal/dse.fmi
+      version: v1.1.8
+    - name: fmu
+      url: https://artifactory.bosch/examples/fmu.zip
+      version: v1.0.0
+  vars:
+    - name: sim_key
+      value: sim_value

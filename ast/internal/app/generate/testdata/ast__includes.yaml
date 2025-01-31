@@ -1,0 +1,18 @@
+---
+kind: Simulation
+spec:
+  arch: linux-amd64
+
+  uses:
+    - name: dse.modelc
+      url: https://github.com/boschglobal/dse.modelc
+      version: v2.1.15
+      metadata:
+        container:
+          repository: ghcr.io/boschglobal/dse-modelc
+          image_var: MODELC_IMAGE
+          tag_var: MODELC_TAG
+
+  vars:
+    - name: sim_key
+      value: sim_value

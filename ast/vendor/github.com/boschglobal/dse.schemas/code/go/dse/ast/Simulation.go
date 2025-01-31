@@ -10,12 +10,15 @@ const (
 )
 
 type Model struct {
-	Arch      *string        `yaml:"arch,omitempty"`
-	Channels  []ModelChannel `yaml:"channels"`
-	Env       *[]Var         `yaml:"env,omitempty"`
-	Model     string         `yaml:"model"`
-	Name      string         `yaml:"name"`
-	Workflows *[]Workflow    `yaml:"workflows,omitempty"`
+	Arch      *string                 `yaml:"arch,omitempty"`
+	Channels  []ModelChannel          `yaml:"channels"`
+	Env       *[]Var                  `yaml:"env,omitempty"`
+	Files     *[]string               `yaml:"files,omitempty"`
+	Metadata  *map[string]interface{} `yaml:"metadata,omitempty"`
+	Model     string                  `yaml:"model"`
+	Name      string                  `yaml:"name"`
+	Uses      string                  `yaml:"uses"`
+	Workflows *[]Workflow             `yaml:"workflows,omitempty"`
 }
 type ModelChannel struct {
 	Alias string `yaml:"alias"`
@@ -50,10 +53,11 @@ type Stack struct {
 	Stacked *bool   `yaml:"stacked,omitempty"`
 }
 type Uses struct {
-	Name    string  `yaml:"name"`
-	Path    *string `yaml:"path,omitempty"`
-	Url     string  `yaml:"url"`
-	Version *string `yaml:"version,omitempty"`
+	Metadata *map[string]interface{} `yaml:"metadata,omitempty"`
+	Name     string                  `yaml:"name"`
+	Path     *string                 `yaml:"path,omitempty"`
+	Url      string                  `yaml:"url"`
+	Version  *string                 `yaml:"version,omitempty"`
 }
 type Var struct {
 	Name      string        `yaml:"name"`

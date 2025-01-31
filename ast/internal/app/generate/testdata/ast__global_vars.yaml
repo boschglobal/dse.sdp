@@ -1,0 +1,8 @@
+---
+kind: Simulation
+spec:
+  arch: linux-amd86
+
+  vars:
+    - name: sim_key
+      value: sim_value

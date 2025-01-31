@@ -29,7 +29,7 @@ install: build
 
 .PHONY: test
 test:
-	go test ./...
+	go test ./... -v
 	go test ./cmd/... -tags test_e2e
 
 .PHONY: format

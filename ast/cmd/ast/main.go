@@ -11,11 +11,13 @@ import (
 
 	"github.boschdevcloud.com/fsil/fsil.go/command"
 	"github.com/boschglobal/dse.sdp/ast/internal/app/convert"
+	"github.com/boschglobal/dse.sdp/ast/internal/app/generate"
 )
 
 var cmds = []command.CommandRunner{
 	command.NewHelpCommand("help"),
 	convert.NewConvertCommand("convert"),
+	generate.NewGenerateCommand("generate"),
 }
 
 var usage = `
@@ -24,6 +26,9 @@ AST Tools for generating and converting Simulation AST objects/files.
 Usage:
 
     ast <command> [option]
+
+    ast convert -input example/ast.json -output example/ast.yaml
+    ast generate -input example/ast.yaml -output example/sim
 
 `
 
