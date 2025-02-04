@@ -1,0 +1,46 @@
+graphdrop --all
+
+# Import the Model YAML file.
+import $WORK/model.yaml
+
+# Run the FSIL graphq command to match query and optional match count from imported file.
+graphq $WORK/match_queryname.cyp 1 '{"file_name":"model.yaml", "model_name":"Network"}'
+graphq $WORK/match_queryspec.cyp 1 '{"os":"linux", "path":"lib/network.so", "arch":"amd64"}'
+graphq $WORK/match_queryaliasselector.cyp 1 '{"alias":"signal_channel", "selector_name":"channel", "selector_value":"signal_vector"}'
+graphq $WORK/match_queryaliasselector.cyp 1 '{"alias":"network_channel", "selector_name":"channel","selector_value":"network_vector"}'
+
+
+# Create Model Yaml.
+-- model.yaml --
+---
+kind: Model
+metadata:
+  name: Network
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/network.so
+  channels:
+    - alias: signal_channel
+      selectors:
+        channel: signal_vector
+    - alias: network_channel
+      selectors:
+        channel: network_vector
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(md:Model)
+WHERE fl.name = $file_name AND md.name = $model_name
+RETURN fl, contains, md
+
+-- match_queryspec.cyp --
+MATCH (rn:Runtime)-[has:Has]->(dl:Dynlib)
+WHERE dl.os = $os AND dl.path = $path AND dl.arch = $arch
+RETURN rn, has, dl
+
+-- match_queryaliasselector.cyp --
+MATCH (md:Model)-[has:Has]->(sel:Selector)
+WHERE sel.channelAlias = $alias AND sel.selectorName = $selector_name AND sel.selectorValue = $selector_value
+RETURN md, has, sel

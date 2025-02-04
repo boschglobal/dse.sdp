@@ -1,0 +1,8 @@
+frames:
+  engine_status:
+    cycle_time_ms: 20
+    frame_id: 400
+    frame_length: 2
+    is_can_fd: false
+    is_container: false
+    is_extended_frame: false

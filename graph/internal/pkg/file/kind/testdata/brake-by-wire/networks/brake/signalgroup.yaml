@@ -1,0 +1,25 @@
+---
+kind: SignalGroup
+metadata:
+  labels:
+    channel: signal_vector
+  name: brake
+spec:
+  signals:
+    - signal: brake_pedal_pos
+    - signal: brake_pedal_pos_ac
+    - signal: brake_force
+---
+kind: SignalGroup
+metadata:
+  annotations:
+    vector_type: binary
+  labels:
+    channel: network_vector
+  name: brake
+spec:
+  signals:
+    - annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=1; interface_id=1
+        network: brake
+      signal: can

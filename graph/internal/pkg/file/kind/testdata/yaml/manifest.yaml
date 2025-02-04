@@ -1,0 +1,71 @@
+---
+kind: Manifest
+metadata:
+  name: fruity
+  labels:
+    banana: potato
+  annotations:
+    cherry: carrot
+spec:
+  repos:
+    - name: string
+      repo: string
+      path: string
+      registry: string
+      user: string
+      token: string
+  tools:
+    - name: string
+      version: string
+      repo: string
+      arch:
+        - string
+      schema: string
+  models:
+    - name: string
+      version: string
+      repo: string
+      arch: string
+      schema: string
+      channels:
+        - name: string
+          alias: string
+          expectedModelCount: 0
+          selectors:
+            property1: string
+  simulations:
+    - name: string
+      parameters:
+        transport: redispubsub
+        environment:
+          property1: string
+      files:
+        - name: string
+          uri: string
+          repo: string
+          processing: string
+          generate: string
+          modelc: true
+      models:
+        - name: string
+          model: string
+          channels:
+            - name: string
+              alias: string
+              expectedModelCount: 0
+              selectors:
+                property1: string
+          files:
+            - name: string
+              uri: string
+              repo: string
+              processing: string
+              generate: string
+              modelc: true
+  documentation:
+    - name: string
+      uri: string
+      repo: string
+      processing: string
+      generate: string
+      modelc: true

@@ -1,0 +1,57 @@
+graphdrop --all
+
+# Import the Simulatiom YAML file.
+import $WORK/simulation.yaml
+
+# Run the FSIL graphq command to match query and optional match count from imported file.
+graphq $WORK/match_queryname.cyp 1 '{"file_name":"simulation.yaml", "name":"project"}'
+
+
+# Create SignalGroup Yaml
+-- simulation.yaml --
+---
+kind: Simulation
+metadata:
+  name: project
+  annotations:
+    input: somefile.json
+    generator: parse2ast
+spec:
+  arch: linux-amd64
+  channels:
+    - name: physical
+    - name: network
+      networks:
+        - name: CAN
+          mime_type: application/x
+  uses:
+    - name: model.linear
+      url: https://github.com/boschglobal/dse.fmi
+      version: 1.1.15
+      path: model/linear/path
+  vars:
+    - name: enable
+      value: true
+  stacks:
+    - name: stack_name
+      stacked: true
+      arch: linux-amd64
+      models:
+        - name: linear
+          model: model.linear
+          channels:
+            - name: physical
+              alias: scalar
+          env:
+            - name: SIMBUS_LOGLEVEL
+              value: 4
+          workflows:
+            - name: generate-fmimcl
+              vars:
+                - name: FMU_DIR
+                  value: '{{.PATH}}/fmu'
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(sim:Simulation)
+WHERE fl.name = $file_name AND sim.name = $name
+RETURN fl, contains, sim

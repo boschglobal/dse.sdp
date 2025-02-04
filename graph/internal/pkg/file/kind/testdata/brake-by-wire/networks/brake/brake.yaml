@@ -1,0 +1,15 @@
+frames:
+  brake_status:
+    cycle_time_ms: 10
+    frame_id: 501
+    frame_length: 1
+    is_can_fd: false
+    is_container: false
+    is_extended_frame: false
+  pedal_status:
+    cycle_time_ms: 10
+    frame_id: 500
+    frame_length: 2
+    is_can_fd: false
+    is_container: false
+    is_extended_frame: false

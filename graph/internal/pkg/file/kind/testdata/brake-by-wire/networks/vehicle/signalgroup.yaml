@@ -1,0 +1,24 @@
+---
+kind: SignalGroup
+metadata:
+  labels:
+    channel: signal_vector
+  name: vehicle
+spec:
+  signals:
+    - signal: check_engine_set
+    - signal: check_engine_clear
+---
+kind: SignalGroup
+metadata:
+  annotations:
+    vector_type: binary
+  labels:
+    channel: network_vector
+  name: vehicle
+spec:
+  signals:
+    - annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=1
+        network: vehicle
+      signal: can

@@ -6,4 +6,5 @@ out/
 node_modules/
 .task/
 
+*.cyp
 package-lock.json

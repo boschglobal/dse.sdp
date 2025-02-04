@@ -1,0 +1,13 @@
+# Ensure the graph is empty.
+exec graph drop --all 
+
+# Add some nodes to the graph.
+graphquery 'CREATE (foo {name: ''Foo''})-[r:FOLLOWS]->(bar {name: ''Bar''})'
+
+# Run the FSIL Graph command.
+exec graph drop --all 
+exec graph export drop.cyp
+exists drop.cyp
+! filecontains drop.cyp 'CREATE (n:_IMPORT_ID {name: ''Foo'','
+! filecontains drop.cyp 'CREATE (n:_IMPORT_ID {name: ''Bar'','
+! filecontains drop.cyp 'CREATE (n)-[:FOLLOWS {}]->(m)'

@@ -1,0 +1,40 @@
+kind: Network
+metadata:
+  annotations:
+    message_lib: networks/brake/message.so
+  name: brake
+spec:
+  messages:
+    - annotations:
+        cycle_time_ms: 10
+        frame_id: 500
+        frame_length: 2
+        frame_type: 0
+        struct_name: brake_pedal_status_t
+        struct_size: "8"
+      message: pedal_status
+      signals:
+        - annotations:
+            struct_member_name: brake_pedal_pos
+            struct_member_offset: 0
+            struct_member_primitive_type: int8_t
+          signal: brake_pedal_pos
+        - annotations:
+            struct_member_name: brake_pedal_pos_ac
+            struct_member_offset: 1
+            struct_member_primitive_type: int8_t
+          signal: brake_pedal_pos_ac
+    - annotations:
+        cycle_time_ms: 10
+        frame_id: 501
+        frame_length: 1
+        frame_type: 0
+        struct_name: brake_brake_status_t
+        struct_size: "8"
+      message: brake_status
+      signals:
+        - annotations:
+            struct_member_name: brake_force
+            struct_member_offset: 0
+            struct_member_primitive_type: int8_t
+          signal: brake_force

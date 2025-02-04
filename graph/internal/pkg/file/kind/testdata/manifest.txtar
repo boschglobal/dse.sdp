@@ -1,0 +1,108 @@
+graphdrop --all
+
+# Import the Manifest YAML file.
+import $WORK/manifest.yaml
+
+
+# Run the FSIL graphq command to match query and optional match count from imported file.
+graphq $WORK/match_queryname.cyp 1 '{"file_name":"manifest.yaml", "manifest_name":"fruity"}'
+graphq $WORK/match_queryrepo.cyp 1 '{"name":"tools_dse", "user":"$AR_USER", "token":"$AR_TOKEN"}'
+graphq $WORK/match_querytool.cyp 1 '{"name":"modelc", "version":"0.11.41", "repo":"tools_dse"}'
+graphq $WORK/match_querymodel.cyp 1 '{"name":"simbus", "version":"0.11.41", "repo":"tools_dse", "arch":"linux-amd64"}'
+graphq $WORK/match_querysimulation.cyp 1 '{"name":"esp", "transport":"redispubsub"}'
+graphq $WORK/match_querydocumentation.cyp 1 '{"name":"foo.txt", "uri":"../examples/manifest/files/foo.txt", "repo":"models_dse"}'
+
+
+# Create Manifest Yaml
+-- manifest.yaml --
+---
+kind: Manifest
+metadata:
+  name: fruity
+  labels:
+    banana: potato
+  annotations:
+    cherry: carrot
+spec:
+  repos:
+    - name: tools_dse
+      user: $AR_USER
+      token: $AR_TOKEN
+  tools:
+    - name: modelc
+      version: 0.11.41
+      repo: tools_dse
+      arch:
+        - linux-amd64
+      schema: string
+  models:
+    - name: simbus
+      version: 0.11.41
+      repo: tools_dse
+      arch: linux-amd64
+      schema: manifest
+      channels:
+        - name: E2M_M2E
+          alias: input
+          expectedModelCount: 0
+          selectors:
+            channel: string
+  simulations:
+    - name: esp
+      parameters:
+        transport: redispubsub
+        environment:
+          property1: string
+      files:
+        - name: bar.txt
+          uri: ../examples/manifest/files/bar.txt
+          repo: tools_dse
+          processing: string
+          generate: |
+            mkdir -p $(dirname {{.FILEPATH}})
+          modelc: true
+      models:
+        - name: string
+          model: string
+          channels:
+            - name: string
+              alias: string
+              expectedModelCount: 0
+              selectors:
+                property1: string
+  documentation:
+    - name: foo.txt
+      uri: ../examples/manifest/files/foo.txt
+      repo: models_dse
+      modelc: true
+
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(mn:Manifest)
+WHERE fl.name = $file_name AND mn.name = $manifest_name
+RETURN fl, contains, mn
+
+-- match_queryrepo.cyp --
+MATCH (mn:Manifest)-[has:Has]->(rp:Repo)
+WHERE rp.name = $name AND rp.user = $user and rp.token = $token
+RETURN mn, has, rp
+
+-- match_querytool.cyp --
+MATCH (mn:Manifest)-[has:Has]->(tl:Tool)
+WHERE tl.name = $name AND tl.version = $version AND tl.repo = $repo
+RETURN mn, has, tl
+
+-- match_querymodel.cyp --
+MATCH (mn:Manifest)-[has:Has]->(md:Model)
+WHERE md.name = $name AND md.version = $version AND md.repo = $repo AND md.arch = $arch
+RETURN mn, has, md
+
+-- match_querysimulation.cyp --
+MATCH (mn:Manifest)-[has:Has]->(sim:Simulation)
+WHERE sim.name = $name AND sim.transport = $transport
+RETURN mn, has, sim
+
+-- match_querydocumentation.cyp --
+MATCH (mn:Manifest)-[has:Has]->(doc:Documentation)
+WHERE doc.name = $name AND doc.uri = $uri AND doc.repo = $repo
+RETURN mn, has, doc

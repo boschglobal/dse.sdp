@@ -1,0 +1,26 @@
+kind: Network
+metadata:
+  annotations:
+    message_lib: networks/vehicle/message.so
+  name: vehicle
+spec:
+  messages:
+    - annotations:
+        cycle_time_ms: 20
+        frame_id: 400
+        frame_length: 2
+        frame_type: 0
+        struct_name: vehicle_engine_status_t
+        struct_size: "8"
+      message: engine_status
+      signals:
+        - annotations:
+            struct_member_name: check_engine_set
+            struct_member_offset: 0
+            struct_member_primitive_type: int8_t
+          signal: check_engine_set
+        - annotations:
+            struct_member_name: check_engine_clear
+            struct_member_offset: 1
+            struct_member_primitive_type: int8_t
+          signal: check_engine_clear

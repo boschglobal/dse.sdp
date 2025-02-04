@@ -1,0 +1,142 @@
+# Ensure that graph is empty.
+exec graph drop --all
+
+# Import OpenLoop Example.
+exec graph import $WORK/test.yaml
+
+# Run the graphq command.
+graphq $WORK/match_querystack.cyp 3 '{"name":"openloop", "model1":"linear", "model_name1":"linear", "model2":"Csv", "model_name2":"input", "model3":"simbus", "model_name3":"simbus"}'
+graphq $WORK/match_querymodel.cyp 1 '{"model1":"simbus", "model2":"Csv", "alias":"scalar", "selectorName":"channel", "selectorValue":"scalar_channel"}'
+graphq $WORK/match_querymodel_dynlib.cyp 1 '{"model":"Csv", "arch":"amd64", "os":"linux", "path":"model/input/lib/libcsv.so"}'
+graphq $WORK/match_querysiggrp.cyp 2 '{"name":"scalar_channel", "label_name1":"channel", "label_value1":"signal_vector", "label_name2":"model", "label_value2":"input"}'
+graphq $WORK/match_querysiggrp_signals.cyp 3 '{"name":"scalar_channel", "signal1":"offset", "signal2":"factor", "signal3":"input"}'
+
+
+-- test.yaml --
+---
+kind: Stack
+metadata:
+  name: openloop
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 5
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 5
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: physical
+          expectedModelCount: 2
+        - name: Network
+          expectedModelCount: 1
+
+    - name: input
+      uid: 24
+      model:
+        name: Csv
+      channels:
+        - name: physical
+          alias: scalar
+          selectors:
+            model: input
+            channel: signal_vector
+      runtime:
+        env:
+          # These values can be set by simer option: simer -env input:CSV_FILE=somefile.csv
+          CSV_FILE: model/input/data/input.csv
+          SIMBUS_LOGLEVEL: 5
+        files:
+          - model/input/data/signalgroup.yaml
+
+    - name: linear
+      uid: 42
+      model:
+        name: linear
+      channels:
+        - name: physical
+          alias: signal_channel
+          selectors:
+            model: linear
+            channel: signal_vector
+        - name: Network
+          alias: network_channel
+          selectors:
+            model: linear
+            channel: network_vector
+      runtime:
+        env:
+          SIMBUS_LOGLEVEL: 4
+        files:
+          - model/linear/data/signalgroup.yaml
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: Model
+metadata:
+  name: Csv
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: model/input/lib/libcsv.so
+  channels:
+    - alias: scalar
+      selectors:
+        channel: scalar_channel
+---
+kind: SignalGroup
+metadata:
+  name: scalar_channel
+  labels:
+    model: input
+    channel: signal_vector
+spec:
+  signals:
+    - signal: input
+    - signal: factor
+    - signal: offset
+
+
+-- match_querystack.cyp --
+MATCH (fl:File)-[contains:Contains]->(st:Stack)
+WHERE st.name = $name
+MATCH (st:Stack)-[has:Has]->(mi:ModelInst)
+WHERE (mi.model = $model1 AND mi.name = $model_name1) OR (mi.model = $model2 AND mi.name = $model_name2) OR (mi.model = $model3 AND mi.name = $model_name3)
+RETURN fl, contains, st, has, mi
+
+-- match_querymodel.cyp --
+MATCH (fl:File)-[contains:Contains]->(md:Model)
+WHERE md.name = $model1 OR md.name = $model2
+MATCH (md:Model)-[has:Has]->(s:Selector)
+WHERE s.channelAlias = $alias AND s.selectorName = $selectorName AND s.selectorValue = $selectorValue
+RETURN fl, contains, md, has, s
+
+-- match_querymodel_dynlib.cyp --
+MATCH (fl:File)-[contains:Contains]->(md:Model)
+WHERE md.name = $model
+MATCH (md:Model)-[hasruntime:Has]->(rt:Runtime)-[hasdynLib:Has]->(dl:Dynlib)
+WHERE dl.arch = $arch AND dl.os = $os AND dl.path = $path
+RETURN fl, contains, md, hasruntime, hasdynLib
+
+-- match_querysiggrp.cyp --
+MATCH (fl:File)-[contains:Contains]->(sg:SignalGroup)
+WHERE sg.signalgroup_name = $name
+MATCH (sg:SignalGroup)-[rep:Represents]->(lb:Label)
+WHERE (lb.label_name = $label_name1 AND lb.label_value = $label_value1) OR (lb.label_name = $label_name2 AND lb.label_value = $label_value2)
+RETURN fl, contains, sg, rep, lb
+
+-- match_querysiggrp_signals.cyp --
+MATCH (fl:File)-[contains:Contains]->(sg:SignalGroup)
+WHERE sg.signalgroup_name = $name
+MATCH (sg:SignalGroup)-[con:Contains]->(sig:Signal)
+WHERE sig.name = $signal1 OR sig.name = $signal2 OR sig.name = $signal3
+RETURN fl, contains, sg, sig, con

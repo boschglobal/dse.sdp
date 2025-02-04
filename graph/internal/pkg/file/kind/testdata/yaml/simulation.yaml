@@ -1,0 +1,44 @@
+---
+kind: Simulation
+metadata:
+  name: project
+  annotations:
+    input: somefile.json
+    generator: parse2ast
+spec:
+  simulation:
+    arch: linux-amd64
+    channels:
+      - name: physical
+      - name: network
+        networks:
+          - name: CAN
+            mime_type: application/x
+    uses:
+      - name: model.linear
+        url: https://github.com/boschglobal/dse.fmi
+        version: 1.1.15
+        path: model/linear/path
+    vars:
+      - name: enable
+        value: true
+    stacks:
+      - name: stack_name
+        stacked: true
+        arch: linux-amd64
+        models:
+          - name: linear                            # :AST:Model <-Represents[name==name]- :KIND:ModelInstance --> :KIND:Model
+            model: model.linear                     # :AST:Model -[model==name]-> :AST:Uses
+            channels:         # :AST:ModelChannel -Connects-> :AST:SimulationChannel (a post query, based on name==name)
+              - name: physical                      # :AST:SimulationChannel <-[name=name]- :KIND:Channel
+                alias: scalar                       # :AST:Model --> :AST:ModelChannel -[name=name]-> :AST:SimulationChannel
+                                                    # example emergent relationship
+                                                    #   :AST:ModelChannel --------> :KIND:Model -[Alias.name == alias] -> :Kind:Channel
+            env:
+              - name: SIMBUS_LOGLEVEL
+                value: 4
+            workflows:
+              - name: generate-fmimcl
+                vars:
+                  - name: FMU_DIR
+                    value: '{{.PATH}}/fmu'

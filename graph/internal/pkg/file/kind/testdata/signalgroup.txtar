@@ -1,0 +1,57 @@
+graphdrop --all
+
+# Run the FSIL graphq command to create and match query and optional match count.
+graphq $WORK/create_newfile.cyp '{"file_name":"newfile.yaml", "file_type":"yaml"}'
+graphq $WORK/match_newfile.cyp 1 '{"name":"newfile.yaml", "type":"yaml"}'
+
+graphdrop --all
+
+# Import the SignalGroup YAML file.
+import $WORK/signalgroup.yaml
+
+# Run the FSIL graphq command to match query and optional match count from imported file.
+graphq $WORK/match_queryname.cyp 1 '{"file_name":"signalgroup.yaml", "signalgroup_name":"E2M_M2E", "channel_name":"E2M_M2E"}'
+graphq $WORK/match_queryname.cyp 0 '{"file_name":"signalgroup.yaml", "signalgroup_name":"E2M_M2E", "channel_name":"Wrong_Channel"}'
+graphq $WORK/match_querysignals.cyp 2 '{"signal1_name":"E2M_SIL_MV1A_Duty3", "signal2_name":"E2M_SIL_MV1A_Current3", "signal1_direction":"output", "signal2_direction":"output"}'
+graphq $WORK/match_querysignals.cyp 1 '{"signal1_name":"E2M_SIL_MV1A_Duty3", "signal2_name":"Wrong_Signal", "signal1_direction":"output", "signal2_direction":"output"}'
+
+
+# Create SignalGroup Yaml
+-- signalgroup.yaml --
+---
+kind: SignalGroup
+metadata:
+  name: E2M_M2E
+  labels:
+    channel: E2M_M2E
+spec:
+  signals:
+  - annotations:
+      propagator_direction: output
+    direction: output
+    signal: E2M_SIL_MV1A_Duty3
+  - annotations:
+      propagator_direction: output
+    direction: output
+    signal: E2M_SIL_MV1A_Current3
+
+-- create_newfile.cyp --
+CREATE (fl:File {name: $file_name, type: $file_type})
+RETURN fl
+
+-- match_newfile.cyp --
+MATCH (file:File)
+WHERE file.name = $name AND file.type = $type
+RETURN file
+
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(sg:SignalGroup)
+WHERE fl.name = $file_name AND sg.signalgroup_name = $signalgroup_name AND  sg.labels.channel = $channel_name
+RETURN fl, contains, sg
+
+-- match_querysignals.cyp --
+MATCH (sg:SignalGroup)-[contains:Contains]->(sig:Signal)
+WHERE (sig.name = $signal1_name AND sig.annotations.propagator_direction = $signal1_direction)
+  OR (sig.name = $signal2_name AND sig.annotations.propagator_direction = $signal2_direction)
+RETURN sg, contains, sig

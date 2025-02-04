@@ -1,0 +1,98 @@
+graphdrop --all
+
+# Import the Network YAML file.
+import $WORK/network.yaml
+
+# Run the FSIL graphq command to match query and optional match count from imported file.
+graphq $WORK/match_queryname.cyp 1 '{"file_name":"network.yaml", "network_name":"stub"}'
+graphq $WORK/match_querymessages.cyp 2 '{"message_name1":"example_message", "message_name2":"function_example", "signal1":"foo", "signal2":"bar"}'
+graphq $WORK/match_queryencode.cyp 2 '{"function1":"crc_generate", "position1":0, "function2":"counter_inc_uint8", "position2":1}'
+graphq $WORK/match_querydecode.cyp 1 '{"function":"crc_validate", "position":0}'
+
+
+# Create Network Yaml.
+-- network.yaml --
+---
+kind: Network
+metadata:
+  annotations:
+    bus_id: 4
+    function_lib: examples/stub/lib/function__ut.so
+    interface_id: 3
+    message_lib: examples/stub/lib/message.so
+    node_id: 2
+  labels: {}
+  name: stub
+spec:
+  messages:
+    - annotations:
+        frame_id: 0x1f0
+        frame_length: 8
+        frame_type: 0
+        struct_name: stub_example_message_t
+        struct_size: 8
+      message: example_message
+      signals:
+        - annotations:
+            struct_member_name: enable
+            struct_member_offset: 0
+            struct_member_primitive_type: uint8_t
+          signal: enable
+        - annotations:
+            init_value: 1.0
+            struct_member_name: average_radius
+            struct_member_offset: 1
+            struct_member_primitive_type: uint8_t
+          signal: average_radius
+    - annotations:
+        frame_id: 0x1f2
+        frame_length: 8
+        frame_type: 0
+        struct_name: stub_function_example_t
+        struct_size: 8
+      functions:
+        encode:
+          - function: counter_inc_uint8
+            annotations:
+              position: 1
+          - function: crc_generate
+            annotations:
+              position: 0
+        decode:
+          - function: crc_validate
+            annotations:
+              position: 0
+      message: function_example
+      signals:
+        - annotations:
+            struct_member_name: foo
+            struct_member_offset: 2
+            struct_member_primitive_type: uint8_t
+          signal: foo
+        - annotations:
+            struct_member_name: bar
+            struct_member_offset: 3
+            struct_member_primitive_type: uint8_t
+          signal: bar
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(net:Network)
+WHERE fl.name = $file_name AND net.name = $network_name
+RETURN fl, contains, net
+
+-- match_querymessages.cyp --
+MATCH (net:Network)-[hasMessage:Has]->(ms:Messages)
+WHERE ms.message = $message_name1 OR ms.message = $message_name2
+MATCH (ms:Messages)-[hasSignal:Has]->(sig:Signals)
+WHERE sig.signal = $signal1 OR sig.signal = $signal2
+RETURN net, hasMessage, hasSignal, ms, sig
+
+-- match_queryencode.cyp --
+MATCH (fn:Functions)-[has:Has]->(en:Encode)
+WHERE (en.function = $function1 AND en.annotations.position = $position1) OR (en.function = $function2 AND en.annotations.position = $position2)
+RETURN fn, has, en
+
+-- match_querydecode.cyp --
+MATCH (fn:Functions)-[has:Has]->(de:Decode)
+WHERE de.function = $function AND de.annotations.position = $position
+RETURN fn, has, de

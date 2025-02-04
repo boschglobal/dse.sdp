@@ -1,0 +1,71 @@
+graphdrop --all
+
+# Import the Stack YAML file.
+import $WORK/stack.yaml
+
+# Run the FSIL graphq command to match query and optional match count from imported file.
+graphq $WORK/match_queryname.cyp 1 '{"file_name":"stack.yaml", "stack_name":"stack"}'
+graphq $WORK/match_querymodels.cyp 2 '{"mi1_name":"simbus", "mi2_name":"stub_inst", "mi2_uid":42}'
+graphq $WORK/match_querychannel.cyp 1 '{"ch_name":"signal", "alias_name":"signal_channel"}'
+graphq $WORK/match_querychannel.cyp 1 '{"ch_name":"network", "alias_name":"network_channel"}'
+graphq $WORK/match_queryselector.cyp 1 '{"selector_name":"channel", "selector_value":"signal_vector", "identifies_alias":"signal_channel"}'
+graphq $WORK/match_queryselector.cyp 1 '{"selector_name":"channel", "selector_value":"network_vector", "identifies_alias":"network_channel"}'
+
+
+# Create Stack Yaml
+-- stack.yaml --
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: signal
+          expectedModelCount: 1
+        - name: network
+          expectedModelCount: 1
+    - name: stub_inst
+      uid: 42
+      model:
+        name: Network
+      metadata:
+        network: stub
+      channels:
+        - name: signal
+          alias: signal_channel
+          selectors:
+            channel: signal_vector
+        - name: network
+          alias: network_channel
+          selectors:
+            channel: network_vector
+
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(st:Stack)
+WHERE fl.name = $file_name AND st.name = $stack_name
+RETURN fl, contains, st
+
+-- match_querymodels.cyp --
+MATCH (st:Stack)-[has:Has]->(mi:ModelInst)
+WHERE mi.name = $mi1_name OR mi.name = $mi2_name AND mi.uid = $mi2_uid
+RETURN st, has, mi
+
+-- match_querychannel.cyp --
+MATCH (mi:ModelInst)-[al:Alias]->(ch:Channel)
+WHERE al.name = $alias_name AND ch.name = $ch_name
+RETURN mi, al, ch
+
+-- match_queryselector.cyp --
+MATCH (sel:Selector)-[id:Identifies]->(ch:Channel)
+WHERE sel.selectorName = $selector_name AND sel.selectorValue = $selector_value AND id.alias = $identifies_alias
+RETURN sel, id, ch

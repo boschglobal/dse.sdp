@@ -1,0 +1,482 @@
+# Import the Brake by wire simulation YAML file.
+
+graphdropall
+
+import $WORK/simulation.yaml
+import $WORK/brake_signalgroup.yaml
+import $WORK/brake_network.yaml
+import $WORK/vehicle_signalgroup.yaml
+import $WORK/vehicle_network.yaml
+import $WORK/model_brake.yaml
+import $WORK/model_driver.yaml
+import $WORK/model_network.yaml
+import $WORK/model_pedal.yaml
+import $WORK/model_safety.yaml
+
+graphq $WORK/match_queryname.cyp 1 '{}'
+
+
+-- simulation.yaml --
+---
+kind: Stack
+metadata:
+  name: brake-by-wire
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 3
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: hmi
+          expectedModelCount: 2
+        - name: model
+          expectedModelCount: 2
+        - name: network
+          expectedModelCount: 2
+        - name: physical
+          expectedModelCount: 4
+        - name: vehicle
+          expectedModelCount: 3
+        - name: wire
+          expectedModelCount: 2
+    - name: brake
+      uid: 101
+      model:
+        name: Brake
+      channels:
+        - name: model
+          alias: model
+        - name: physical
+          alias: physical
+        - name: wire
+          alias: wire
+    - name: driver
+      uid: 102
+      model:
+        name: Driver
+      channels:
+        - name: hmi
+          alias: hmi
+        - name: vehicle
+          alias: vehicle
+    - name: pedal
+      uid: 103
+      model:
+        name: Pedal
+      channels:
+        - name: hmi
+          alias: hmi
+        - name: physical
+          alias: physical
+        - name: wire
+          alias: wire
+    - name: safety
+      uid: 104
+      model:
+        name: Safety
+      channels:
+        - name: model
+          alias: model
+        - name: physical
+          alias: physical
+        - name: vehicle
+          alias: vehicle
+    - name: net_brake
+      uid: 201
+      model:
+        name: Network
+      runtime:
+        files:
+          - networks/brake/network.yaml
+          - networks/brake/signalgroup.yaml
+      metadata:
+        network: brake
+      channels:
+        - name: physical
+          alias: signal_channel
+          selectors:
+            channel: signal_vector
+        - name: network
+          alias: network_channel
+          selectors:
+            channel: network_vector
+    - name: net_vehicle
+      uid: 202
+      model:
+        name: Network
+      runtime:
+        files:
+          - networks/vehicle/network.yaml
+          - networks/vehicle/signalgroup.yaml
+      metadata:
+        network: vehicle
+      channels:
+        - name: vehicle
+          alias: signal_channel
+          selectors:
+            channel: vehicle_signal_vector
+        - name: network
+          alias: network_channel
+          selectors:
+            channel: network_vector
+---
+kind: Model
+metadata:
+  name: simbus
+
+
+-- brake_network.yaml --
+kind: Network
+metadata:
+  annotations:
+    message_lib: networks/brake/message.so
+  name: brake
+spec:
+  messages:
+    - annotations:
+        cycle_time_ms: 10
+        frame_id: 500
+        frame_length: 2
+        frame_type: 0
+        struct_name: brake_pedal_status_t
+        struct_size: "8"
+      message: pedal_status
+      signals:
+        - annotations:
+            struct_member_name: brake_pedal_pos
+            struct_member_offset: 0
+            struct_member_primitive_type: int8_t
+          signal: brake_pedal_pos
+        - annotations:
+            struct_member_name: brake_pedal_pos_ac
+            struct_member_offset: 1
+            struct_member_primitive_type: int8_t
+          signal: brake_pedal_pos_ac
+    - annotations:
+        cycle_time_ms: 10
+        frame_id: 501
+        frame_length: 1
+        frame_type: 0
+        struct_name: brake_brake_status_t
+        struct_size: "8"
+      message: brake_status
+      signals:
+        - annotations:
+            struct_member_name: brake_force
+            struct_member_offset: 0
+            struct_member_primitive_type: int8_t
+          signal: brake_force
+
+
+-- brake_signalgroup.yaml --
+---
+kind: SignalGroup
+metadata:
+  labels:
+    channel: signal_vector
+  name: brake
+spec:
+  signals:
+    - signal: brake_pedal_pos
+    - signal: brake_pedal_pos_ac
+    - signal: brake_force
+---
+kind: SignalGroup
+metadata:
+  annotations:
+    vector_type: binary
+  labels:
+    channel: network_vector
+  name: brake
+spec:
+  signals:
+    - annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=1; interface_id=1
+        network: brake
+      signal: can
+
+
+-- vehicle_signalgroup.yaml --
+---
+kind: SignalGroup
+metadata:
+  labels:
+    channel: vehicle_signal_vector
+  name: vehicle
+spec:
+  signals:
+    - signal: check_engine_set
+    - signal: check_engine_clear
+---
+kind: SignalGroup
+metadata:
+  annotations:
+    vector_type: binary
+  labels:
+    channel: network_vector
+  name: vehicle
+spec:
+  signals:
+    - annotations:
+        mime_type: application/x-automotive-bus; interface=stream; type=frame; bus=can; schema=fbs; bus_id=1; node_id=2; interface_id=1
+        network: vehicle
+      signal: can
+
+
+-- vehicle_network.yaml --
+kind: Network
+metadata:
+  annotations:
+    message_lib: networks/vehicle/message.so
+  name: vehicle
+spec:
+  messages:
+    - annotations:
+        cycle_time_ms: 20
+        frame_id: 400
+        frame_length: 2
+        frame_type: 0
+        struct_name: vehicle_engine_status_t
+        struct_size: "8"
+      message: engine_status
+      signals:
+        - annotations:
+            struct_member_name: check_engine_set
+            struct_member_offset: 0
+            struct_member_primitive_type: int8_t
+          signal: check_engine_set
+        - annotations:
+            struct_member_name: check_engine_clear
+            struct_member_offset: 1
+            struct_member_primitive_type: int8_t
+          signal: check_engine_clear
+
+
+-- model_brake.yaml --
+---
+kind: Model
+metadata:
+  name: Brake
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: models/brake/lib/brake.so
+  channels:
+    - alias: model
+      selectors:
+        channel: model_vector
+    - alias: physical
+      selectors:
+        channel: physical_vector
+    - alias: wire
+      selectors:
+        channel: wire_vector
+---
+kind: SignalGroup
+metadata:
+  name: model
+  labels:
+    channel: model_vector
+spec:
+  signals:
+    - signal: BrakePedalFault
+---
+kind: SignalGroup
+metadata:
+  name: physical
+  labels:
+    channel: physical_vector
+spec:
+  signals:
+    - signal: BrakePedalPos
+    - signal: BrakeForce
+---
+kind: SignalGroup
+metadata:
+  name: wire
+  labels:
+    channel: wire_vector
+spec:
+  signals:
+    - signal: BrakePedal
+
+
+-- model_driver.yaml --
+---
+kind: Model
+metadata:
+  name: Driver
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: models/driver/lib/driver.so
+  channels:
+    - alias: hmi
+      selectors:
+        channel: hmi_vector
+    - alias: vehicle
+      selectors:
+        channel: vehicle_vector
+---
+kind: SignalGroup
+metadata:
+  name: hmi
+  labels:
+    channel: hmi_vector
+spec:
+  signals:
+    - signal: BrakePedalPos
+    - signal: BrakePedalForce
+    - signal: CheckEngine
+---
+kind: SignalGroup
+metadata:
+  name: vehicle
+  labels:
+    channel: vehicle_vector
+spec:
+  signals:
+    - signal: CheckEngineSet
+    - signal: CheckEngineClear
+
+
+-- model_network.yaml --
+---
+kind: Model
+metadata:
+  name: Network
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: models/network/lib/network.so
+  channels:
+    - alias: signal_channel
+      selectors:
+        channel: signal_vector
+    - alias: network_channel
+      selectors:
+        channel: network_vector
+
+
+-- model_pedal.yaml --
+---
+kind: Model
+metadata:
+  name: Pedal
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: models/pedal/lib/pedal.so
+  channels:
+    - alias: hmi
+      selectors:
+        channel: hmi_vector
+    - alias: physical
+      selectors:
+        channel: physical_vector
+    - alias: wire
+      selectors:
+        channel: wire_vector
+---
+kind: SignalGroup
+metadata:
+  name: hmi
+  labels:
+    channel: hmi_vector
+spec:
+  signals:
+    - signal: BrakePedalPos
+    - signal: BrakePedalForce
+---
+kind: SignalGroup
+metadata:
+  name: physical
+  labels:
+    channel: physical_vector
+spec:
+  signals:
+    - signal: BrakePedalPos
+    - signal: BrakeForce
+---
+kind: SignalGroup
+metadata:
+  name: wire
+  labels:
+    channel: wire_vector
+spec:
+  signals:
+    - signal: BrakePedal
+
+
+-- model_safety.yaml --
+---
+kind: Model
+metadata:
+  name: Safety
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: models/safety/lib/safety.so
+  channels:
+    - alias: model
+      selectors:
+        channel: model_vector
+    - alias: physical
+      selectors:
+        channel: physical_vector
+    - alias: vehicle
+      selectors:
+        channel: vehicle_vector
+---
+kind: SignalGroup
+metadata:
+  name: model
+  labels:
+    channel: model_vector
+spec:
+  signals:
+    - signal: BrakePedalFault
+---
+kind: SignalGroup
+metadata:
+  name: physical
+  labels:
+    channel: physical_vector
+spec:
+  signals:
+    - signal: BrakePedalPos_AC
+---
+kind: SignalGroup
+metadata:
+  name: vehicle
+  labels:
+    channel: vehicle_vector
+spec:
+  signals:
+    - signal: CheckEngineSet
+    - signal: CheckEngineClear
+
+
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(st:Stack)
+WHERE st.name = "brake-by-wire"
+RETURN st

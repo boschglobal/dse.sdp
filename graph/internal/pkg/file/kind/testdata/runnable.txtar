@@ -1,0 +1,39 @@
+graphdrop --all
+
+# Import the Runnable YAML file.
+import $WORK/runnable.yaml
+
+# Run the FSIL graphq command to match query and optional match count from imported file.
+graphq $WORK/match_queryname.cyp 1 '{"file_name":"runnable.yaml", "runnable_name":"target"}'
+graphq $WORK/match_function.cyp 3 '{"function1":"task_init",  "schedule1":0, "function2":"task_5ms", "schedule2":5, "function3":"task_10ms", "schedule3":10}'
+
+
+# Create Runnable Yaml
+-- runnable.yaml --
+---
+kind: Runnable
+metadata:
+    annotations:
+      target_lib: examples/stub/lib/target.so
+    labels: {}
+    name: target
+spec:
+    tasks:
+        - function: task_init
+          schedule: 0
+        - function: task_5ms
+          schedule: 5
+        - function: task_10ms
+          schedule: 10
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(rn:Runnable)
+WHERE fl.name = $file_name AND rn.name = $runnable_name
+RETURN fl, contains, rn
+
+-- match_function.cyp --
+MATCH (rn:Runnable)-[has:Has]->(ts:Tasks)
+WHERE (ts.function = $function1 AND ts.schedule = $schedule1)
+OR (ts.function = $function2 AND ts.schedule = $schedule2)
+OR (ts.function = $function3 AND ts.schedule = $schedule3)
+RETURN rn, ts

@@ -1,0 +1,24 @@
+kind: Propagator
+metadata:
+  name: propagator
+  labels:
+    property1: string
+spec:
+  options:
+    direction: both
+  signals:
+    - signal: foo
+      target: bar
+      encoding:
+        linear:
+          min: 0
+          max: 10
+          factor: 0.5
+          offset: 2
+        mapping:
+          - name: map
+            source: 0.11
+            target: 0.22
+            range:
+              min: 0
+              max: 10

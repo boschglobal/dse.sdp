@@ -1,0 +1,61 @@
+graphdrop --all
+
+# Import the Propagator YAML file.
+import $WORK/propagator.yaml
+
+# Run the FSIL graphq command to match query and optional match count from imported file.
+graphq $WORK/match_queryname.cyp 1 '{"file_name":"propagator.yaml", "propagator_name":"propagator"}'
+graphq $WORK/match_queryspec.cyp 1 '{"direction":"both"}'
+graphq $WORK/match_querysignals.cyp 1 '{"signal":"foo", "target":"bar"}'
+graphq $WORK/match_queryencoding.cyp 1 '{"name":"map", "max":10, "min":0}'
+
+
+# Create Propagator Yaml
+-- propagator.yaml --
+---
+kind: Propagator
+metadata:
+  name: propagator
+  labels:
+    property1: string
+spec:
+  options:
+    direction: both
+  signals:
+    - signal: foo
+      target: bar
+      encoding:
+        linear:
+          min: 0
+          max: 10
+          factor: 0.5
+          offset: 2
+        mapping:
+          - name: map
+            source: 0.11
+            target: 0.22
+            range:
+              min: 0
+              max: 10
+
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(pr:Propagator)
+WHERE fl.name = $file_name AND pr.name = $propagator_name
+RETURN fl, contains, pr
+
+-- match_queryspec.cyp --
+MATCH (pr:Propagator)-[has:Has]->(op:Options)
+WHERE op.direction = $direction
+RETURN pr, has, op
+
+-- match_querysignals.cyp --
+MATCH (pr:Propagator)-[has:Has]->(sg:Signals)
+WHERE sg.signal = $signal AND sg.target = $target
+RETURN pr, has, sg
+
+-- match_queryencoding.cyp --
+MATCH (en:Encoding)-[hasMap:Has]->(map:Mapping)
+MATCH (en:Encoding)-[hasLinear:Has]->(ln:Linear)
+WHERE map.name = $name AND ln.max = $max AND ln.min = $min
+RETURN en, hasMap, hasLinear, map, ln

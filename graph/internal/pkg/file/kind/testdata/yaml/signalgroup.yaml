@@ -1,0 +1,16 @@
+---
+kind: SignalGroup
+metadata:
+  name: E2M_M2E
+  labels:
+    channel: E2M_M2E
+spec:
+  signals:
+  - annotations:
+      propagator_direction: output
+    direction: output
+    signal: E2M_SIL_MV1A_Duty3
+  - annotations:
+      propagator_direction: output
+    direction: output
+    signal: E2M_SIL_MV1A_Current3
