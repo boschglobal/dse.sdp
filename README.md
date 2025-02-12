@@ -52,7 +52,7 @@ $ ls out/examples/modelc/
 benchmark/  binary/  extended/  gateway/  gdb/  minimal/  ncodec/  runtime/  simer/  transform/
 
 # Run a simulation using Simer.
-$ dse-simer out/examples/minimal
+$ dse-simer out/examples/modelc/minimal
 ```
 
 > Hint: Find more information about the Simer [command options here](https://boschglobal.github.io/dse.doc/docs/user/simer/#options).
