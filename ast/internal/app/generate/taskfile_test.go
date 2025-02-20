@@ -117,6 +117,9 @@ func TestGenerateTaskfile_common_elements(t *testing.T) {
 	YamlContains(t, f, "$.tasks.unzip-dir.sources[0]", "{{.ZIP}}")
 	YamlContains(t, f, "$.tasks.unzip-dir.generates[0]", "{{.DIR}}/**")
 
+	YamlContains(t, f, "$.tasks.unzip-extract-fmu.dir", "{{.OUTDIR}}")
+	// FIXME add rest of this
+
 	YamlContains(t, f, "$.tasks.download-file.dir", "{{.OUTDIR}}")
 	YamlContains(t, f, "$.tasks.download-file.run", "when_changed")
 	YamlContains(t, f, "$.tasks.download-file.label", "dse:download-file:{{.URL}}-{{.FILE}}")
@@ -149,7 +152,7 @@ func TestGenerateTaskfile_model_modelc(t *testing.T) {
 	YamlContains(t, f, "$.tasks.model-input.vars.MODEL", "input")
 	YamlContains(t, f, "$.tasks.model-input.vars.PATH", "model/input")
 	YamlContains(t, f, "$.tasks.model-input.vars.PACKAGE_URL", "{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip")
-	YamlContains(t, f, "$.tasks.model-input.vars.PACKAGE_PATH", "ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}/examples/csv")
+	YamlContains(t, f, "$.tasks.model-input.vars.PACKAGE_PATH", "examples/csv")
 
 	YamlContains(t, f, "$.tasks.model-input.deps[0].task", "download-file")
 	YamlContains(t, f, "$.tasks.model-input.deps[0].vars.URL", "{{.PACKAGE_URL}}")
@@ -181,15 +184,56 @@ func TestGenerateTaskfile_model_modelc(t *testing.T) {
 }
 
 func TestGenerateTaskfile_model_fmu(t *testing.T) {
-	taskfileName := generateTaskfile(t, "testdata/ast.yaml")
+	taskfileName := generateTaskfile(t, "testdata/ast__model_fmu.yaml")
 	assert.FileExists(t, taskfileName)
+	f, _ := os.ReadFile(taskfileName)
+	t.Logf("\n%s\n", f)
 
-	// TODO check the content
+	YamlContains(t, f, "$.tasks.build-models.label", "build-models")
+	YamlContains(t, f, "$.tasks.build-models.deps[0].task", "model-linear")
 
-	//default
-	//build
-	//build-models .. deps/task/model-modelc
-	//model-modelc .. download-file
-	//fmu-fetch-extract
+	YamlContains(t, f, "$.tasks.model-linear.dir", "{{.OUTDIR}}")
+	YamlContains(t, f, "$.tasks.model-linear.label", "sim:model:linear")
 
+	YamlContains(t, f, "$.tasks.model-linear.vars.REPO", "https://github.com/boschglobal/dse.fmi")
+	YamlContains(t, f, "$.tasks.model-linear.vars.TAG", "1.1.20")
+	YamlContains(t, f, "$.tasks.model-linear.vars.MODEL", "linear")
+	YamlContains(t, f, "$.tasks.model-linear.vars.PATH", "model/linear")
+	YamlContains(t, f, "$.tasks.model-linear.vars.PACKAGE_URL", "{{.REPO}}/releases/download/v{{.TAG}}/Fmi-{{.TAG}}-{{.PLATFORM_ARCH}}.zip")
+	YamlContains(t, f, "$.tasks.model-linear.vars.PACKAGE_PATH", "fmimcl")
+
+	YamlContains(t, f, "$.tasks.model-linear.deps[0].task", "download-file")
+	YamlContains(t, f, "$.tasks.model-linear.deps[0].vars.URL", "{{.PACKAGE_URL}}")
+	YamlContains(t, f, "$.tasks.model-linear.deps[0].vars.FILE", "downloads/{{base .PACKAGE_URL}}")
+
+	YamlContains(t, f, "$.tasks.model-linear.deps[1].task", "download-file")
+	YamlContains(t, f, "$.tasks.model-linear.deps[1].vars.URL", "https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip")
+	YamlContains(t, f, "$.tasks.model-linear.deps[1].vars.FILE", "downloads/{{base .URL}}")
+
+	YamlContains(t, f, "$.tasks.model-linear.cmds[0]", "echo \"SIM Model linear -> {{.SIMDIR}}/{{.PATH}}\"")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[1]", "mkdir -p '{{.SIMDIR}}/{{.PATH}}/data'")
+
+	YamlContains(t, f, "$.tasks.model-linear.cmds[2].task", "unzip-file")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[2].vars.ZIP", "downloads/{{base .PACKAGE_URL}}")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[2].vars.ZIPFILE", "{{.PACKAGE_PATH}}/lib/libfmimcl.so")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[2].vars.FILE", "{{.SIMDIR}}/{{.PATH}}/lib/libfmimcl.so")
+
+	YamlContains(t, f, "$.tasks.model-linear.cmds[3].task", "unzip-extract-fmu")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[3].vars.ZIP", "downloads/Fmi-1.1.20-linux-amd64.zip")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[3].vars.FMUFILE", "examples/fmu/linear/fmi2/linear.fmu")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[3].vars.FMUDIR", "{{.SIMDIR}}/{{.PATH}}/linear_fmu")
+
+	YamlContains(t, f, "$.tasks.model-linear.cmds[4].task", "dse.fmi-v1.1.20:generate-fmimcl")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.FMU_DIR_USES_VALUE", "linear_fmu")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.FMU_DIR", "{{.SIMDIR}}/{{.PATH}}/{{.FMU_DIR_USES_VALUE}}")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.OUT_DIR", "{{.SIMDIR}}/{{.PATH}}/data")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.MCL_PATH", "{{.SIMDIR}}/{{.PATH}}/lib/libfmimcl.so")
+
+	YamlContains(t, f, "$.tasks.model-linear.generates[0]", "downloads/{{base .PACKAGE_URL}}")
+	YamlContains(t, f, "$.tasks.model-linear.generates[1]", "{{.SIMDIR}}/{{.PATH}}/lib/libfmimcl.so")
+	YamlContains(t, f, "$.tasks.model-linear.generates[2]", "downloads/Fmi-1.1.20-linux-amd64.zip")
+	YamlContains(t, f, "$.tasks.model-linear.generates[3]", "{{.SIMDIR}}/{{.PATH}}/linear_fmu")
+
+	YamlContains(t, f, "$.tasks.model-linear.generates[4]", "{{.SIMDIR}}/{{.PATH}}/data/model.yaml")
+	YamlContains(t, f, "$.tasks.model-linear.generates[5]", "{{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml")
 }

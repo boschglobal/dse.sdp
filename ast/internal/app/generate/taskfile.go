@@ -75,6 +75,11 @@ func stringPtr(s string) *string {
 	return &s
 }
 
+func cleanTag(tag string) string {
+	var clean = regexp.MustCompile(`[^0-9\.]+`)
+	return clean.ReplaceAllString(tag, "")
+}
+
 func (c GenerateCommand) GenerateTaskfile() error {
 	var taskfilePath = filepath.Join(c.outputPath, "Taskfile.yml")
 
@@ -95,6 +100,22 @@ func (c GenerateCommand) GenerateTaskfile() error {
 		},
 	}
 
+	// FIXME MCL tasks
+	//	MCL path
+	//  The FMU itself
+	//  Tasks -
+	//		Fetch FMU : from uses ... each should be downloaded
+	//		Workflows : from AST
+	// Need to know its an FMU or at least MCL ... so that the correct deps task can be selected.
+	//	TODO use the model name == dse.fmi.mcl as the selector.
+	// Then the tasks; setup MCL, run Workflow (from AST)
+	// Sources and generates ... more complex ... only partial on generates (the mcl).
+
+	// FIXME MIMEtypes on channels.
+
+	// FIXME Uses ... referenced by workflows (references: uses), part of model.
+	//		need to resolve reference_uses and generate fetch/download with version tag in path.
+
 	includes := make(map[string]Include)
 	for k, v := range c.buildIncludes() {
 		includes[k] = v
@@ -114,6 +135,8 @@ func (c GenerateCommand) GenerateTaskfile() error {
 	for k, v := range buildBaseTasks() {
 		tasks[k] = v
 	}
+
+	// FIXME need a task to correct paths in model.yaml files.
 
 	taskfile.Tasks = &tasks
 	taskfile.Includes = &includes
@@ -166,9 +189,49 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 	return includes
 }
 
-func cleanTag(tag string) string {
-	var clean = regexp.MustCompile(`[^0-9\.]+`)
-	return clean.ReplaceAllString(tag, "")
+func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
+	deps := []Dep{
+		{
+			Task: "download-file",
+			Vars: &map[string]string{
+				"URL":  "{{.PACKAGE_URL}}",
+				"FILE": "downloads/{{base .PACKAGE_URL}}",
+			},
+		},
+	}
+	cmds := []Cmd{
+		{
+			Cmd: fmt.Sprintf("echo \"SIM Model %s -> {{.SIMDIR}}/{{.PATH}}\"", model.Name),
+		},
+		{
+			Cmd: "mkdir -p '{{.SIMDIR}}/{{.PATH}}/data'",
+		},
+	}
+	sources := []string{}
+	generates := []string{
+		"downloads/{{base .PACKAGE_URL}}",
+	}
+	md := *model.Metadata
+
+	modelTask := Task{
+		Dir:   stringPtr("{{.OUTDIR}}"),
+		Label: stringPtr(fmt.Sprintf("sim:model:%s", model.Name)),
+		Vars: &map[string]string{
+			"REPO":         modelUses.Url,
+			"TAG":          cleanTag(*modelUses.Version),
+			"MODEL":        model.Name,
+			"PATH":         fmt.Sprintf("model/%s", model.Name),
+			"PACKAGE_URL":  md["package"].(map[string]interface{})["download"].(string),
+			"PACKAGE_PATH": md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string),
+			// TODO need PLATFORM_ARCH if specified on Stack or Model
+			// TODO need correction to files .. like model.yaml
+		},
+		Deps:      &deps,
+		Cmds:      &cmds,
+		Sources:   &sources,
+		Generates: &generates,
+	}
+	return modelTask
 }
 
 func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
@@ -185,31 +248,27 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 	}
 
 	md := *model.Metadata
+	modelTask := genericModelTask(model, *modelUses)
 
-	cmds := []Cmd{}
-	cmds = append(cmds, []Cmd{
-		{
-			Cmd: fmt.Sprintf("echo \"SIM Model %s -> {{.SIMDIR}}/{{.PATH}}\"", model.Name),
-		},
-		{
-			Cmd: "mkdir -p '{{.SIMDIR}}/{{.PATH}}/data'",
-		},
-	}...)
-	cmds = append(cmds, func(userFiles []string) []Cmd {
-		cmds := []Cmd{}
-		for _, file := range userFiles {
-			cmds = append(cmds, Cmd{
-				Cmd: fmt.Sprintf("cp {{.PWD}}/%[1]s '{{.SIMDIR}}/{{.PATH}}/data/%[1]s'", file),
-			})
+	// Parse: user files
+	func(task *Task, model ast.Model) {
+		if model.Files != nil {
+			for _, file := range *model.Files {
+				*task.Cmds = append(*task.Cmds, Cmd{
+					Cmd: fmt.Sprintf("cp {{.PWD}}/%[1]s '{{.SIMDIR}}/{{.PATH}}/data/%[1]s'", file),
+				})
+				*task.Sources = append(*task.Sources, fmt.Sprintf("{{.PWD}}/%s", file))
+				*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/data/%s", file))
+			}
 		}
-		return cmds
-	}(*model.Files)...)
-	cmds = append(cmds, func(md map[string]interface{}) []Cmd {
-		tasks := []Cmd{}
-		packageFiles := md["package"].(map[string]interface{})["files"].([]interface{})
+	}(&modelTask, model)
 
-		for _, file := range packageFiles {
-			cmds = append(cmds, Cmd{
+	// Parse: modelc package/model files
+	func(task *Task, model ast.Model) {
+		modelFiles := md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["files"].([]interface{})
+
+		for _, file := range modelFiles {
+			*task.Cmds = append(*task.Cmds, Cmd{
 				Task: "unzip-file",
 				Vars: &map[string]string{
 					"ZIP":     "downloads/{{base .PACKAGE_URL}}",
@@ -217,53 +276,101 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					"FILE":    fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", file.(string)),
 				},
 			})
+			*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", file.(string)))
 		}
-		return tasks
-	}(md)...)
+	}(&modelTask, model)
 
-	modelTask := Task{
-		Dir:   stringPtr("{{.OUTDIR}}"),
-		Label: stringPtr(fmt.Sprintf("sim:model:%s", model.Name)),
-		Vars: &map[string]string{
-			"REPO":         modelUses.Url,
-			"TAG":          cleanTag(*modelUses.Version),
-			"MODEL":        model.Name,
-			"PATH":         fmt.Sprintf("model/%s", model.Name),
-			"PACKAGE_URL":  md["package"].(map[string]interface{})["download"].(string),
-			"PACKAGE_PATH": md["package"].(map[string]interface{})["path"].(string),
-			// TODO need PLATFORM_ARCH if specified on Stack or Model
-			// TODO need correction to files .. like model.yaml
-		},
-		Deps: &[]Dep{
-			{
-				Task: "download-file",
-				Vars: &map[string]string{
-					"URL":  "{{.PACKAGE_URL}}",
-					"FILE": "downloads/{{base .PACKAGE_URL}}",
-				},
-			},
-		},
-		Cmds: &cmds,
-		Sources: func(userFiles []string) *[]string {
-			s := []string{}
-			for _, file := range userFiles {
-				s = append(s, fmt.Sprintf("{{.PWD}}/%s", file))
+	// Parse: workflow uses items
+	func(task *Task, model ast.Model) {
+		if model.Workflows == nil {
+			return
+		}
+		for _, workflow := range *model.Workflows {
+			if workflow.Vars == nil {
+				continue
 			}
-			return &s
-		}(*model.Files),
-		Generates: func(userFiles []string, md map[string]interface{}) *[]string {
-			s := []string{}
-			s = append(s, "downloads/{{base .PACKAGE_URL}}")
-			for _, file := range userFiles {
-				s = append(s, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/data/%s", file))
+			for _, v := range *workflow.Vars {
+				if v.Reference != nil && *v.Reference == "uses" {
+					var varUses *ast.Uses
+					for _, uses := range *simSpec.Uses {
+						if uses.Name == v.Value {
+							varUses = &uses
+							break
+						}
+					}
+					if varUses == nil {
+						continue
+					}
+					// Download the Uses file.
+					*task.Deps = append(*task.Deps, Dep{
+						Task: "download-file",
+						Vars: &map[string]string{
+							"URL":  varUses.Url,
+							"FILE": "downloads/{{base .URL}}",
+						},
+					})
+					u, _ := url.Parse(varUses.Url)
+					downloadFile := fmt.Sprintf("downloads/%s", filepath.Base(u.Path))
+					*task.Generates = append(*task.Generates, downloadFile)
+					// Extract the Uses path.
+					if varUses.Path == nil {
+						continue
+					}
+					if filepath.Ext(*varUses.Path) == ".fmu" {
+						*task.Cmds = append(*task.Cmds, Cmd{
+							Task: "unzip-extract-fmu",
+							Vars: &map[string]string{
+								"ZIP":     downloadFile,
+								"FMUFILE": *varUses.Path,
+								"FMUDIR":  fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", varUses.Name),
+							},
+						})
+						*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", varUses.Name))
+					}
+				}
 			}
-			packageFiles := md["package"].(map[string]interface{})["files"].([]interface{})
-			for _, file := range packageFiles {
-				s = append(s, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", file.(string)))
+		}
+	}(&modelTask, model)
+
+	// TODO Parse: workflow emit tasks
+	func(task *Task, model ast.Model) {
+		if model.Workflows == nil {
+			return
+		}
+		for _, workflow := range *model.Workflows {
+			var workflowUses *ast.Uses = modelUses
+			if workflow.Uses != nil {
+				for _, uses := range *simSpec.Uses {
+					if uses.Name == *workflow.Uses {
+						workflowUses = &uses
+						break
+					}
+				}
 			}
-			return &s
-		}(*model.Files, md),
-	}
+			vars := map[string]string{}
+			if workflow.Vars == nil {
+				continue
+			}
+			for _, v := range *workflow.Vars {
+				if v.Reference != nil && *v.Reference == "uses" {
+					name := fmt.Sprintf("%s_USES_VALUE", v.Name)
+					vars[name] = v.Value
+					vars[v.Name] = fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/{{.%s}}", name)
+				} else {
+					vars[v.Name] = v.Value
+				}
+			}
+			*task.Cmds = append(*task.Cmds, Cmd{
+				Task: fmt.Sprintf("%s-%s:%s", workflowUses.Name, *workflowUses.Version, workflow.Name),
+				Vars: &vars,
+			})
+			workflowFiles := md["workflows"].(map[string]interface{})[workflow.Name].(map[string]interface{})["generates"].([]interface{})
+			for _, file := range workflowFiles {
+				*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", file.(string)))
+			}
+		}
+	}(&modelTask, model)
+
 	return modelTask, nil
 }
 
@@ -308,7 +415,7 @@ func buildBaseTasks() map[string]Task {
 		"unzip-file": {
 			Dir:   stringPtr("{{.OUTDIR}}"),
 			Run:   stringPtr("when_changed"),
-			Label: stringPtr("dse:unzip-file:{{.ZIPFILE}}-{{.FILEPATH}}"),
+			Label: stringPtr("dse:unzip-file:{{.ZIPFILE}}-{{.FILEPATH}}"), // FIXME need to prefix the ZIPFILE with the name of the ZIP which is the root dir of the extracted content.
 			Vars: &map[string]string{
 				"ZIP":     "{{.ZIP}}",
 				"ZIPFILE": "{{.ZIPFILE}}",
@@ -340,6 +447,37 @@ func buildBaseTasks() map[string]Task {
 			},
 			Sources:   &[]string{"{{.ZIP}}"},
 			Generates: &[]string{"{{.DIR}}/**"},
+		},
+		"unzip-extract-fmu": {
+			Dir:   stringPtr("{{.OUTDIR}}"),
+			Run:   stringPtr("when_changed"),
+			Label: stringPtr("dse:unzip-extract-fmu:{{.ZIP}}-{{.FMUDIR}}"),
+			Vars: &map[string]string{
+				"ZIP":        "{{.ZIP}}",
+				"FMUFILE":    "{{.FMUFILE}}",
+				"FMUDIR":     "{{.FMUDIR}}",
+				"FMUTMPFILE": "{{.FMUFILE}}.tmp",
+			},
+			Cmds: &[]Cmd{
+				{Cmd: "echo \"UNZIP FMU {{.ZIP}}/{{.FMUFILE}} -> {{.FMUDIR}}\""},
+				{
+					Task: "unzip-file",
+					Vars: &map[string]string{
+						"ZIP":     "{{.ZIP}}",
+						"ZIPFILE": "{{.FMUFILE}}",
+						"FILE":    "{{.FMUTMPFILE}}",
+					},
+				},
+				{
+					Task: "unzip-dir",
+					Vars: &map[string]string{
+						"ZIP": "{{.FMUTMPFILE}}",
+						"DIR": "{{.FMUDIR}}",
+					},
+				},
+			},
+			Sources:   &[]string{"{{.ZIP}}"},
+			Generates: &[]string{"{{.FMUDIR}}/**"},
 		},
 		"download-file": {
 			Dir:   stringPtr("{{.OUTDIR}}"),
@@ -396,5 +534,3 @@ func buildSimulationTasks() map[string]Task {
 	}
 	return simulationTasks
 }
-
-// https://github.boschdevcloud.com/fsil/fsil.graph/blob/1408da0c33f2323be9d3a9cf3cd1ceedd2949833/internal/app/manifest/generator/generator.go

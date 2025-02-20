@@ -229,6 +229,7 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 	})
 	simulation.Spec.Stacks = stackList
 
+	// FIXME append or overwrite ? Add as option ?
 	if err := util.WriteYaml(&simulation, file, true); err != nil {
 		return err
 	}
