@@ -20,6 +20,13 @@ github.com/gabriel-vasile/mimetype/internal/magic
 # github.com/google/uuid v1.5.0
 ## explicit
 github.com/google/uuid
+# github.com/jedib0t/go-pretty/v6 v6.6.6
+## explicit; go 1.18
+github.com/jedib0t/go-pretty/v6/table
+github.com/jedib0t/go-pretty/v6/text
+# github.com/mattn/go-runewidth v0.0.16
+## explicit; go 1.9
+github.com/mattn/go-runewidth
 # github.com/neo4j/neo4j-go-driver/v5 v5.22.0
 ## explicit; go 1.18
 github.com/neo4j/neo4j-go-driver/v5/neo4j
@@ -51,6 +58,9 @@ github.com/oapi-codegen/runtime/types
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
+# github.com/rivo/uniseg v0.4.7
+## explicit; go 1.18
+github.com/rivo/uniseg
 # github.com/rogpeppe/go-internal v1.13.1
 ## explicit; go 1.22
 github.com/rogpeppe/go-internal/diff
@@ -72,9 +82,14 @@ github.com/stretchr/testify/suite
 ## explicit; go 1.18
 golang.org/x/net/html
 golang.org/x/net/html/atom
-# golang.org/x/sys v0.28.0
+# golang.org/x/sys v0.30.0
 ## explicit; go 1.18
 golang.org/x/sys/unix
+golang.org/x/sys/windows
+# golang.org/x/text v0.22.0
+## explicit; go 1.18
+golang.org/x/text/transform
+golang.org/x/text/width
 # golang.org/x/tools v0.22.0
 ## explicit; go 1.19
 golang.org/x/tools/txtar

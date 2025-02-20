@@ -1,0 +1,60 @@
+# Ensure that graph is empty.
+exec graph drop --all
+
+# import command
+exec graph import $WORK/test_VDA305.yaml
+
+
+-- test_VDA305.yaml --
+---
+kind: Model
+metadata:
+  name: VDA305
+  annotations:
+    # create graph fragment:  "Model" -Contains->  FunctionalBlock(name: VDA305-FB)
+    graph:
+      edge:
+        direction: out
+        label: Contains 
+        properties: {}
+      nodes:
+        - label: FunctionalBlock 
+          properties: 
+            name: VDA305-FB
+        - label: FunctionalBlock 
+          properties: 
+            name: VDA305-FB-2 
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: model/vda305-MI/lib/libvda305.so
+  channels:
+    - alias: scalar
+      selectors:
+        channel: scalar_channel
+---
+kind: SignalGroup
+metadata:
+  name: scalar_channel
+  labels:
+    model: vda305
+    functional_block: VDA305-FB 
+    channel: signal_vector
+  annotations:
+    # create graph fragment:  "Signal" <-Interface- FunctionalBlock(name: VDA305-FB)
+    graph:
+      edge:
+        direction: in
+        label: Interface
+        properties: {}
+      nodes:
+        - label: FunctionalBlock 
+          properties: 
+            name: VDA305-FB
+spec:
+  signals:
+    - signal: input
+    - signal: factor
+    - signal: offset

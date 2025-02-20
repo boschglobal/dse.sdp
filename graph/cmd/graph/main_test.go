@@ -25,7 +25,7 @@ func TestMain(m *testing.M) {
 
 func TestE2E(t *testing.T) {
 	testscript.Run(t, testscript.Params{
-		Dir: "testdata/script",
+		Dir: "testdata/reports",
 		Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
 			"fubar": func(ts *testscript.TestScript, neg bool, args []string) {
 				fmt.Fprint(ts.Stdout(), "hello world")

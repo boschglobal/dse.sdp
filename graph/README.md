@@ -45,6 +45,19 @@ Running command graph ...
 2025/01/28 09:25:45 INFO Graph Export: write file=export.cyp
 ...
 
+# Run the reports using tag filter.
+$ bin/graph report -tag foo -tag bar cmd/graph/testdata/reports/yaml
+Running command: report
+Options:
+  db             : bolt://localhost:7687
+  tag            : bar
+2025/01/28 14:47:15 INFO Connecting to graph db=bolt://localhost:7687
+...
+=================== Summary ===================
+Ran 2 Reports | Passed: 1 | Failed: 1
+Failed Reports: Count 'ModelInst' in AST and SIM
+===============================================
+
 # Graph is available at:
 http://localhost:3000/lab/dashboard?component=query
 #  Query: MATCH (node1)-[r*]->(node2) RETURN node1, r, node2;
@@ -70,6 +83,7 @@ $ go get github.com/neo4j/neo4j-go-driver/v5@v5.22.0
 $ go get gopkg.in/yaml.v3@v3.0.1
 $ go get github.com/oapi-codegen/runtime@v1.1.1
 $ go get github.com/rogpeppe/go-internal/testscript
+$ go get github.com/jedib0t/go-pretty/v6/text@v6.6.6
 ```
 
 > Note: Release Tags for modules in DSE Schemas are according to the schema `code/go/dse/v1.2.11`.

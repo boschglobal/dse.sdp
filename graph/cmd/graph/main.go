@@ -19,6 +19,7 @@ var cmds = []command.CommandRunner{
 	graph.NewGraphImportCommand("import"),
 	graph.NewGraphExportCommand("export"),
 	graph.NewGraphDropCommand("drop"),
+	graph.NewGraphReportCommand("report"),
 }
 
 var usage = `
@@ -30,14 +31,18 @@ Usage:
 
 `
 
+func printUsage() {
+	command.PrintUsage(usage[1:], cmds)
+}
+
 func main() {
 	os.Exit(main_())
 }
 
 func main_() int {
-	flag.Usage = PrintUsage
+	flag.Usage = printUsage
 	if len(os.Args) == 1 {
-		PrintUsage()
+		printUsage()
 		return 1
 	}
 	// Dispatch the command.
