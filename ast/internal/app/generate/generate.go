@@ -74,7 +74,10 @@ func (c *GenerateCommand) Run() error {
 		c.genSimulation = true
 	}
 	if c.genTaskfile == true {
-		c.GenerateTaskfile()
+		err = c.GenerateTaskfile()
+		if err != nil {
+			return err
+		}
 	}
 	if c.genSimulation == true {
 		c.GenerateSimulation()

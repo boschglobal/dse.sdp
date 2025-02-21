@@ -39,11 +39,11 @@ spec:
                   value: linear_fmu
                   # emit as
                   # name: FMU_DIR
-                  # value: '{{.SIMDIR}}/{{.PATH}}/{{.FMU_DIR_USES_VALUE}}'
+                  # value: '{{.PATH}}/{{.FMU_DIR_USES_VALUE}}'
                 - name: OUT_DIR
-                  value: '{{.SIMDIR}}/{{.PATH}}/data'
+                  value: '{{.PATH}}/data'
                 - name: MCL_PATH
-                  value: '{{.SIMDIR}}/{{.PATH}}/lib/libfmimcl.so'
+                  value: '{{.PATH}}/lib/libfmimcl.so'
           metadata:
             # downloaded from repo
             package:

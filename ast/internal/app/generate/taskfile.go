@@ -5,15 +5,34 @@
 package generate
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"regexp"
+
+	"github.com/elliotchance/orderedmap/v2"
+	//	"github.com/elliotchance/orderedmap/v2"
 
 	"github.boschdevcloud.com/fsil/fsil.go/command/util"
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 )
+
+type OMap struct {
+	*orderedmap.OrderedMap[string, string]
+}
+
+func (vm OMap) MarshalYAML() (interface{}, error) {
+	s := ""
+	for _, k := range vm.Keys() {
+		v, _ := vm.Get(k)
+		s = fmt.Sprintf("%s\n%s: '%s'", s, k, v)
+		// TODO make the value more robust {{}} => '{{}}' and other cases.
+	}
+	return s, nil
+}
 
 type Cmd struct {
 	Cmd  string             `yaml:"cmd,omitempty"`
@@ -36,8 +55,10 @@ func (c Cmd) MarshalYAML() (interface{}, error) {
 }
 
 type Dep struct {
-	Task string             `yaml:"task"`
-	Vars *map[string]string `yaml:"vars,omitempty"`
+	Task string `yaml:"task"`
+	//Vars *map[string]string `yaml:"vars,omitempty"`
+	//Vars *orderedmap.OrderedMap[string, string]
+	Vars *OMap `yaml:"vars,omitempty"`
 }
 
 type Requires struct {
@@ -45,17 +66,17 @@ type Requires struct {
 }
 
 type Task struct {
-	Cmds      *[]Cmd             `yaml:"cmds,omitempty"`
-	Desc      *string            `yaml:"desc,omitempty"`
-	Dir       *string            `yaml:"dir,omitempty"`
-	Label     *string            `yaml:"label,omitempty"`
-	Requires  *Requires          `yaml:"requires,omitempty"`
-	Run       *string            `yaml:"run,omitempty"`
-	Vars      *map[string]string `yaml:"vars,omitempty"`
-	Deps      *[]Dep             `yaml:"deps,omitempty"`
-	Sources   *[]string          `yaml:"sources,omitempty"`
-	Generates *[]string          `yaml:"generates,omitempty"`
-	Status    *[]string          `yaml:"status,omitempty"`
+	Cmds      *[]Cmd    `yaml:"cmds,omitempty"`
+	Desc      *string   `yaml:"desc,omitempty"`
+	Dir       *string   `yaml:"dir,omitempty"`
+	Label     *string   `yaml:"label,omitempty"`
+	Requires  *Requires `yaml:"requires,omitempty"`
+	Run       *string   `yaml:"run,omitempty"`
+	Vars      *OMap     `yaml:"vars,omitempty"`
+	Deps      *[]Dep    `yaml:"deps,omitempty"`
+	Sources   *[]string `yaml:"sources,omitempty"`
+	Generates *[]string `yaml:"generates,omitempty"`
+	Status    *[]string `yaml:"status,omitempty"`
 }
 
 type Include struct {
@@ -100,21 +121,7 @@ func (c GenerateCommand) GenerateTaskfile() error {
 		},
 	}
 
-	// FIXME MCL tasks
-	//	MCL path
-	//  The FMU itself
-	//  Tasks -
-	//		Fetch FMU : from uses ... each should be downloaded
-	//		Workflows : from AST
-	// Need to know its an FMU or at least MCL ... so that the correct deps task can be selected.
-	//	TODO use the model name == dse.fmi.mcl as the selector.
-	// Then the tasks; setup MCL, run Workflow (from AST)
-	// Sources and generates ... more complex ... only partial on generates (the mcl).
-
 	// FIXME MIMEtypes on channels.
-
-	// FIXME Uses ... referenced by workflows (references: uses), part of model.
-	//		need to resolve reference_uses and generate fetch/download with version tag in path.
 
 	includes := make(map[string]Include)
 	for k, v := range c.buildIncludes() {
@@ -140,9 +147,16 @@ func (c GenerateCommand) GenerateTaskfile() error {
 
 	taskfile.Tasks = &tasks
 	taskfile.Includes = &includes
-	if err := util.WriteYaml(&taskfile, taskfilePath, true); err != nil {
+	if err := util.WriteYaml(&taskfile, taskfilePath, false); err != nil {
 		return err
 	}
+	// Correct sorted Vars in the generated YAML.
+	data, err := os.ReadFile(taskfilePath)
+	if err != nil {
+		return err
+	}
+	os.WriteFile(taskfilePath, bytes.ReplaceAll(data, []byte("vars: |2-"), []byte("vars:")), 0644)
+
 	return nil
 }
 
@@ -176,7 +190,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 		if tagKey, ok := mdContainer.(map[string]interface{})["tag_var"]; ok {
 			vars[tagKey.(string)] = cleanTag(*uses.Version)
 		}
-		includes[uses.Name] = Include{
+		includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
 			Taskfile: func() string {
 				u, _ := url.Parse(uses.Url)
 				return fmt.Sprintf("https://raw.githubusercontent.com%s/refs/tags/%s/Taskfile.yml", u.Path, *uses.Version)
@@ -193,10 +207,12 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 	deps := []Dep{
 		{
 			Task: "download-file",
-			Vars: &map[string]string{
-				"URL":  "{{.PACKAGE_URL}}",
-				"FILE": "downloads/{{base .PACKAGE_URL}}",
-			},
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("URL", "{{.PACKAGE_URL}}")
+				om.Set("FILE", "downloads/{{base .PACKAGE_URL}}")
+				return &om
+			}(),
 		},
 	}
 	cmds := []Cmd{
@@ -211,21 +227,39 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 	generates := []string{
 		"downloads/{{base .PACKAGE_URL}}",
 	}
-	md := *model.Metadata
+	md := map[string]interface{}{}
+	if model.Metadata != nil {
+		md = *model.Metadata
+	}
 
 	modelTask := Task{
 		Dir:   stringPtr("{{.OUTDIR}}"),
 		Label: stringPtr(fmt.Sprintf("sim:model:%s", model.Name)),
-		Vars: &map[string]string{
-			"REPO":         modelUses.Url,
-			"TAG":          cleanTag(*modelUses.Version),
-			"MODEL":        model.Name,
-			"PATH":         fmt.Sprintf("model/%s", model.Name),
-			"PACKAGE_URL":  md["package"].(map[string]interface{})["download"].(string),
-			"PACKAGE_PATH": md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string),
+		Vars: func() *OMap {
+			om := OMap{orderedmap.NewOrderedMap[string, string]()}
+			if modelUses.Name != "" {
+				om.Set("REPO", modelUses.Url)
+				if modelUses.Version != nil {
+					om.Set("TAG", cleanTag(*modelUses.Version))
+				}
+			}
+			om.Set("MODEL", model.Name)
+			om.Set("PATH", fmt.Sprintf("model/%s", model.Name))
+
+			func() {
+				// FIXME schema for this.
+				defer func() {
+					if r := recover(); r != nil {
+					}
+				}()
+				om.Set("PACKAGE_URL", md["package"].(map[string]interface{})["download"].(string))
+				om.Set("PACKAGE_PATH", md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string))
+			}()
+
 			// TODO need PLATFORM_ARCH if specified on Stack or Model
 			// TODO need correction to files .. like model.yaml
-		},
+			return &om
+		}(),
 		Deps:      &deps,
 		Cmds:      &cmds,
 		Sources:   &sources,
@@ -235,20 +269,25 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 }
 
 func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
-	var modelUses *ast.Uses
+	var modelUses ast.Uses
 
-	for _, uses := range *simSpec.Uses {
-		if uses.Name == model.Uses {
-			modelUses = &uses
-			break
+	if len(model.Uses) > 0 {
+		for _, uses := range *simSpec.Uses {
+			if uses.Name == model.Uses {
+				modelUses = uses
+				break
+			}
+		}
+		if modelUses.Name == "" {
+			return Task{}, fmt.Errorf("model uses not found in simulation AST (name=%s)", model.Uses)
 		}
 	}
-	if modelUses == nil {
-		return Task{}, fmt.Errorf("model uses not found in simulation AST (name=%s)", "dse.modelc")
-	}
 
-	md := *model.Metadata
-	modelTask := genericModelTask(model, *modelUses)
+	md := map[string]interface{}{}
+	if model.Metadata != nil {
+		md = *model.Metadata
+	}
+	modelTask := genericModelTask(model, modelUses)
 
 	// Parse: user files
 	func(task *Task, model ast.Model) {
@@ -265,7 +304,15 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 
 	// Parse: modelc package/model files
 	func(task *Task, model ast.Model) {
-		modelFiles := md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["files"].([]interface{})
+		modelFiles := []interface{}{}
+		func() {
+			// FIXME schema for this.
+			defer func() {
+				if r := recover(); r != nil {
+				}
+			}()
+			modelFiles = md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["files"].([]interface{})
+		}()
 
 		for _, file := range modelFiles {
 			*task.Cmds = append(*task.Cmds, Cmd{
@@ -302,15 +349,17 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 						continue
 					}
 					// Download the Uses file.
-					*task.Deps = append(*task.Deps, Dep{
-						Task: "download-file",
-						Vars: &map[string]string{
-							"URL":  varUses.Url,
-							"FILE": "downloads/{{base .URL}}",
-						},
-					})
 					u, _ := url.Parse(varUses.Url)
 					downloadFile := fmt.Sprintf("downloads/%s", filepath.Base(u.Path))
+					*task.Deps = append(*task.Deps, Dep{
+						Task: "download-file",
+						Vars: func() *OMap {
+							om := OMap{orderedmap.NewOrderedMap[string, string]()}
+							om.Set("URL", varUses.Url)
+							om.Set("FILE", downloadFile)
+							return &om
+						}(),
+					})
 					*task.Generates = append(*task.Generates, downloadFile)
 					// Extract the Uses path.
 					if varUses.Path == nil {
@@ -332,17 +381,17 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 		}
 	}(&modelTask, model)
 
-	// TODO Parse: workflow emit tasks
+	// Parse: workflow emit tasks
 	func(task *Task, model ast.Model) {
 		if model.Workflows == nil {
 			return
 		}
 		for _, workflow := range *model.Workflows {
-			var workflowUses *ast.Uses = modelUses
+			var workflowUses ast.Uses = modelUses
 			if workflow.Uses != nil {
 				for _, uses := range *simSpec.Uses {
 					if uses.Name == *workflow.Uses {
-						workflowUses = &uses
+						workflowUses = uses
 						break
 					}
 				}
@@ -353,18 +402,30 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 			}
 			for _, v := range *workflow.Vars {
 				if v.Reference != nil && *v.Reference == "uses" {
-					name := fmt.Sprintf("%s_USES_VALUE", v.Name)
-					vars[name] = v.Value
-					vars[v.Name] = fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/{{.%s}}", name)
+					vars[v.Name] = fmt.Sprintf("{{.PATH}}/%s", v.Value)
 				} else {
 					vars[v.Name] = v.Value
 				}
 			}
+			var workflowTaskName string
+			if workflowUses.Version == nil {
+				workflowTaskName = fmt.Sprintf("%s:%s", workflowUses.Name, workflow.Name)
+			} else {
+				workflowTaskName = fmt.Sprintf("%s-%s:%s", workflowUses.Name, *workflowUses.Version, workflow.Name)
+			}
 			*task.Cmds = append(*task.Cmds, Cmd{
-				Task: fmt.Sprintf("%s-%s:%s", workflowUses.Name, *workflowUses.Version, workflow.Name),
+				Task: workflowTaskName,
 				Vars: &vars,
 			})
-			workflowFiles := md["workflows"].(map[string]interface{})[workflow.Name].(map[string]interface{})["generates"].([]interface{})
+			workflowFiles := []interface{}{}
+			func() {
+				// FIXME schema for this.
+				defer func() {
+					if r := recover(); r != nil {
+					}
+				}()
+				workflowFiles = md["workflows"].(map[string]interface{})[workflow.Name].(map[string]interface{})["generates"].([]interface{})
+			}()
 			for _, file := range workflowFiles {
 				*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", file.(string)))
 			}
@@ -386,10 +447,7 @@ func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 			modelTaskNames = append(modelTaskNames, modelName)
 			mt, err := buildModel(model, simSpec)
 			if err != nil {
-				// FIXME what to do here ?
-				fmt.Fprint(flag.CommandLine.Output(), fmt.Errorf("ERROR: build model task (%s): %w", model.Name, err))
-				continue
-				//return map[string]Task{}, err
+				return nil, fmt.Errorf("Error building model (name=%s): %w", modelName, err)
 			}
 			modelTasks[modelName] = mt
 		}
@@ -410,21 +468,22 @@ func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 }
 
 func buildBaseTasks() map[string]Task {
-
 	baseTasks := map[string]Task{
 		"unzip-file": {
 			Dir:   stringPtr("{{.OUTDIR}}"),
 			Run:   stringPtr("when_changed"),
-			Label: stringPtr("dse:unzip-file:{{.ZIPFILE}}-{{.FILEPATH}}"), // FIXME need to prefix the ZIPFILE with the name of the ZIP which is the root dir of the extracted content.
-			Vars: &map[string]string{
-				"ZIP":     "{{.ZIP}}",
-				"ZIPFILE": "{{.ZIPFILE}}",
-				"FILE":    "{{.FILE}}",
-			},
+			Label: stringPtr("dse:unzip-file:{{.ZIPFILE}}-{{.FILEPATH}}"),
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("ZIP", "{{.ZIP}}")
+				om.Set("ZIPFILE", "{{.ZIPFILE}}")
+				om.Set("FILE", "{{.FILE}}")
+				return &om
+			}(),
 			Cmds: &[]Cmd{
 				{Cmd: "echo \"UNZIP FILE {{.ZIP}}/{{.ZIPFILE}} -> {{.FILE}}\""},
 				{Cmd: "mkdir -p $(dirname {{.FILE}})"},
-				{Cmd: "unzip -o -j {{.ZIP}} {{.ZIPFILE}} -d $(dirname {{.FILE}})"},
+				{Cmd: "unzip -o -j {{.ZIP}} $(basename {{.ZIP}} {{ext .ZIP}})/{{.ZIPFILE}} -d $(dirname {{.FILE}})"},
 				{Cmd: "mv -n $(dirname {{.FILE}})/$(basename {{.ZIPFILE}}) {{.FILE}}"},
 			},
 			Sources:   &[]string{"{{.ZIP}}"},
@@ -434,12 +493,14 @@ func buildBaseTasks() map[string]Task {
 			Dir:   stringPtr("{{.OUTDIR}}"),
 			Run:   stringPtr("when_changed"),
 			Label: stringPtr("dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}"),
-			Vars: &map[string]string{
-				"ZIP":     "{{.ZIP}}",
-				"ZIPDIR":  "{{if .ZIPDIR}}\"{{.ZIPDIR}}/*\"{{else}}{{end}}",
-				"DIR":     "{{.DIR}}",
-				"JUNKDIR": "{{if .ZIPDIR}}-j{{else}}{{end}}",
-			},
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("ZIP", "{{.ZIP}}")
+				om.Set("ZIPDIR", "{{if .ZIPDIR}}\"{{.ZIPDIR}}/*\"{{else}}{{end}}")
+				om.Set("DIR", "{{.DIR}}")
+				om.Set("JUNKDIR", "{{if .ZIPDIR}}-j{{else}}{{end}}")
+				return &om
+			}(),
 			Cmds: &[]Cmd{
 				{Cmd: "echo \"UNZIP DIR {{.ZIP}}/{{.ZIPDIR}} -> {{.DIR}}\""},
 				{Cmd: "mkdir -p {{.DIR}}"},
@@ -452,12 +513,14 @@ func buildBaseTasks() map[string]Task {
 			Dir:   stringPtr("{{.OUTDIR}}"),
 			Run:   stringPtr("when_changed"),
 			Label: stringPtr("dse:unzip-extract-fmu:{{.ZIP}}-{{.FMUDIR}}"),
-			Vars: &map[string]string{
-				"ZIP":        "{{.ZIP}}",
-				"FMUFILE":    "{{.FMUFILE}}",
-				"FMUDIR":     "{{.FMUDIR}}",
-				"FMUTMPFILE": "{{.FMUFILE}}.tmp",
-			},
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("ZIP", "{{.ZIP}}")
+				om.Set("FMUFILE", "{{.FMUFILE}}")
+				om.Set("FMUDIR", "{{.FMUDIR}}")
+				om.Set("FMUTMPFILE", "{{.FMUDIR}}.tmp")
+				return &om
+			}(),
 			Cmds: &[]Cmd{
 				{Cmd: "echo \"UNZIP FMU {{.ZIP}}/{{.FMUFILE}} -> {{.FMUDIR}}\""},
 				{
@@ -475,6 +538,7 @@ func buildBaseTasks() map[string]Task {
 						"DIR": "{{.FMUDIR}}",
 					},
 				},
+				{Cmd: "rm -f {{.FMUTMPFILE}}"},
 			},
 			Sources:   &[]string{"{{.ZIP}}"},
 			Generates: &[]string{"{{.FMUDIR}}/**"},
@@ -483,11 +547,13 @@ func buildBaseTasks() map[string]Task {
 			Dir:   stringPtr("{{.OUTDIR}}"),
 			Run:   stringPtr("when_changed"),
 			Label: stringPtr("dse:download-file:{{.URL}}-{{.FILE}}"),
-			Vars: &map[string]string{
-				"URL":  "{{.URL}}",
-				"FILE": "{{.FILE}}",
-				"AUTH": "{{if all .USER .TOKEN}}-u {{.USER}}:{{.TOKEN}}{{else}}{{end}}",
-			},
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("URL", "{{.URL}}")
+				om.Set("FILE", "{{.FILE}}")
+				om.Set("AUTH", "{{if all .USER .TOKEN}}-u {{.USER}}:{{.TOKEN}}{{else}}{{end}}")
+				return &om
+			}(),
 			Cmds: &[]Cmd{
 				{Cmd: "echo \"CURL {{.URL}} -> {{.FILE}}\""},
 				{Cmd: "mkdir -p $(dirname {{.FILE}})"},

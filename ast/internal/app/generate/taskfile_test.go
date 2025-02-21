@@ -12,6 +12,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func generateTaskfile(t *testing.T, input string) string {
@@ -53,24 +54,24 @@ func TestGenerateTaskfile_global_vars(t *testing.T) {
 
 func TestGenerateTaskfile_includes(t *testing.T) {
 	taskfileName := generateTaskfile(t, "testdata/ast__includes.yaml")
-	assert.FileExists(t, taskfileName)
+	require.FileExists(t, taskfileName)
 	f, _ := os.ReadFile(taskfileName)
 	t.Logf("\n%s\n", f)
 
 	YamlContains(t, f, "$.version", "3")
 
-	YamlContains(t, f, "$.includes.'dse.modelc'.taskfile", "https://raw.githubusercontent.com/boschglobal/dse.modelc/refs/tags/v2.1.15/Taskfile.yml")
-	YamlContains(t, f, "$.includes.'dse.modelc'.dir", "{{.OUTDIR}}/{{.SIMDIR}}")
-	YamlContains(t, f, "$.includes.'dse.modelc'.vars.MODELC_IMAGE", "ghcr.io/boschglobal/dse-modelc")
-	YamlContains(t, f, "$.includes.'dse.modelc'.vars.MODELC_TAG", "2.1.15")
-	YamlContains(t, f, "$.includes.'dse.modelc'.vars.SIM", "{{.SIMDIR}}")
-	YamlContains(t, f, "$.includes.'dse.modelc'.vars.ENTRYWORKDIR", "{{.PWD}}/{{.OUTDIR}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.taskfile", "https://raw.githubusercontent.com/boschglobal/dse.modelc/refs/tags/v2.1.15/Taskfile.yml")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.dir", "{{.OUTDIR}}/{{.SIMDIR}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.MODELC_IMAGE", "ghcr.io/boschglobal/dse-modelc")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.MODELC_TAG", "2.1.15")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.SIM", "{{.SIMDIR}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.ENTRYWORKDIR", "{{.PWD}}/{{.OUTDIR}}")
 
 }
 
 func TestGenerateTaskfile_build_simulation(t *testing.T) {
 	taskfileName := generateTaskfile(t, "testdata/ast.yaml")
-	assert.FileExists(t, taskfileName)
+	require.FileExists(t, taskfileName)
 	f, _ := os.ReadFile(taskfileName)
 	t.Logf("\n%s\n", f)
 
@@ -90,7 +91,7 @@ func TestGenerateTaskfile_build_simulation(t *testing.T) {
 
 func TestGenerateTaskfile_common_elements(t *testing.T) {
 	taskfileName := generateTaskfile(t, "testdata/ast.yaml")
-	assert.FileExists(t, taskfileName)
+	require.FileExists(t, taskfileName)
 	f, _ := os.ReadFile(taskfileName)
 	t.Logf("\n%s\n", f)
 
@@ -208,7 +209,7 @@ func TestGenerateTaskfile_model_fmu(t *testing.T) {
 
 	YamlContains(t, f, "$.tasks.model-linear.deps[1].task", "download-file")
 	YamlContains(t, f, "$.tasks.model-linear.deps[1].vars.URL", "https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip")
-	YamlContains(t, f, "$.tasks.model-linear.deps[1].vars.FILE", "downloads/{{base .URL}}")
+	YamlContains(t, f, "$.tasks.model-linear.deps[1].vars.FILE", "downloads/Fmi-1.1.20-linux-amd64.zip")
 
 	YamlContains(t, f, "$.tasks.model-linear.cmds[0]", "echo \"SIM Model linear -> {{.SIMDIR}}/{{.PATH}}\"")
 	YamlContains(t, f, "$.tasks.model-linear.cmds[1]", "mkdir -p '{{.SIMDIR}}/{{.PATH}}/data'")
@@ -224,10 +225,9 @@ func TestGenerateTaskfile_model_fmu(t *testing.T) {
 	YamlContains(t, f, "$.tasks.model-linear.cmds[3].vars.FMUDIR", "{{.SIMDIR}}/{{.PATH}}/linear_fmu")
 
 	YamlContains(t, f, "$.tasks.model-linear.cmds[4].task", "dse.fmi-v1.1.20:generate-fmimcl")
-	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.FMU_DIR_USES_VALUE", "linear_fmu")
-	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.FMU_DIR", "{{.SIMDIR}}/{{.PATH}}/{{.FMU_DIR_USES_VALUE}}")
-	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.OUT_DIR", "{{.SIMDIR}}/{{.PATH}}/data")
-	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.MCL_PATH", "{{.SIMDIR}}/{{.PATH}}/lib/libfmimcl.so")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.FMU_DIR", "{{.PATH}}/linear_fmu")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.OUT_DIR", "{{.PATH}}/data")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[4].vars.MCL_PATH", "{{.PATH}}/lib/libfmimcl.so")
 
 	YamlContains(t, f, "$.tasks.model-linear.generates[0]", "downloads/{{base .PACKAGE_URL}}")
 	YamlContains(t, f, "$.tasks.model-linear.generates[1]", "{{.SIMDIR}}/{{.PATH}}/lib/libfmimcl.so")
