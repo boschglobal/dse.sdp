@@ -1,0 +1,19 @@
+---
+# FMI
+metadata:
+  package:
+    download: '{{.REPO}}/releases/download/v{{.TAG}}/Fmi-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+  container:
+    repository: ghcr.io/boschglobal/dse-fmi
+    image_var: FMI_IMAGE
+    tag_var: FMI_TAG
+  models:
+    dse.fmi.mcl:
+      path: fmimcl
+      files:
+        - lib/libfmimcl.so
+  workflows:
+    generate-fmimcl:
+      generates:
+        - data/model.yaml
+        - data/signalgroup.yaml

@@ -1,0 +1,17 @@
+---
+# ModelC
+metadata:
+  package:
+    download: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+  metadata:
+    container:
+      repository: ghcr.io/boschglobal/dse-modelc
+      image_var: MODELC_IMAGE
+      tag_var: MODELC_TAG
+  models:
+    dse.modelc.csv:
+      path: examples/csv
+      files:
+        - lib/libcsv.so
+        - data/model.yaml
+  workflows: {}

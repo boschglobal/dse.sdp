@@ -1,0 +1,20 @@
+simulation arch=linux-amd64
+channel physical
+
+uses
+dse.modelc https://github.com/boschglobal/dse.modelc v2.1.15
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.20
+linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
+
+model input dse.modelc.csv
+channel physical scalar_vector
+file input.csv
+file signalgroup.yaml
+
+
+model linear dse.fmi.mcl
+channel physical scalar_vector
+workflow generate-fmimcl
+    var FMU_DIR uses linear_fmu
+    var MCL_PATH {{.PATH}}/lib/libfmimcl.so
+    var OUT_DIR {{.PATH}}/data
