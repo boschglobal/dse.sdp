@@ -11,7 +11,4 @@ metadata:
   models:
     dse.modelc.csv:
       path: examples/csv
-      files:
-        - lib/libcsv.so
-        - data/model.yaml
   workflows: {}

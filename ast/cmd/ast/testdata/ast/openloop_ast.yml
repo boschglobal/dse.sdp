@@ -22,9 +22,6 @@ spec:
             models:
               dse.modelc.csv:
                 path: examples/csv
-                files:
-                  - lib/libcsv.so
-                  - data/model.yaml
         - name: linear
           model: dse.fmi.mcl
           uses: dse.fmi
@@ -48,8 +45,6 @@ spec:
             models:
               dse.fmi.mcl:
                 path: fmimcl
-                files:
-                  - lib/libfmimcl.so
             workflows:
               generate-fmimcl:
                 generates:

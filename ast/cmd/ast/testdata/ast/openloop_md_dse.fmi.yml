@@ -10,8 +10,6 @@ metadata:
   models:
     dse.fmi.mcl:
       path: fmimcl
-      files:
-        - lib/libfmimcl.so
   workflows:
     generate-fmimcl:
       generates:

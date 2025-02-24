@@ -158,26 +158,34 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 
 	// Parse: modelc package/model files
 	func(task *Task, model ast.Model) {
-		modelFiles := []interface{}{}
+		modelPath := ""
 		func() {
 			// FIXME schema for this.
 			defer func() {
 				if r := recover(); r != nil {
 				}
 			}()
-			modelFiles = md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["files"].([]interface{})
+			modelPath = md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string)
 		}()
-
-		for _, file := range modelFiles {
+		if len(modelPath) != 0 {
 			*task.Cmds = append(*task.Cmds, Cmd{
-				Task: "unzip-file",
+				Task: "unzip-dir",
 				Vars: &map[string]string{
-					"ZIP":     "downloads/{{base .PACKAGE_URL}}",
-					"ZIPFILE": fmt.Sprintf("{{.PACKAGE_PATH}}/%s", file.(string)),
-					"FILE":    fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", file.(string)),
+					"ZIP":    "downloads/{{base .PACKAGE_URL}}",
+					"ZIPDIR": fmt.Sprintf("{{.PACKAGE_PATH}}"),
+					"DIR":    fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}"),
 				},
 			})
-			*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", file.(string)))
+			*task.Cmds = append(*task.Cmds, Cmd{
+				Cmd: fmt.Sprintf("rm -rf '{{.SIMDIR}}/{{.PATH}}/examples'"),
+			})
+			*task.Cmds = append(*task.Cmds, Cmd{
+				Cmd: fmt.Sprintf("find '{{.SIMDIR}}/{{.PATH}}' -type f -name simulation.yaml -print0  | xargs -0 rm -f"),
+			})
+			*task.Cmds = append(*task.Cmds, Cmd{
+				Cmd: fmt.Sprintf("find '{{.SIMDIR}}/{{.PATH}}' -type f -name simulation.yml -print0  | xargs -0 rm -f"),
+			})
+			*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/**"))
 		}
 	}(&modelTask, model)
 

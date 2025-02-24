@@ -37,15 +37,34 @@ func buildBaseTasks() map[string]Task {
 			Vars: func() *OMap {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("ZIP", "{{.ZIP}}")
-				om.Set("ZIPDIR", "{{if .ZIPDIR}}\"{{.ZIPDIR}}/*\"{{else}}{{end}}")
+				om.Set("ZIPDIR", "$(basename {{.ZIP}} {{ext .ZIP}})/{{.ZIPDIR}}")
 				om.Set("DIR", "{{.DIR}}")
-				om.Set("JUNKDIR", "{{if .ZIPDIR}}-j{{else}}{{end}}")
 				return &om
 			}(),
 			Cmds: &[]Cmd{
 				{Cmd: "echo \"UNZIP DIR {{.ZIP}}/{{.ZIPDIR}} -> {{.DIR}}\""},
 				{Cmd: "mkdir -p {{.DIR}}"},
-				{Cmd: "unzip -o {{.JUNKDIR}} {{.ZIP}} {{.ZIPDIR}} -d {{.DIR}}"},
+				{Cmd: "unzip -o {{.ZIP}} {{.ZIPDIR}}/* -d {{.DIR}}"},
+				{Cmd: "mv {{.DIR}}/{{.ZIPDIR}}/* {{.DIR}}/"},
+				{Cmd: "rm -rf {{.DIR}}/$(basename {{.ZIP}} {{ext .ZIP}})"},
+			},
+			Sources:   &[]string{"{{.ZIP}}"},
+			Generates: &[]string{"{{.DIR}}/**"},
+		},
+		"unzip-rootdir": {
+			Dir:   stringPtr("{{.OUTDIR}}"),
+			Run:   stringPtr("when_changed"),
+			Label: stringPtr("dse:unzip-rootdir:{{.ZIPFILE}}-{{.DIR}}"),
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("ZIP", "{{.ZIP}}")
+				om.Set("DIR", "{{.DIR}}")
+				return &om
+			}(),
+			Cmds: &[]Cmd{
+				{Cmd: "echo \"UNZIP DIR {{.ZIP}} -> {{.DIR}}\""},
+				{Cmd: "mkdir -p {{.DIR}}"},
+				{Cmd: "unzip -o {{.ZIP}} '*' -d {{.DIR}}"},
 			},
 			Sources:   &[]string{"{{.ZIP}}"},
 			Generates: &[]string{"{{.DIR}}/**"},
@@ -73,7 +92,7 @@ func buildBaseTasks() map[string]Task {
 					},
 				},
 				{
-					Task: "unzip-dir",
+					Task: "unzip-rootdir",
 					Vars: &map[string]string{
 						"ZIP": "{{.FMUTMPFILE}}",
 						"DIR": "{{.FMUDIR}}",
