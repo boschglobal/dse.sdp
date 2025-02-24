@@ -10,8 +10,6 @@ spec:
       metadata:
         container:
           repository: ghcr.io/boschglobal/dse-modelc
-          image_var: MODELC_IMAGE
-          tag_var: MODELC_TAG
 
   vars:
     - name: sim_key

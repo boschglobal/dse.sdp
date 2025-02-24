@@ -53,7 +53,7 @@ spec:
                 path: fmimcl
                 files:
                   - lib/libfmimcl.so
-            workflows:
+            tasks:
               generate-fmimcl:
                 generates:
                   - data/model.yaml
@@ -66,8 +66,6 @@ spec:
       metadata:
         container:
           repository: ghcr.io/boschglobal/dse-fmi
-          image_var: FMI_IMAGE
-          tag_var: FMI_TAG
     - name: linear_fmu
       url: https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip
       path: examples/fmu/linear/fmi2/linear.fmu  # detect extension, download, extract, expand -> /model/linear/linear_fmu

@@ -62,8 +62,7 @@ func TestGenerateTaskfile_includes(t *testing.T) {
 
 	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.taskfile", "https://raw.githubusercontent.com/boschglobal/dse.modelc/refs/tags/v2.1.15/Taskfile.yml")
 	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.dir", "{{.OUTDIR}}/{{.SIMDIR}}")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.MODELC_IMAGE", "ghcr.io/boschglobal/dse-modelc")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.MODELC_TAG", "2.1.15")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.IMAGE_TAG", "2.1.15")
 	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.SIM", "{{.SIMDIR}}")
 	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.ENTRYWORKDIR", "{{.PWD}}/{{.OUTDIR}}")
 

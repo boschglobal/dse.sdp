@@ -23,26 +23,13 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 	}
 
 	for _, uses := range *simSpec.Uses {
-		if *&uses.Metadata == nil {
+		if uses.Version == nil {
 			continue
 		}
-		md := *uses.Metadata
-		mdContainer, ok := md["container"]
-		if !ok {
-			continue
-		}
-
 		vars := map[string]string{
 			"SIM":          "{{.SIMDIR}}",
 			"ENTRYWORKDIR": "{{.PWD}}/{{.OUTDIR}}",
-		}
-		if imageKey, ok := mdContainer.(map[string]interface{})["image_var"]; ok {
-			if imageVal, ok := mdContainer.(map[string]interface{})["repository"]; ok {
-				vars[imageKey.(string)] = imageVal.(string)
-			}
-		}
-		if tagKey, ok := mdContainer.(map[string]interface{})["tag_var"]; ok {
-			vars[tagKey.(string)] = cleanTag(*uses.Version)
+			"IMAGE_TAG":    cleanTag(*uses.Version),
 		}
 		includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
 			Taskfile: func() string {
@@ -286,7 +273,7 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					if r := recover(); r != nil {
 					}
 				}()
-				workflowFiles = md["workflows"].(map[string]interface{})[workflow.Name].(map[string]interface{})["generates"].([]interface{})
+				workflowFiles = md["tasks"].(map[string]interface{})[workflow.Name].(map[string]interface{})["generates"].([]interface{})
 			}()
 			for _, file := range workflowFiles {
 				*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", file.(string)))
