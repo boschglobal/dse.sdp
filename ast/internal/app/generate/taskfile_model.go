@@ -109,6 +109,28 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 	return modelTask
 }
 
+func parseUrl(task *Task, uses *ast.Uses) string {
+	u, _ := url.Parse(uses.Url)
+	downloadFile := fmt.Sprintf("downloads/%s", filepath.Base(u.Path))
+	if u.IsAbs() == true {
+		*task.Deps = append(*task.Deps, Dep{
+			Task: "download-file",
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("URL", uses.Url)
+				om.Set("FILE", downloadFile)
+				return &om
+			}(),
+		})
+	} else {
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Cmd: fmt.Sprintf("cp '%s' {{.PWD}}/%s", uses.Url, downloadFile),
+		})
+	}
+	*task.Generates = append(*task.Generates, downloadFile)
+	return downloadFile
+}
+
 func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 	var modelUses ast.Uses
 
@@ -133,12 +155,37 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 	// Parse: user files
 	func(task *Task, model ast.Model) {
 		if model.Files != nil {
-			for _, file := range *model.Files {
-				*task.Cmds = append(*task.Cmds, Cmd{
-					Cmd: fmt.Sprintf("cp {{.PWD}}/%[1]s '{{.SIMDIR}}/{{.PATH}}/data/%[1]s'", file),
-				})
-				*task.Sources = append(*task.Sources, fmt.Sprintf("{{.PWD}}/%s", file))
-				*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/data/%s", file))
+			for _, f := range *model.Files {
+				// Calculate the model relative path (i.e. generates).
+				dir, file := filepath.Split(f.Name)
+				if len(dir) == 0 {
+					dir = "data/"
+				}
+				filePath := fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s%s", dir, file)
+				*task.Generates = append(*task.Generates, fmt.Sprintf("%s", filePath))
+				// Determine the source (i.e. sources).
+				if f.Reference != nil && *f.Reference == "uses" {
+					var fileUses *ast.Uses
+					for _, uses := range *simSpec.Uses {
+						if uses.Name == f.Value {
+							fileUses = &uses
+							break
+						}
+					}
+					if fileUses == nil {
+						continue
+					}
+					downloadFile := parseUrl(task, fileUses)
+					*task.Cmds = append(*task.Cmds, Cmd{
+						Cmd: fmt.Sprintf("cp {{.PWD}}/%s '%s'", downloadFile, filePath),
+					})
+					*task.Sources = append(*task.Sources, fmt.Sprintf("{{.PWD}}/%s", downloadFile))
+				} else {
+					*task.Cmds = append(*task.Cmds, Cmd{
+						Cmd: fmt.Sprintf("cp {{.PWD}}/%s '%s'", f.Value, filePath),
+					})
+					*task.Sources = append(*task.Sources, fmt.Sprintf("{{.PWD}}/%s", f.Name))
+				}
 			}
 		}
 	}(&modelTask, model)
@@ -198,18 +245,8 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 						continue
 					}
 					// Download the Uses file.
-					u, _ := url.Parse(varUses.Url)
-					downloadFile := fmt.Sprintf("downloads/%s", filepath.Base(u.Path))
-					*task.Deps = append(*task.Deps, Dep{
-						Task: "download-file",
-						Vars: func() *OMap {
-							om := OMap{orderedmap.NewOrderedMap[string, string]()}
-							om.Set("URL", varUses.Url)
-							om.Set("FILE", downloadFile)
-							return &om
-						}(),
-					})
-					*task.Generates = append(*task.Generates, downloadFile)
+					downloadFile := parseUrl(task, varUses)
+
 					// Extract the Uses path.
 					if varUses.Path == nil {
 						continue
