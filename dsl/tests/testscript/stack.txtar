@@ -1,8 +1,9 @@
 # Setup the environment.
-env PATH=$ENTRYDIR/tests/scripts:$PATH
+env PATH=$ENTRYDIR/tests/scripts/:$PATH
 
 # Generate the AST.
 exec parse2ast dsl_fmu.txt ast_fmu.json
+
 
 # Evaluate the AST.
 exec ast_stats.sh ast_fmu.json
@@ -15,6 +16,7 @@ stdout 'models = 5'
 stdout 'stacks = 4'
 stdout 'vars = 12'
 stdout 'envar = 4'
+stdout 'files = 0'
 
 # Evaluate the AST path/structure.
 exec ast_paths.sh ast_fmu.json

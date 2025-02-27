@@ -1,0 +1,109 @@
+# Setup the environment.
+env PATH=$ENTRYDIR/tests/scripts:$PATH
+
+# Generate the AST.
+exec parse2ast dsl_fmu.txt ast_fmu.json
+
+# Evaluate the AST.
+exec ast_stats.sh ast_fmu.json
+
+stdout 'sims = 1'
+stdout 'channels = 5'
+stdout 'networks = 1'
+stdout 'uses = 1'
+stdout 'models = 3'
+stdout 'stacks = 2'
+stdout 'vars = 3'
+stdout 'envar = 0'
+stdout 'files = 3'
+
+# Evaluate the AST path/structure.
+exec ast_paths.sh ast_fmu.json
+
+stdout 'object.image: "simulation arch=linux-amd64" :'
+stdout 'object.payload.simulation_arch.value: "linux-amd64" :'
+
+stdout 'children.channels.0.object.image: "channel physical" :'
+stdout 'children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.channels.0.object.payload.channel_alias.value: "" :'
+stdout 'children.channels.1.children.networks.0.object.payload.network_name.value: "CAN_1" :'
+stdout 'children.channels.1.children.networks.0.object.payload.mime_type.value: "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1" :'
+
+stdout 'children.uses.0.type: "Uses" :'
+stdout 'children.uses.0.object.image: "dse.network https://github.com/boschglobal/dse.network v1.0.7" :'
+
+stdout 'children.stacks.0.children.models.0.object.image: "model FMU dse.fmi.mcl" :'
+stdout 'children.stacks.0.children.models.0.object.payload.model_name.value: "FMU" :'
+stdout 'children.stacks.0.children.models.0.object.payload.model_repo_name.value: "dse.fmi.mcl" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_name.value: "physical" :'
+stdout 'children.stacks.0.children.models.0.children.channels.0.object.payload.channel_alias.value: "scalar_vector" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.object.image: "workflow generate-fmimcl" :'
+stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.0.object.image: "var FMU_DIR uses fmu" :'
+
+stdout 'children.stacks.1.object.image: "stack fmu-stacked stacked=true arch=linux-x86" :'
+stdout 'children.stacks.1.object.payload.stack_name.value: "fmu-stacked" :'
+stdout 'children.stacks.1.object.payload.stacked.value: "true" :'
+stdout 'children.stacks.1.children.models.0.object.image: "model FMU_1 dse.fmi.mcl" :'
+stdout 'children.stacks.1.children.models.0.object.payload.model_name.value: "FMU_1" :'
+stdout 'children.stacks.1.children.models.0.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.1.children.models.0.children.files.0.type: "File" :'
+stdout 'children.stacks.1.children.models.0.children.files.0.object.image: "file input.csv uses input_file" :'
+stdout 'children.stacks.1.children.models.0.children.files.0.object.payload.file_name.token_type: "file_name" :'
+stdout 'children.stacks.1.children.models.0.children.files.0.object.payload.file_reference_type.value: "uses" :'
+stdout 'children.stacks.1.children.models.0.children.files.0.object.payload.file_reference_type.token_type: "file_reference_type" :'
+stdout 'children.stacks.1.children.models.0.children.files.0.object.payload.file_value.value: "input_file" :'
+stdout 'children.stacks.1.children.models.0.children.files.0.object.payload.file_value.token_type: "file_value" :'
+stdout 'children.stacks.1.children.models.0.children.files.1.type: "File" :'
+stdout 'children.stacks.1.children.models.0.children.files.1.object.image: "file data/signalgroup.yaml sample/data/signalgroup.yaml" :'
+stdout 'children.stacks.1.children.models.0.children.files.1.object.payload.file_name.value: "data/signalgroup.yaml" :'
+stdout 'children.stacks.1.children.models.0.children.files.1.object.payload.file_name.token_type: "file_name" :'
+stdout 'children.stacks.1.children.models.0.children.files.1.object.payload.file_reference_type.value: "" :'
+stdout 'children.stacks.1.children.models.0.children.files.1.object.payload.file_reference_type.token_type: "file_reference_type" :'
+stdout 'children.stacks.1.children.models.0.children.files.1.object.payload.file_value.value: "sample/data/signalgroup.yaml" :'
+stdout 'children.stacks.1.children.models.0.children.files.1.object.payload.file_value.token_type: "file_value" :'
+stdout 'children.stacks.1.children.models.0.children.workflow.0.object.image: "workflow generate-fmimcl" :'
+
+stdout 'children.stacks.1.children.models.1.object.image: "model FMU_2 dse.fmi.mcl" :'
+stdout 'children.stacks.1.children.models.1.object.payload.model_name.value: "FMU_2" :'
+stdout 'children.stacks.1.children.models.1.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.1.children.models.1.children.files.0.type: "File" :'
+stdout 'children.stacks.1.children.models.1.children.files.0.object.image: "file data/signalgroup.yaml sample/data/signalgroup.yaml" :'
+stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file_name.value: "data/signalgroup.yaml" :'
+stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file_name.token_type: "file_name" :'
+stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file_reference_type.value: "" :'
+stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file_reference_type.token_type: "file_reference_type" :'
+stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file_value.value: "sample/data/signalgroup.yaml" :'
+stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file_value.token_type: "file_value" :'
+stdout 'children.stacks.1.children.models.1.children.workflow.0.object.image: "workflow generate-fmimcl" :'
+stdout 'children.stacks.1.children.models.1.children.workflow.0.children.workflow_vars.0.object.image: "  var FMU_DIR uses fmu_2" :'
+
+
+-- dsl_fmu.txt --
+simulation arch=linux-amd64
+channel physical
+channel network_ch
+network CAN_1 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+
+uses
+dse.network https://github.com/boschglobal/dse.network v1.0.7
+
+model FMU dse.fmi.mcl
+channel physical scalar_vector
+workflow generate-fmimcl
+var FMU_DIR uses fmu
+
+stack fmu-stacked stacked=true arch=linux-x86
+
+model FMU_1 dse.fmi.mcl
+channel physical scalar_vector
+file input.csv uses input_file
+file data/signalgroup.yaml sample/data/signalgroup.yaml
+workflow generate-fmimcl
+var FMU_DIR uses fmu_1
+
+model FMU_2 dse.fmi.mcl
+channel physical scalar_vector
+file data/signalgroup.yaml sample/data/signalgroup.yaml
+workflow generate-fmimcl
+  var FMU_DIR uses fmu_2

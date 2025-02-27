@@ -13,7 +13,7 @@
         "keywords": {
             "patterns": [{
                 "name": "keyword.control.fsil",
-                "match": "\\b(simulation|env|model|channel|uses|workflow|from|as|stack|network|var|arch)\\b",
+                "match": "\\b(simulation|env|model|channel|uses|workflow|from|as|stack|network|var|arch|file|uid)\\b",
                 "scope": "keyword.control"
             }]
         }

@@ -78,6 +78,56 @@ export const Channel = createToken({
     line_breaks: false,
 });
 
+function matchFile(text) {
+    const filePattern = /^file([ ]+\S+)([ ]+(?:uses))?([ ]+\S+)$/;
+    const execResult = filePattern.exec(text);
+    if (execResult !== null) {
+        const fileName = execResult[1];
+        let fileReferenceType = '';
+        if (execResult[2] !== undefined) {
+            fileReferenceType = execResult[2];
+        }
+        const fileValue = execResult[3];
+        const fileNameStart = execResult.index + 'file'.length + 1;
+        const fileNameEnd = fileNameStart + fileName.length;
+        let fileReferenceTypeStart = null;
+        let fileReferenceTypeEnd = null;
+        if (fileReferenceType !== '') {
+            fileReferenceTypeStart = execResult.index + 'file'.length + fileName.length + 1;
+            fileReferenceTypeEnd = fileReferenceTypeStart + fileReferenceType.length;
+        }
+        const fileValueStart = execResult.index + 'file'.length + fileName.length + fileReferenceType.length + 1;
+        const fileValueEnd = fileValueStart + fileValue.length;
+        execResult.payload = {
+            file_name: {
+                value: fileName.trim(),
+                token_type: 'file_name',
+                start_offset: fileNameStart,
+                end_offset: fileNameEnd
+            },
+            file_reference_type: {
+                value: fileReferenceType.trim(),
+                token_type: 'file_reference_type',
+                start_offset: fileReferenceTypeStart,
+                end_offset: fileReferenceTypeEnd
+            },
+            file_value: {
+                value: fileValue.trim(),
+                token_type: 'file_value',
+                start_offset: fileValueStart,
+                end_offset: fileValueEnd
+            }
+        }
+    }
+    return execResult;
+}
+
+export const File = createToken({
+    name: "File",
+    pattern: matchFile,
+    line_breaks: false,
+});
+
 function matchNetwork(text) {
     const networkPattern = /^network([ ]+\S+)([ ]+\'\S+\')$/;
     const execResult = networkPattern.exec(text);
@@ -118,12 +168,15 @@ export const Uses = createToken({
 });
 
 function matchUseItem(text) {
-    const useItemPattern = /^^(\S+)([ ]+https\:\/\/\S+)([ ]+v\d+(?:\.\d+)*)(?:[ ]+(path\=\S+))?$/;
+    const useItemPattern = /^(\S+)([ ]+https\:\/\/\S+)([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?$/;
     const execResult = useItemPattern.exec(text);
     if (execResult !== null) {
         const useItem = execResult[1];
         const link = execResult[2];
-        const version = execResult[3];
+        let version = '';
+        if (execResult[3] !== undefined) {
+            version = execResult[3];
+        }
         let path = '';
         if (execResult[4] !== undefined) {
             path = execResult[4];
@@ -227,7 +280,7 @@ export const Var = createToken({
 });
 
 function matchModel(text) {
-    const modelPattern = /^model([ ]+\S+)([ ]+\S+)([ ]+arch\=\S+)?$/;
+    const modelPattern = /^model([ ]+\S+)([ ]+\S+)([ ]+arch\=\S+)?([ ]+uid\=\S+)?$/;
     const execResult = modelPattern.exec(text);
     if (execResult !== null) {
         const modelName = execResult[1];
@@ -235,6 +288,10 @@ function matchModel(text) {
         let modelArch = '';
         if (execResult[3] !== undefined) {
             modelArch = execResult[3];
+        }
+        let modelUid = '';
+        if (execResult[4] !== undefined) {
+            modelUid = execResult[4];
         }
         const modelNameStart = execResult.index + 'model'.length + 1;
         const modelNameEnd = modelNameStart + modelName.length;
@@ -244,8 +301,15 @@ function matchModel(text) {
         let modelArchValueEnd = null;
         if (modelArch !== '') {
             modelArchValueStart = execResult.index + 'model'.length + 1 + modelName.length + modelRepoValue.length + 1;
-            modelArchValueEnd = modelArchValueStart + modelRepoValue.length + modelArch.length;
+            modelArchValueEnd = modelArchValueStart + modelArch.length;
         }
+        let modelUidValueStart = null;
+        let modelUidValueEnd = null;
+        if (modelUid !== '') {
+            modelUidValueStart = execResult.index + 'model'.length + 1 + modelName.length + modelRepoValue.length + modelArch.length + 1;
+            modelUidValueEnd = modelUidValueStart + modelUid.length;
+        }
+
         execResult.payload = {
             model_name: {
                 value: modelName.trim(),
@@ -264,6 +328,12 @@ function matchModel(text) {
                 token_type: 'model_arch',
                 start_offset: modelArchValueStart,
                 end_offset: modelArchValueEnd
+            },
+            model_uid: {
+                value: modelUid.replace('uid=', '').trim(),
+                token_type: 'model_uid',
+                start_offset: modelUidValueStart,
+                end_offset: modelUidValueEnd
             }
         }
     }
@@ -396,6 +466,7 @@ export const allTokens = [
     Simulation,
     Channel,
     Network,
+    File,
     Uses,
     UseItem,
     Var,

@@ -15,6 +15,7 @@ stdout 'models = 3'
 stdout 'stacks = 2'
 stdout 'vars = 12'
 stdout 'envar = 0'
+stdout 'files = 0'
 
 # Evaluate the AST path/structure.
 exec ast_paths.sh ast_fmu.json

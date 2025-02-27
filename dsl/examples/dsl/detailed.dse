@@ -9,7 +9,7 @@ dse.network https://github.com/boschglobal/dse.network v1.0.7
 dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8
 NetA_dbc https://github.com/boschglobal/dse.network/blob/main/dse/network/examples/stub/stub.dbc v1.0.7
 fmu https://artifactory.bosch/examples/fmu.zip v1.0.0
-fmu_1 https://artifactory.bosch/examples/fmu_release_package.zip v1.0.0 path=folder/to/fmu.zip
+fmu_1 https://artifactory.bosch/examples/fmu_release_package.zip path=folder/to/fmu.zip
 
 var key_name var_value
 var key_name2 var_value2
@@ -23,7 +23,7 @@ var FMU_DIR uses fmu
 var MCL_PATH some/path
 var OUT_DIR {{.model.name}}
 
-model NET dse.network arch=linux-x86
+model NET dse.network arch=linux-x86 uid=41
 channel physical scalar_vector
 channel network_ch network_vector
 workflow generate-network
@@ -49,8 +49,10 @@ var FMU_DIR uses fmu_1
 var MCL_PATH some/path
 var OUT_DIR {{.model.name}}
 
-model FMU_2 dse.fmi.mcl
+model FMU_2 dse.fmi.mcl uid=42
 channel physical scalar_vector
+file input.csv uses input_file
+file data/signalgroup.yaml sample/data/signalgroup.yaml
 workflow generate-fmimcl
   var FMU_DIR uses fmu_2
   var MCL_PATH some/path

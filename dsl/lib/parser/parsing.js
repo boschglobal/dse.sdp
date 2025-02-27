@@ -8,6 +8,7 @@ import {
     Simulation,
     Channel,
     Network,
+    File,
     Uses,
     UseItem,
     Model,
@@ -111,6 +112,20 @@ class FsilParser extends EmbeddedActionsParser {
             return vars;
         });
 
+        $.RULE("files", () => {
+            const files = [];
+            $.MANY({
+                DEF: () => {
+                    const file = $.CONSUME(File);
+                    files.push({
+                        type: file.tokenType.name.replace(' ', ''),
+                        object: updateTokenObject(file)
+                    })
+                }
+            });
+            return files;
+        });
+
         $.RULE("envvars", () => {
             const env_vars = [];
             $.MANY({
@@ -159,25 +174,40 @@ class FsilParser extends EmbeddedActionsParser {
 
         $.RULE("models", () => {
             const models = [];
-            $.MANY({
-                DEF: () => {
-                    const model = $.CONSUME(Model);
-                    const model_channels = $.SUBRULE($.channels);
-                    const env_vars = $.SUBRULE($.envvars);
-                    const workflow = $.SUBRULE($.workflow);
-                    models.push({
-                        type: model.tokenType.name,
-                        object: updateTokenObject(model),
-                        children: {
-                            channels: model_channels,
-                            env_vars: env_vars,
-                            workflow: workflow,
-                        }
-                    });
+            
+            $.MANY(() => {
+                const model = $.CONSUME(Model);
+                const model_channels = $.SUBRULE($.channels);
+        
+                let model_files = null;
+                let env_vars = null;
+                // Read model_files and env_vars in any order
+                while ($.LA(1).tokenType === File || $.LA(1).tokenType === EnvVar) {
+                    if ($.LA(1).tokenType === File) {
+                        model_files = $.SUBRULE($.files);
+                    } else if ($.LA(1).tokenType === EnvVar) {
+                        env_vars = $.SUBRULE($.envvars);
+                    }
                 }
+        
+                const workflow = $.SUBRULE($.workflow);
+        
+                models.push({
+                    type: model.tokenType.name,
+                    object: updateTokenObject(model),
+                    children: {
+                        channels: model_channels,
+                        files: model_files,
+                        env_vars: env_vars,
+                        workflow: workflow,
+                    }
+                });
             });
+        
             return models;
         });
+        
+        
 
         $.RULE("stack", () => {
             let stack = '';

@@ -9,7 +9,8 @@
     "main": "bin/parse2ast.js",
     "preferGlobal": true,
     "bin": {
-        "dse-parse2ast": "./bin/parse2ast.js"
+        "dse-parse2ast": "./bin/parse2ast.js",
+        "parse2ast": "./bin/parse2ast.js"
     },
     "directories": {
         "lib": "./lib"

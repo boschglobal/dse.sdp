@@ -8,13 +8,14 @@ exec parse2ast dsl_fmu.txt ast_fmu.json
 exec ast_stats.sh ast_fmu.json
 
 stdout 'sims = 1'
-stdout 'channels = 4'
+stdout 'channels = 7'
 stdout 'networks = 1'
 stdout 'uses = 2'
-stdout 'models = 1'
+stdout 'models = 3'
 stdout 'stacks = 1'
-stdout 'vars = 3'
+stdout 'vars = 5'
 stdout 'envar = 0'
+stdout 'files = 0'
 
 # Evaluate the AST path/structure.
 exec ast_paths.sh ast_fmu.json
@@ -52,6 +53,26 @@ stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflo
 stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.payload.var_reference_type.value: "" :'
 stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflow_vars.1.object.payload.var_value.value: "some/path" :'
 
+stdout 'children.stacks.0.children.models.1.object.image: "model FMU_2 dse.fmi.mcl uid=41" :'
+stdout 'children.stacks.0.children.models.1.object.payload.model_name.value: "FMU_2" :'
+stdout 'children.stacks.0.children.models.1.object.payload.model_repo_name.value: "dse.fmi.mcl" :'
+stdout 'children.stacks.0.children.models.1.object.payload.model_arch.value: "" :'
+stdout 'children.stacks.0.children.models.1.object.payload.model_uid.value: "41" :'
+stdout 'children.stacks.0.children.models.1.object.payload.model_uid.token_type: "model_uid" :'
+stdout 'children.stacks.0.children.models.1.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.0.children.models.1.children.workflow.0.object.image: "workflow patch-some-file" :'
+stdout 'children.stacks.0.children.models.1.children.workflow.0.children.workflow_vars.0.object.image: "var PATCHFILE uses patchfile_proj" :'
+
+stdout 'children.stacks.0.children.models.2.object.image: "model NET dse.network arch=linux-x86 uid=42" :'
+stdout 'children.stacks.0.children.models.2.object.payload.model_name.value: "NET" :'
+stdout 'children.stacks.0.children.models.2.object.payload.model_repo_name.value: "dse.network" :'
+stdout 'children.stacks.0.children.models.2.object.payload.model_arch.value: "linux-x86" :'
+stdout 'children.stacks.0.children.models.2.object.payload.model_uid.value: "42" :'
+stdout 'children.stacks.0.children.models.2.object.payload.model_uid.token_type: "model_uid" :'
+stdout 'children.stacks.0.children.models.2.children.channels.0.object.image: "channel physical scalar_vector" :'
+stdout 'children.stacks.0.children.models.2.children.channels.1.object.image: "channel network_ch network_vector" :'
+stdout 'children.stacks.0.children.models.2.children.workflow.0.object.image: "workflow generate-network" :'
+stdout 'children.stacks.0.children.models.2.children.workflow.0.children.workflow_vars.0.object.image: "var SIGNAL network CAN_1" :'
 
 -- dsl_fmu.txt --
 simulation arch=linux-amd64
@@ -70,3 +91,14 @@ workflow generate-fmimcl
 var FMU_DIR uses fmu
 var MCL_PATH some/path
 var OUT_DIR {{.model.name}}
+
+model FMU_2 dse.fmi.mcl uid=41
+channel physical scalar_vector
+workflow patch-some-file
+var PATCHFILE uses patchfile_proj
+
+model NET dse.network arch=linux-x86 uid=42
+channel physical scalar_vector
+channel network_ch network_vector
+workflow generate-network
+var SIGNAL network CAN_1
