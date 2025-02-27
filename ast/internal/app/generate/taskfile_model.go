@@ -11,6 +11,7 @@ import (
 
 	"github.com/elliotchance/orderedmap/v2"
 
+	"github.boschdevcloud.com/fsil/fsil.go/command/util"
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 )
 
@@ -74,8 +75,8 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 	}
 
 	modelTask := Task{
-		Dir:   stringPtr("{{.OUTDIR}}"),
-		Label: stringPtr(fmt.Sprintf("sim:model:%s", model.Name)),
+		Dir:   util.StringPtr("{{.OUTDIR}}"),
+		Label: util.StringPtr(fmt.Sprintf("sim:model:%s", model.Name)),
 		Vars: func() *OMap {
 			om := OMap{orderedmap.NewOrderedMap[string, string]()}
 			if modelUses.Name != "" {
@@ -98,7 +99,6 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 			}()
 
 			// TODO need PLATFORM_ARCH if specified on Stack or Model
-			// TODO need correction to files .. like model.yaml
 			return &om
 		}(),
 		Deps:      &deps,
@@ -209,6 +209,12 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					"ZIPDIR": fmt.Sprintf("{{.PACKAGE_PATH}}"),
 					"DIR":    fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}"),
 				},
+			})
+			*task.Cmds = append(*task.Cmds, Cmd{
+				Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | " +
+					"xargs -0 yq -i " +
+					"'with(.spec.runtime.dynlib[]; " +
+					".path |= sub(\".*/(.*$)\", \"{{.SIMDIR}}/{{.PATH}}/lib/${1}\"))'"),
 			})
 			*task.Cmds = append(*task.Cmds, Cmd{
 				Cmd: fmt.Sprintf("rm -rf '{{.SIMDIR}}/{{.PATH}}/examples'"),
@@ -340,7 +346,7 @@ func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 	}
 
 	modelTasks["build-models"] = Task{
-		Label: stringPtr("build-models"),
+		Label: util.StringPtr("build-models"),
 		Deps: func() *[]Dep {
 			deps := []Dep{}
 			for _, modelName := range modelTaskNames {

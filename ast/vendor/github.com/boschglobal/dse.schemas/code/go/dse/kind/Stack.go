@@ -2,6 +2,8 @@ package kind
 
 import (
 	"encoding/json"
+	"strings"
+
 	"github.com/oapi-codegen/runtime"
 )
 
@@ -32,6 +34,7 @@ type ModelInstanceRuntime struct {
 	Env   *map[string]string `yaml:"env,omitempty"`
 	Files *[]string          `yaml:"files,omitempty"`
 	I386  *bool              `yaml:"i386,omitempty"`
+	Paths *[]string          `yaml:"paths,omitempty"`
 	X32   *bool              `yaml:"x32,omitempty"`
 }
 type RedisConnection struct {
@@ -133,4 +136,11 @@ func (t StackSpec_Connection_Transport) MarshalJSON() ([]byte, error) {
 func (t *StackSpec_Connection_Transport) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
+}
+func (t StackSpec_Connection_Transport) MarshalYAML() (interface{}, error) {
+	b, err := t.union.MarshalJSON()
+	b = []byte(strings.ToLower(string(b)))
+	r := make(map[string]interface{})
+	json.Unmarshal(b, &r)
+	return r, err
 }

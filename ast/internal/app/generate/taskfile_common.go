@@ -6,14 +6,16 @@ package generate
 
 import (
 	"github.com/elliotchance/orderedmap/v2"
+
+	"github.boschdevcloud.com/fsil/fsil.go/command/util"
 )
 
 func buildBaseTasks() map[string]Task {
 	baseTasks := map[string]Task{
 		"unzip-file": {
-			Dir:   stringPtr("{{.OUTDIR}}"),
-			Run:   stringPtr("when_changed"),
-			Label: stringPtr("dse:unzip-file:{{.ZIPFILE}}-{{.FILEPATH}}"),
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Run:   util.StringPtr("when_changed"),
+			Label: util.StringPtr("dse:unzip-file:{{.ZIPFILE}}-{{.FILEPATH}}"),
 			Vars: func() *OMap {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("ZIP", "{{.ZIP}}")
@@ -31,9 +33,9 @@ func buildBaseTasks() map[string]Task {
 			Generates: &[]string{"{{.FILE}}"},
 		},
 		"unzip-dir": {
-			Dir:   stringPtr("{{.OUTDIR}}"),
-			Run:   stringPtr("when_changed"),
-			Label: stringPtr("dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}"),
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Run:   util.StringPtr("when_changed"),
+			Label: util.StringPtr("dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}"),
 			Vars: func() *OMap {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("ZIP", "{{.ZIP}}")
@@ -52,9 +54,9 @@ func buildBaseTasks() map[string]Task {
 			Generates: &[]string{"{{.DIR}}/**"},
 		},
 		"unzip-rootdir": {
-			Dir:   stringPtr("{{.OUTDIR}}"),
-			Run:   stringPtr("when_changed"),
-			Label: stringPtr("dse:unzip-rootdir:{{.ZIPFILE}}-{{.DIR}}"),
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Run:   util.StringPtr("when_changed"),
+			Label: util.StringPtr("dse:unzip-rootdir:{{.ZIPFILE}}-{{.DIR}}"),
 			Vars: func() *OMap {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("ZIP", "{{.ZIP}}")
@@ -70,9 +72,9 @@ func buildBaseTasks() map[string]Task {
 			Generates: &[]string{"{{.DIR}}/**"},
 		},
 		"unzip-extract-fmu": {
-			Dir:   stringPtr("{{.OUTDIR}}"),
-			Run:   stringPtr("when_changed"),
-			Label: stringPtr("dse:unzip-extract-fmu:{{.ZIP}}-{{.FMUDIR}}"),
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Run:   util.StringPtr("when_changed"),
+			Label: util.StringPtr("dse:unzip-extract-fmu:{{.ZIP}}-{{.FMUDIR}}"),
 			Vars: func() *OMap {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("ZIP", "{{.ZIP}}")
@@ -104,9 +106,9 @@ func buildBaseTasks() map[string]Task {
 			Generates: &[]string{"{{.FMUDIR}}/**"},
 		},
 		"download-file": {
-			Dir:   stringPtr("{{.OUTDIR}}"),
-			Run:   stringPtr("when_changed"),
-			Label: stringPtr("dse:download-file:{{.URL}}-{{.FILE}}"),
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Run:   util.StringPtr("when_changed"),
+			Label: util.StringPtr("dse:download-file:{{.URL}}-{{.FILE}}"),
 			Vars: func() *OMap {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("URL", "{{.URL}}")
@@ -145,8 +147,8 @@ func buildSimulationTasks() map[string]Task {
 			},
 		},
 		"build": {
-			Dir:   stringPtr("{{.OUTDIR}}"),
-			Label: stringPtr("build"),
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Label: util.StringPtr("build"),
 			Deps: &[]Dep{
 				{Task: "build-models"},
 			},

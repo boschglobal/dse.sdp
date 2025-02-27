@@ -1,0 +1,86 @@
+---
+kind: Simulation
+spec:
+  arch: linux-amd64
+  channels:
+    - name: physical
+      networks: []
+    - name: network
+      networks: []
+  stacks:
+    - name: default
+      models:
+        - name: input
+          model: dse.modelc.csv
+          uses: dse.modelc
+          channels:
+            - alias: scalar_channel
+              name: physical
+          env:
+            - name: CSV_FILE
+              value: model/input/data/input.csv
+          files:
+            - name: input.csv
+              reference: uses
+              value: input
+            - name: signalgroup.yaml
+              value: signalgroup.yaml
+            - name: trace/output.bmp
+              reference: uses
+              value: output
+          metadata:
+            package:
+              download: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+            models:
+              dse.modelc.csv:
+                path: examples/csv
+        - name: linear
+          model: dse.fmi.mcl
+          uses: dse.fmi
+          channels:
+            - alias: scalar_channel
+              name: physical
+            - alias: network_channel
+              name: network
+          workflows:
+            - name: generate-fmimcl
+              vars:
+                - name: FMU_DIR
+                  reference: uses
+                  value: linear_fmu
+                - name: OUT_DIR
+                  value: '{{.PATH}}/data'
+                - name: MCL_PATH
+                  value: '{{.PATH}}/lib/libfmimcl.so'
+          metadata:
+            package:
+              download: '{{.REPO}}/releases/download/v{{.TAG}}/Fmi-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+            models:
+              dse.fmi.mcl:
+                path: fmimcl
+            tasks:
+              generate-fmimcl:
+                generates:
+                  - data/model.yaml
+                  - data/signalgroup.yaml
+  uses:
+    - name: dse.modelc
+      url: https://github.com/boschglobal/dse.modelc
+      version: v2.1.15
+      metadata:
+        container:
+          repository: ghcr.io/boschglobal/dse-modelc
+    - name: input
+      url: http://some.server/fileshare/input.csv
+    - name: output
+      url: /volume/output.csv
+    - name: dse.fmi
+      url: https://github.com/boschglobal/dse.fmi
+      version: v1.1.20
+      metadata:
+        container:
+          repository: ghcr.io/boschglobal/dse-fmi
+    - name: linear_fmu
+      url: https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip
+      path: examples/fmu/linear/fmi2/linear.fmu  # detect extension, download, extract, expand -> /model/linear/linear_fmu
+      metadata: {}

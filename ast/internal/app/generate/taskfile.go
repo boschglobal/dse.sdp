@@ -90,10 +90,6 @@ type Taskfile struct {
 	Tasks    *map[string]Task    `yaml:"tasks,omitempty"`
 }
 
-func stringPtr(s string) *string {
-	return &s
-}
-
 func cleanTag(tag string) string {
 	var clean = regexp.MustCompile(`[^0-9\.]+`)
 	return clean.ReplaceAllString(tag, "")

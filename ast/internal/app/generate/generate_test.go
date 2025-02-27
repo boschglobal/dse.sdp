@@ -6,10 +6,22 @@ package generate
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/assert"
 )
+
+func YamlContains(t *testing.T, file []byte, ypath string, text string) {
+	path, err := yaml.PathString(ypath)
+	assert.NoError(t, err, "Path no good: %s", ypath)
+
+	var value string
+	err = path.Read(strings.NewReader(string(file)), &value)
+	assert.NoError(t, err, "Path not found in YAML: %s", ypath)
+	assert.Equal(t, text, value, "Value did not match")
+}
 
 func TestLoadInputFile_none(t *testing.T) {
 	c := GenerateCommand{}
