@@ -12,12 +12,14 @@ import (
 	"github.boschdevcloud.com/fsil/fsil.go/command"
 	"github.com/boschglobal/dse.sdp/ast/internal/app/convert"
 	"github.com/boschglobal/dse.sdp/ast/internal/app/generate"
+	"github.com/boschglobal/dse.sdp/ast/internal/app/resolve"
 )
 
 var cmds = []command.CommandRunner{
 	command.NewHelpCommand("help"),
 	convert.NewConvertCommand("convert"),
 	generate.NewGenerateCommand("generate"),
+	resolve.NewResolveCommand("resolve"),
 }
 
 var usage = `
@@ -28,6 +30,7 @@ Usage:
     ast <command> [option]
 
     ast convert -input example/ast.json -output example/ast.yaml
+    ast resolve -input example/ast.yaml
     ast generate -input example/ast.yaml -output example/sim
 
 `
