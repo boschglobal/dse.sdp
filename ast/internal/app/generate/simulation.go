@@ -20,7 +20,7 @@ func (c *GenerateCommand) GenerateSimulation() error {
 	var simulationPath = filepath.Join(c.outputPath, "simulation.yaml")
 	os.MkdirAll(filepath.Dir(simulationPath), os.ModePerm)
 	os.Remove(simulationPath)
-	fmt.Fprintf(flag.CommandLine.Output(), "Writing simulation: %s\n", c.outputPath)
+	fmt.Fprintf(flag.CommandLine.Output(), "Writing simulation: %s\n", simulationPath)
 
 	simSpec := c.simulationAst
 	//uidList := map[int]interface{}{}

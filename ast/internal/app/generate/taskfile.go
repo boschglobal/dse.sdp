@@ -111,8 +111,9 @@ func (c GenerateCommand) GenerateTaskfile() error {
 					return "linux-amd64"
 				}
 			}(),
-			"OUTDIR": "out",
-			"SIMDIR": "sim",
+			"ENTRYDIR": "{{if .SIM}}{{.ENTRYWORKDIR}}/{{.SIM}}{{else}}{{.PWD}}{{end}}",
+			"OUTDIR":   "out",
+			"SIMDIR":   "sim",
 		},
 	}
 	tasks := make(map[string]Task)
@@ -136,8 +137,7 @@ func (c GenerateCommand) GenerateTaskfile() error {
 		tasks[k] = v
 	}
 
-	// FIXME need a task to correct paths in model.yaml files.
-	// FIXME MIMEtypes on channels.
+	// TODO MIMEtypes on channels.
 
 	// Finalise the Taskfile.
 	taskfile.Tasks = &tasks

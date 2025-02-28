@@ -47,7 +47,7 @@ func buildBaseTasks() map[string]Task {
 				{Cmd: "echo \"UNZIP DIR {{.ZIP}}/{{.ZIPDIR}} -> {{.DIR}}\""},
 				{Cmd: "mkdir -p {{.DIR}}"},
 				{Cmd: "unzip -o {{.ZIP}} {{.ZIPDIR}}/* -d {{.DIR}}"},
-				{Cmd: "mv {{.DIR}}/{{.ZIPDIR}}/* {{.DIR}}/"},
+				{Cmd: "rsync -a {{.DIR}}/{{.ZIPDIR}}/ {{.DIR}}/"},
 				{Cmd: "rm -rf {{.DIR}}/$(basename {{.ZIP}} {{ext .ZIP}})"},
 			},
 			Sources:   &[]string{"{{.ZIP}}"},
@@ -154,9 +154,9 @@ func buildSimulationTasks() map[string]Task {
 			},
 			Cmds: &[]Cmd{
 				{Cmd: "mkdir -p {{.SIMDIR}}/data"},
-				{Cmd: "cp {{.PWD}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
+				{Cmd: "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
 			},
-			Sources:   &[]string{"{{.PWD}}/simulation.yaml"},
+			Sources:   &[]string{"{{.ENTRYDIR}}/simulation.yaml"},
 			Generates: &[]string{"{{.SIMDIR}}/data/simulation.yaml"},
 		},
 	}

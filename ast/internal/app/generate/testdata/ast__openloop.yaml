@@ -66,7 +66,7 @@ spec:
   uses:
     - name: dse.modelc
       url: https://github.com/boschglobal/dse.modelc
-      version: v2.1.15
+      version: v2.1.17
       metadata:
         container:
           repository: ghcr.io/boschglobal/dse-modelc
@@ -82,5 +82,5 @@ spec:
           repository: ghcr.io/boschglobal/dse-fmi
     - name: linear_fmu
       url: https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip
-      path: examples/fmu/linear/fmi2/linear.fmu  # detect extension, download, extract, expand -> /model/linear/linear_fmu
+      path: examples/fmu/linear/fmi2/linear.fmu
       metadata: {}

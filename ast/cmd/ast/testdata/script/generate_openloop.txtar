@@ -1,0 +1,108 @@
+env
+exec mkdir project
+exec ast generate -input openloop.yaml -output project
+stderr 'Running command: generate'
+stderr 'Reading file: openloop.yaml'
+stderr 'Writing to folder: project'
+stderr 'Writing taskfile: project/Taskfile.yml'
+stderr 'Writing simulation: project/simulation.yaml'
+
+exec ls -R .
+exists project/simulation.yaml
+exists project/Taskfile.yml
+exec cat project/Taskfile.yml
+yamlcontains project/simulation.yaml $.kind Stack
+yamlcontains project/simulation.yaml $.metadata.name default
+yamlcontains project/simulation.yaml $.spec.connection.transport.redis.uri redis://localhost:6379
+yamlcontains project/simulation.yaml $.spec.models[0].name simbus
+yamlcontains project/simulation.yaml $.spec.models[1].name input
+yamlcontains project/simulation.yaml $.spec.models[2].name linear
+
+yamlcontains project/Taskfile.yml $.tasks.build-models.deps[0].task model-input
+yamlcontains project/Taskfile.yml $.tasks.build-models.deps[1].task model-linear
+yamlcontains project/Taskfile.yml $.tasks.model-input.label sim:model:input
+yamlcontains project/Taskfile.yml $.tasks.model-linear.label sim:model:linear
+
+
+-- openloop.yaml --
+---
+kind: Simulation
+spec:
+  arch: linux-amd64
+  channels:
+    - name: physical
+      networks: []
+    - name: network
+      networks: []
+  stacks:
+    - name: default
+      models:
+        - name: input
+          model: dse.modelc.csv
+          uses: dse.modelc
+          channels:
+            - alias: scalar_channel
+              name: physical
+          env:
+            - name: CSV_FILE
+              value: model/input/data/input.csv
+          files:
+            - name: input.csv
+              reference: uses
+              value: input
+            - name: signalgroup.yaml
+              value: signalgroup.yaml
+          metadata:
+            package:
+              download: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+            models:
+              dse.modelc.csv:
+                path: examples/csv
+        - name: linear
+          model: dse.fmi.mcl
+          uses: dse.fmi
+          channels:
+            - alias: scalar_channel
+              name: physical
+            - alias: network_channel
+              name: network
+          workflows:
+            - name: generate-fmimcl
+              vars:
+                - name: FMU_DIR
+                  reference: uses
+                  value: linear_fmu
+                - name: OUT_DIR
+                  value: '{{.PATH}}/data'
+                - name: MCL_PATH
+                  value: '{{.PATH}}/lib/libfmimcl.so'
+          metadata:
+            package:
+              download: '{{.REPO}}/releases/download/v{{.TAG}}/Fmi-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+            models:
+              dse.fmi.mcl:
+                path: fmimcl
+            tasks:
+              generate-fmimcl:
+                generates:
+                  - data/model.yaml
+                  - data/signalgroup.yaml
+  uses:
+    - name: dse.modelc
+      url: https://github.com/boschglobal/dse.modelc
+      version: v2.1.17
+      metadata:
+        container:
+          repository: ghcr.io/boschglobal/dse-modelc
+    - name: input
+      url: openloop_input.csv
+    - name: dse.fmi
+      url: https://github.com/boschglobal/dse.fmi
+      version: v1.1.20
+      metadata:
+        container:
+          repository: ghcr.io/boschglobal/dse-fmi
+    - name: linear_fmu
+      url: https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip
+      path: examples/fmu/linear/fmi2/linear.fmu
+      metadata: {}

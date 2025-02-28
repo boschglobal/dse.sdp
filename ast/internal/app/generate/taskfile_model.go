@@ -62,7 +62,7 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 			Cmd: fmt.Sprintf("echo \"SIM Model %s -> {{.SIMDIR}}/{{.PATH}}\"", model.Name),
 		},
 		{
-			Cmd: "mkdir -p '{{.SIMDIR}}/{{.PATH}}/data'",
+			Cmd: "mkdir -p {{.SIMDIR}}/{{.PATH}}/data",
 		},
 	}
 	sources := []string{}
@@ -89,7 +89,6 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 			om.Set("PATH", fmt.Sprintf("model/%s", model.Name))
 
 			func() {
-				// FIXME schema for this.
 				defer func() {
 					if r := recover(); r != nil {
 					}
@@ -123,9 +122,15 @@ func parseUrl(task *Task, uses *ast.Uses) string {
 			}(),
 		})
 	} else {
-		*task.Cmds = append(*task.Cmds, Cmd{
-			Cmd: fmt.Sprintf("cp '%s' {{.PWD}}/%s", uses.Url, downloadFile),
-		})
+		if filepath.IsAbs(uses.Url) {
+			*task.Cmds = append(*task.Cmds, Cmd{
+				Cmd: fmt.Sprintf("cp %s %s", uses.Url, downloadFile),
+			})
+		} else {
+			*task.Cmds = append(*task.Cmds, Cmd{
+				Cmd: fmt.Sprintf("cp {{.ENTRYDIR}}/%s %s", uses.Url, downloadFile),
+			})
+		}
 	}
 	*task.Generates = append(*task.Generates, downloadFile)
 	return downloadFile
@@ -177,14 +182,20 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					}
 					downloadFile := parseUrl(task, fileUses)
 					*task.Cmds = append(*task.Cmds, Cmd{
-						Cmd: fmt.Sprintf("cp {{.PWD}}/%s '%s'", downloadFile, filePath),
+						Cmd: fmt.Sprintf("cp %s %s", downloadFile, filePath),
 					})
-					*task.Sources = append(*task.Sources, fmt.Sprintf("{{.PWD}}/%s", downloadFile))
+					*task.Sources = append(*task.Sources, fmt.Sprintf("%s", downloadFile))
 				} else {
-					*task.Cmds = append(*task.Cmds, Cmd{
-						Cmd: fmt.Sprintf("cp {{.PWD}}/%s '%s'", f.Value, filePath),
-					})
-					*task.Sources = append(*task.Sources, fmt.Sprintf("{{.PWD}}/%s", f.Name))
+					if filepath.IsAbs(f.Value) {
+						*task.Cmds = append(*task.Cmds, Cmd{
+							Cmd: fmt.Sprintf("cp %s %s", f.Value, filePath),
+						})
+					} else {
+						*task.Cmds = append(*task.Cmds, Cmd{
+							Cmd: fmt.Sprintf("cp {{.ENTRYDIR}}/%s %s", f.Value, filePath),
+						})
+					}
+					*task.Sources = append(*task.Sources, fmt.Sprintf("%s", f.Name))
 				}
 			}
 		}
@@ -194,7 +205,6 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 	func(task *Task, model ast.Model) {
 		modelPath := ""
 		func() {
-			// FIXME schema for this.
 			defer func() {
 				if r := recover(); r != nil {
 				}
@@ -212,18 +222,18 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 			})
 			*task.Cmds = append(*task.Cmds, Cmd{
 				Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | " +
-					"xargs -0 yq -i " +
+					"xargs -r -0 yq -i " +
 					"'with(.spec.runtime.dynlib[]; " +
 					".path |= sub(\".*/(.*$)\", \"{{.SIMDIR}}/{{.PATH}}/lib/${1}\"))'"),
 			})
 			*task.Cmds = append(*task.Cmds, Cmd{
-				Cmd: fmt.Sprintf("rm -rf '{{.SIMDIR}}/{{.PATH}}/examples'"),
+				Cmd: fmt.Sprintf("rm -rf {{.SIMDIR}}/{{.PATH}}/examples"),
 			})
 			*task.Cmds = append(*task.Cmds, Cmd{
-				Cmd: fmt.Sprintf("find '{{.SIMDIR}}/{{.PATH}}' -type f -name simulation.yaml -print0  | xargs -0 rm -f"),
+				Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f"),
 			})
 			*task.Cmds = append(*task.Cmds, Cmd{
-				Cmd: fmt.Sprintf("find '{{.SIMDIR}}/{{.PATH}}' -type f -name simulation.yml -print0  | xargs -0 rm -f"),
+				Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yml -print0  | xargs -r -0 rm -f"),
 			})
 			*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/**"))
 		}
@@ -311,7 +321,6 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 			})
 			workflowFiles := []interface{}{}
 			func() {
-				// FIXME schema for this.
 				defer func() {
 					if r := recover(); r != nil {
 					}
