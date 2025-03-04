@@ -1,7 +1,7 @@
 ---
 kind: SignalGroup
 metadata:
-  name: scalar_channel
+  name: signal_channel
   labels:
     model: input
     channel: signal_vector

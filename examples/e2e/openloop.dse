@@ -1,6 +1,5 @@
 simulation arch=linux-amd64
 channel physical
-channel network
 
 uses
 dse.modelc https://github.com/boschglobal/dse.modelc v2.1.17
@@ -10,12 +9,11 @@ linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-
 model input dse.modelc.csv
 channel physical scalar_vector
 envar CSV_FILE model/input/data/input.csv
-file input.csv input__value_set.csv
-file signalgroup.yaml input__signalgroup.yaml
+file input.csv project/openloop_input.csv
+file signalgroup.yaml project/signalgroup.yaml
 
 model liner dse.fmi.mcl
 channel physical scalar_vector
-channel network network_vector
 workflow generate-fmimcl
 var FMU_DIR uses linear_fmu
 var OUT_DIR uses {{.PATH}}/data
