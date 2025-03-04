@@ -6,10 +6,10 @@ exec graph import $WORK/test.yaml
 
 # Run the graphq command.
 graphq $WORK/match_querystack.cyp 3 '{"name":"openloop", "model1":"linear", "model_name1":"linear", "model2":"Csv", "model_name2":"input", "model3":"simbus", "model_name3":"simbus"}'
-graphq $WORK/match_querymodel.cyp 1 '{"model1":"simbus", "model2":"Csv", "alias":"scalar", "selectorName":"channel", "selectorValue":"scalar_channel"}'
+graphq $WORK/match_querymodel.cyp 1 '{"model1":"simbus", "model2":"Csv", "alias":"scalar", "selectorName":"channel", "selectorValue":"signal_channel"}'
 graphq $WORK/match_querymodel_dynlib.cyp 1 '{"model":"Csv", "arch":"amd64", "os":"linux", "path":"model/input/lib/libcsv.so"}'
-graphq $WORK/match_querysiggrp.cyp 2 '{"name":"scalar_channel", "label_name1":"channel", "label_value1":"signal_vector", "label_name2":"model", "label_value2":"input"}'
-graphq $WORK/match_querysiggrp_signals.cyp 3 '{"name":"scalar_channel", "signal1":"offset", "signal2":"factor", "signal3":"input"}'
+graphq $WORK/match_querysiggrp.cyp 2 '{"name":"signal_channel", "label_name1":"channel", "label_value1":"signal_vector", "label_name2":"model", "label_value2":"input"}'
+graphq $WORK/match_querysiggrp_signals.cyp 3 '{"name":"signal_channel", "signal1":"offset", "signal2":"factor", "signal3":"input"}'
 
 
 -- test.yaml --
@@ -91,11 +91,11 @@ spec:
   channels:
     - alias: scalar
       selectors:
-        channel: scalar_channel
+        channel: signal_channel
 ---
 kind: SignalGroup
 metadata:
-  name: scalar_channel
+  name: signal_channel
   labels:
     model: input
     channel: signal_vector

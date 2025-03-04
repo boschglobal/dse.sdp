@@ -5,8 +5,6 @@ spec:
   channels:
     - name: physical
       networks: []
-    - name: network
-      networks: []
   stacks:
     - name: default
       models:
@@ -14,7 +12,7 @@ spec:
           model: dse.modelc.csv
           uses: dse.modelc
           channels:
-            - alias: scalar_channel
+            - alias: signal_channel
               name: physical
           env:
             - name: CSV_FILE
@@ -35,7 +33,7 @@ spec:
           model: dse.fmi.mcl
           uses: dse.fmi
           channels:
-            - alias: scalar_channel
+            - alias: signal_channel
               name: physical
             - alias: network_channel
               name: network
@@ -55,6 +53,7 @@ spec:
             models:
               dse.fmi.mcl:
                 path: fmimcl
+                mcl: true
             tasks:
               generate-fmimcl:
                 generates:

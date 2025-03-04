@@ -15,15 +15,15 @@ metadata:
     graph:
       edge:
         direction: out
-        label: Contains 
+        label: Contains
         properties: {}
       nodes:
-        - label: FunctionalBlock 
-          properties: 
+        - label: FunctionalBlock
+          properties:
             name: VDA305-FB
-        - label: FunctionalBlock 
-          properties: 
-            name: VDA305-FB-2 
+        - label: FunctionalBlock
+          properties:
+            name: VDA305-FB-2
 spec:
   runtime:
     dynlib:
@@ -33,14 +33,14 @@ spec:
   channels:
     - alias: scalar
       selectors:
-        channel: scalar_channel
+        channel: signal_channel
 ---
 kind: SignalGroup
 metadata:
-  name: scalar_channel
+  name: signal_channel
   labels:
     model: vda305
-    functional_block: VDA305-FB 
+    functional_block: VDA305-FB
     channel: signal_vector
   annotations:
     # create graph fragment:  "Signal" <-Interface- FunctionalBlock(name: VDA305-FB)
@@ -50,8 +50,8 @@ metadata:
         label: Interface
         properties: {}
       nodes:
-        - label: FunctionalBlock 
-          properties: 
+        - label: FunctionalBlock
+          properties:
             name: VDA305-FB
 spec:
   signals:

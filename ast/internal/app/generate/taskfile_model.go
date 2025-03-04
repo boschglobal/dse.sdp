@@ -224,7 +224,7 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 				Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | " +
 					"xargs -r -0 yq -i " +
 					"'with(.spec.runtime.dynlib[]; " +
-					".path |= sub(\".*/(.*$)\", \"{{.SIMDIR}}/{{.PATH}}/lib/${1}\"))'"),
+					".path |= sub(\".*/(.*$)\", \"{{.PATH}}/lib/${1}\"))'"),
 			})
 			*task.Cmds = append(*task.Cmds, Cmd{
 				Cmd: fmt.Sprintf("rm -rf {{.SIMDIR}}/{{.PATH}}/examples"),

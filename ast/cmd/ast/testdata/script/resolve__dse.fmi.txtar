@@ -103,6 +103,7 @@ metadata:
   models:
     dse.fmi.mcl:
       path: fmimcl
+      mcl: true
       files:
         - lib/libfmimcl.so
   workflows:

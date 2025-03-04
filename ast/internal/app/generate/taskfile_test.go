@@ -171,7 +171,7 @@ func TestGenerateTaskfile_model_modelc(t *testing.T) {
 	YamlContains(t, f, "$.tasks.model-input.cmds[6].vars.ZIPDIR", "{{.PACKAGE_PATH}}")
 	YamlContains(t, f, "$.tasks.model-input.cmds[6].vars.DIR", "{{.SIMDIR}}/{{.PATH}}")
 
-	YamlContains(t, f, "$.tasks.model-input.cmds[7]", "find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i 'with(.spec.runtime.dynlib[]; .path |= sub(\".*/(.*$)\", \"{{.SIMDIR}}/{{.PATH}}/lib/${1}\"))'")
+	YamlContains(t, f, "$.tasks.model-input.cmds[7]", "find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i 'with(.spec.runtime.dynlib[]; .path |= sub(\".*/(.*$)\", \"{{.PATH}}/lib/${1}\"))'")
 	YamlContains(t, f, "$.tasks.model-input.cmds[8]", "rm -rf {{.SIMDIR}}/{{.PATH}}/examples")
 
 	YamlContains(t, f, "$.tasks.model-input.sources[0]", "downloads/input.csv")
@@ -222,7 +222,7 @@ func TestGenerateTaskfile_model_fmu(t *testing.T) {
 	YamlContains(t, f, "$.tasks.model-linear.cmds[2].vars.ZIPDIR", "{{.PACKAGE_PATH}}")
 	YamlContains(t, f, "$.tasks.model-linear.cmds[2].vars.DIR", "{{.SIMDIR}}/{{.PATH}}")
 
-	YamlContains(t, f, "$.tasks.model-linear.cmds[3]", "find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i 'with(.spec.runtime.dynlib[]; .path |= sub(\".*/(.*$)\", \"{{.SIMDIR}}/{{.PATH}}/lib/${1}\"))'")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[3]", "find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i 'with(.spec.runtime.dynlib[]; .path |= sub(\".*/(.*$)\", \"{{.PATH}}/lib/${1}\"))'")
 
 	YamlContains(t, f, "$.tasks.model-linear.cmds[4]", "rm -rf {{.SIMDIR}}/{{.PATH}}/examples")
 	YamlContains(t, f, "$.tasks.model-linear.cmds[5]", "find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f")

@@ -48,6 +48,7 @@ spec:
             models:
               dse.fmi.mcl:
                 path: fmimcl
+                mcl: true
             tasks:
               generate-fmimcl:
                 generates:

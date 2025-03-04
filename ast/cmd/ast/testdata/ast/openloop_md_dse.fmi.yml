@@ -10,6 +10,7 @@ metadata:
   models:
     dse.fmi.mcl:
       path: fmimcl
+      mcl: true
   workflows:
     generate-fmimcl:
       generates:

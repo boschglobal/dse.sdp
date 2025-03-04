@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.boschdevcloud.com/fsil/fsil.go/command/util"
@@ -30,9 +31,12 @@ func (c *GenerateCommand) GenerateSimulation() error {
 		currentUid += 1
 		return
 	}
+	var simChannels []string
+	for _, c := range simSpec.Channels {
+		simChannels = append(simChannels, c.Name)
+	}
 
 	var simbusModel *kind.ModelInstance
-
 	for _, astStack := range simSpec.Stacks {
 		stack := kind.Stack{
 			Kind: "Stack",
@@ -51,12 +55,30 @@ func (c *GenerateCommand) GenerateSimulation() error {
 		for _, astModel := range astStack.Models {
 			channels := []kind.Channel{}
 			for _, c := range astModel.Channels {
-				channels = append(channels, kind.Channel{
-					Name:      &c.Name,
-					Alias:     &c.Alias,
-					Selectors: generateChannelSelectors(astModel, c),
-				})
+				if slices.Contains(simChannels, c.Name) {
+					channels = append(channels, kind.Channel{
+						Name:      &c.Name,
+						Alias:     &c.Alias,
+						Selectors: generateChannelSelectors(astModel, c),
+					})
+				}
 			}
+
+			// MCL Models need to use astModel.Name (instance name).
+			modelName := astModel.Model
+			md := map[string]interface{}{}
+			if astModel.Metadata != nil {
+				md = *astModel.Metadata
+			}
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+					}
+				}()
+				if md["models"].(map[string]interface{})[astModel.Model].(map[string]interface{})["mcl"].(bool) == true {
+					modelName = astModel.Name
+				}
+			}()
 
 			model := kind.ModelInstance{
 				Name: astModel.Name,
@@ -70,7 +92,7 @@ func (c *GenerateCommand) GenerateSimulation() error {
 					} `yaml:"mcl,omitempty"`
 					Name string `yaml:"name"`
 				}{
-					Name: astModel.Model,
+					Name: modelName,
 				},
 				Channels: &channels,
 				Runtime:  generateModelRuntime(astModel),
@@ -159,10 +181,12 @@ func generateSimbusModel(simSpec ast.SimulationSpec) *kind.ModelInstance {
 
 	channels := []kind.Channel{}
 	for channelName, expectedCount := range channelMap {
-		channels = append(channels, kind.Channel{
-			Name:               &channelName,
-			ExpectedModelCount: &expectedCount,
-		})
+		if expectedCount > 0 {
+			channels = append(channels, kind.Channel{
+				Name:               &channelName,
+				ExpectedModelCount: &expectedCount,
+			})
+		}
 	}
 	model := kind.ModelInstance{
 		Name: "simbus",
