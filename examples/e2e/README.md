@@ -40,7 +40,9 @@ $ export TASK_X_REMOTE_TASKFILES=1
 $ cd examples/e2e
 
 # Compile the DSL and generate the Simulation AST.
-# TODO
+$ dse-parse2ast openloop.dse openloop.json
+$ dse-ast convert -input openloop.json -output openloop.yaml
+# TODO resolve metadata
 
 # Build the Simulation.
 $ dse-ast generate -input openloop.yaml -output .
