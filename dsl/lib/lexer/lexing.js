@@ -79,7 +79,7 @@ export const Channel = createToken({
 });
 
 function matchFile(text) {
-    const filePattern = /^file([ ]+\S+)([ ]+(?:uses))?([ ]+\S+)$/;
+    const filePattern = /^file([ ]+\S+)([ ]+(?:uses))?([ ]+\S+)?$/;
     const execResult = filePattern.exec(text);
     if (execResult !== null) {
         const fileName = execResult[1];
@@ -87,7 +87,10 @@ function matchFile(text) {
         if (execResult[2] !== undefined) {
             fileReferenceType = execResult[2];
         }
-        const fileValue = execResult[3];
+        let fileValue = '';
+        if (execResult[3] !== undefined) {
+            fileValue = execResult[3];
+        }
         const fileNameStart = execResult.index + 'file'.length + 1;
         const fileNameEnd = fileNameStart + fileName.length;
         let fileReferenceTypeStart = null;
@@ -96,8 +99,13 @@ function matchFile(text) {
             fileReferenceTypeStart = execResult.index + 'file'.length + fileName.length + 1;
             fileReferenceTypeEnd = fileReferenceTypeStart + fileReferenceType.length;
         }
-        const fileValueStart = execResult.index + 'file'.length + fileName.length + fileReferenceType.length + 1;
-        const fileValueEnd = fileValueStart + fileValue.length;
+        let fileValueStart = null;
+        let fileValueEnd = null;
+        if (fileValue !== '') {
+            fileValueStart = execResult.index + 'file'.length + fileName.length + fileReferenceType.length + 1;
+            fileValueEnd = fileValueStart + fileValue.length;
+        }
+
         execResult.payload = {
             file_name: {
                 value: fileName.trim(),

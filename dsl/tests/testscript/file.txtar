@@ -15,7 +15,7 @@ stdout 'models = 3'
 stdout 'stacks = 2'
 stdout 'vars = 3'
 stdout 'envar = 0'
-stdout 'files = 3'
+stdout 'files = 4'
 
 # Evaluate the AST path/structure.
 exec ast_paths.sh ast_fmu.json
@@ -75,6 +75,13 @@ stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file
 stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file_reference_type.token_type: "file_reference_type" :'
 stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file_value.value: "sample/data/signalgroup.yaml" :'
 stdout 'children.stacks.1.children.models.1.children.files.0.object.payload.file_value.token_type: "file_value" :'
+stdout 'children.stacks.1.children.models.1.children.files.1.type: "File" :'
+stdout 'children.stacks.1.children.models.1.children.files.1.object.image: "file input.csv" :'
+stdout 'children.stacks.1.children.models.1.children.files.1.object.payload.file_name.token_type: "file_name" :'
+stdout 'children.stacks.1.children.models.1.children.files.1.object.payload.file_reference_type.value: "" :'
+stdout 'children.stacks.1.children.models.1.children.files.1.object.payload.file_reference_type.token_type: "file_reference_type" :'
+stdout 'children.stacks.1.children.models.1.children.files.1.object.payload.file_value.value: "" :'
+stdout 'children.stacks.1.children.models.1.children.files.1.object.payload.file_value.token_type: "file_value" :'
 stdout 'children.stacks.1.children.models.1.children.workflow.0.object.image: "workflow generate-fmimcl" :'
 stdout 'children.stacks.1.children.models.1.children.workflow.0.children.workflow_vars.0.object.image: "  var FMU_DIR uses fmu_2" :'
 
@@ -105,5 +112,6 @@ var FMU_DIR uses fmu_1
 model FMU_2 dse.fmi.mcl
 channel physical scalar_vector
 file data/signalgroup.yaml sample/data/signalgroup.yaml
+file input.csv
 workflow generate-fmimcl
   var FMU_DIR uses fmu_2

@@ -17,4 +17,16 @@ Extension gets activated for files with below extensions
 ```bash
 .fsil
 .fs
+.dse
 ```
+
+# Live AST View
+
+#### 1. Open the Fsil supported file.
+#### 2. Click the `Open Preview` menu button in the right top corner of vs code.
+
+
+### Alternatively:
+- Press <b>`Ctrl + K V`</b> to open Preview to the side.
+- Press <b>`Ctrl + Shift + V`</b> to open Preview.
+

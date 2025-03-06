@@ -1,0 +1,32 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "name": "input",
+      "type": "rect"
+    },
+    {
+      "id": 2,
+      "name": "linear",
+      "type": "rect"
+    },
+    {
+      "id": 3,
+      "name": "physical",
+      "alias": "scalar_vector",
+      "type": "vertical_rounded_rect"
+    }
+  ],
+  "links": [
+    {
+      "source": 1,
+      "target": 3,
+      "type": "link_to_channel"
+    },
+    {
+      "source": 2,
+      "target": 3,
+      "type": "link_to_channel"
+    }
+  ]
+}

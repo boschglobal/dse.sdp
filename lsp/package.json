@@ -8,7 +8,7 @@
     "categories": [],
     "repository": {
         "type": "git",
-        "url": ""
+        "url": "https://github.com/boschglobal/dse.sdp.git"
     },
     "keywords": [
         "multi-root ready"
@@ -16,6 +16,7 @@
     "engines": {
         "vscode": "^1.75.0"
     },
+    "extensionDependencies": [],
     "activationEvents": [
         "onLanguage:fsil"
     ],
@@ -52,21 +53,81 @@
             ],
             "extensions": [
                 ".fsil",
-                ".fs"
+                ".fs",
+                ".dse"
             ]
         }],
         "grammars": [{
             "language": "fsil",
             "scopeName": "source.fsil",
             "path": "./syntaxes/fsil.tmLanguage.json"
-        }]
+        }],
+        "keybindings": [{
+                "command": "livePreview.toggle",
+                "key": "ctrl+shift+V",
+                "mac": "cmd+shift+V",
+                "when": "editorLangId == fsil"
+            },
+            {
+                "command": "livePreview.toggleSideBySide",
+                "key": "ctrl+k v",
+                "mac": "cmd+k v",
+                "when": "editorLangId == fsil"
+            }
+        ],
+        "menus": {
+            "editor/title": [{
+                "command": "livePreview.toggleSideBySide",
+                "when": "editorLangId == fsil",
+                "group": "navigation"
+            }]
+        },
+        "commands": [{
+                "command": "livePreview.toggle",
+                "title": "Open Preview",
+                "category": "Fsil",
+                "icon": "$(open-preview)"
+            },
+            {
+                "command": "livePreview.toggleSideBySide",
+                "title": "Open Preview",
+                "category": "Fsil",
+                "icon": "$(open-preview)"
+            },
+            {
+                "command": "Build",
+                "title": "Build",
+                "category": "Fsil"
+            },
+            {
+                "command": "Check",
+                "title": "Check",
+                "category": "Fsil"
+            },
+            {
+                "command": "Run",
+                "title": "Run",
+                "category": "Fsil"
+            },
+            {
+                "command": "Clean",
+                "title": "Clean",
+                "category": "Fsil"
+            },
+            {
+                "command": "Cleanall",
+                "title": "Cleanall",
+                "category": "Fsil"
+            }
+        ]
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
+        "copy-ast-exec-file": "cp ../ast/bin/ast ./bin/",
+        "vscode:prepublish": "npm run compile && npm run copy-ast-exec-file",
         "compile": "tsc -b",
         "watch": "tsc -b -w",
         "lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
-        "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+        "postinstall": "cd client && npm install && cd ../server && npm install  && cd ../ast_dag && npm install && cd .."
     },
     "devDependencies": {
         "@types/js-yaml": "^4.0.9",

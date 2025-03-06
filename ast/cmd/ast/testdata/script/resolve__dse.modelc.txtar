@@ -13,10 +13,11 @@ yamlcontains ast.yaml $.spec.stacks[0].models[0].uses dse.modelc
 yamlcontains ast.yaml $.spec.stacks[0].models[0].files[0] input.csv
 yamlcontains ast.yaml $.spec.stacks[0].models[0].files[1] signalgroup.yaml
 
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.metadata.container.image_var MODELC_IMAGE
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.metadata.container.repository ghcr.io/boschglobal/dse-modelc
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.metadata.container.tag_var MODELC_TAG
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.package.download {{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.displayName dse.modelc.csv
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.channels[0].alias scalar_channel
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.name csv
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.path examples/csv
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.platforms[0] linux-amd64
 
 yamlcontains ast.yaml $.spec.stacks[0].models[1].name linear
 yamlcontains ast.yaml $.spec.stacks[0].models[1].uses dse.fmi
@@ -65,7 +66,7 @@ spec:
   uses:
     - name: dse.modelc
       url: https://github.com/boschglobal/dse.modelc
-      version: v2.1.15
+      version: v2.1.17
       metadata:
         container:
           repository: ghcr.io/boschglobal/dse-modelc
@@ -94,15 +95,20 @@ spec:
 metadata:
   package:
     download: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
-  metadata:
-    container:
-      repository: ghcr.io/boschglobal/dse-modelc
-      image_var: MODELC_IMAGE
-      tag_var: MODELC_TAG
+  container:
+    repository: ghcr.io/boschglobal/dse-modelc
   models:
     dse.modelc.csv:
+      name: csv
+      displayName: dse.modelc.csv
       path: examples/csv
-      files:
-        - lib/libcsv.so
-        - data/model.yaml
-  workflows: {}
+      workflows: []
+      platforms:
+        - linux-amd64
+        - linux-x86
+        - linux-i386
+        - windows-x64
+        - windows-x86
+      channels:
+        - alias: scalar_channel
+  tasks: {}

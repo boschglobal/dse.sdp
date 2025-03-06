@@ -1,0 +1,59 @@
+simulation arch=linux-amd64
+channel physical
+channel network
+network CAN 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+
+uses
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8
+dse.network https://github.com/boschglobal/dse.network v1.0.7
+fmu https://artifactory.bosch/examples/fmu.zip v1.0.0
+fmu_s1 https://artifactory.bosch/examples/fmu.zip v1.0.0
+fmu_s2 https://artifactory.bosch/examples/fmu.zip v1.0.0
+CAN_dbc https://github.com/boschglobal/dse.network/blob/main/dse/network/examples/stub/stub.dbc v1.0.7
+
+
+model FMU dse.fmi.mcl arch=linux-x86
+channel physical scalar_vector
+channel network network_vector
+workflow generate-fmimcl
+var FMU_DIR uses fmu
+var MCL_PATH some/path
+var OUT_DIR {{.model.name}}
+
+
+stack network-stack
+
+model NET dse.network
+channel physical scalar_vector
+channel network_ch network_vector
+workflow generate-network
+var SIGNAL network CAN
+var NET_DIR uses CAN_dbc
+var OUT_DIR var {{.model.name}}
+
+
+stack fmu-remote
+
+envar foo stack_foo
+envar bar stack_bar
+model GW dse.fmi.gateway
+channel physical scalar_vector
+envar foo model_foo
+envar bar model_bar
+workflow generate-gateway
+
+stack fmu-stack stacked=true arch=linux-i386
+
+model FMU_S1 dse.fmi.mcl
+channel physical scalar_vector
+workflow generate-fmimcl
+var FMU_DIR uses fmu_s1
+var MCL_PATH some/path
+var OUT_DIR {{.model.name}}
+
+model FMU_S2 dse.fmi.mcl
+channel physical scalar_vector
+workflow generate-fmimcl
+var FMU_DIR uses fmu_s2
+var MCL_PATH some/path
+var OUT_DIR {{.model.name}}

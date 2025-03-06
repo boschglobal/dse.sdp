@@ -5,32 +5,33 @@
 package resolve
 
 import (
-	"flag"
-	"fmt"
-	"log/slog"
-	"os"
-	"github.com/goccy/go-yaml"
-	"regexp"
-	"net/http"
-	"io"
 	"crypto/sha256"
 	"encoding/hex"
+	"flag"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"os"
 	"path/filepath"
+	"regexp"
+
+	"github.com/goccy/go-yaml"
 
 	"github.boschdevcloud.com/fsil/fsil.go/command"
 	"github.boschdevcloud.com/fsil/fsil.go/command/log"
 )
 
-type ResolveCommand struct{
+type ResolveCommand struct {
 	command.Command
 
-	inputFile  string
-	logLevel   int
-	repoName string
+	inputFile    string
+	logLevel     int
+	repoName     string
 	metadataFile string
-	cacheDir string
+	cacheDir     string
 
-	yamlAst map[string]interface{}
+	yamlAst      map[string]interface{}
 	yamlMetadata map[string]interface{}
 }
 
@@ -70,7 +71,7 @@ func (c *ResolveCommand) Run() error {
 	return nil
 }
 
-func calculateSha256(url string) string{
+func calculateSha256(url string) string {
 	hash := sha256.Sum256([]byte(url))
 	hashString := hex.EncodeToString(hash[:])
 	return hashString
@@ -92,7 +93,7 @@ func FileExists(path string) bool {
 	return err == nil && !info.IsDir()
 }
 
-func createCacheDir(path string){
+func createCacheDir(path string) {
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		fmt.Println("Error creating directories:", err)
@@ -120,7 +121,7 @@ func appendFileName(path, filename string) string {
 
 func (c *ResolveCommand) loadYamlAST(file string) error {
 	usesMap := make(map[string]interface{})
-	
+
 	data, err := os.ReadFile(file)
 	if err != nil {
 		fmt.Println("Error reading YAML file:", err)
@@ -145,7 +146,7 @@ func (c *ResolveCommand) loadYamlAST(file string) error {
 			return fmt.Errorf("Error parsing Metadata YAML file: %v", err)
 		}
 		usesMap[c.repoName] = c.yamlMetadata
-		updateYaml(usesMap, c, file)	
+		updateYaml(usesMap, c, file)
 	} else {
 		if spec, ok := c.yamlAst["spec"].(map[string]interface{}); ok {
 			if uses, ok := spec["uses"].([]interface{}); ok {
@@ -169,15 +170,15 @@ func (c *ResolveCommand) loadYamlAST(file string) error {
 									if err := yaml.Unmarshal(data, &yamlData); err != nil {
 										fmt.Println("Error parsing chache YAML:", err)
 										return fmt.Errorf("Error parsing cache YAML file: %v", err)
-									}			
-								}else{
+									}
+								} else {
 									yamlData = fetchMetadata(rawUrl)
 									saveCacheFile(cacheFilepath, yamlData)
 								}
 							} else {
 								yamlData = fetchMetadata(rawUrl)
 							}
-							usesMap[useMap["name"].(string)] = yamlData	
+							usesMap[useMap["name"].(string)] = yamlData
 						}
 					}
 				}
@@ -207,8 +208,6 @@ func genGitRawURL(useMap map[string]interface{}) string {
 		if len(matchResult) > 3 {
 			path = matchResult[3]
 		}
-	} else {
-		fmt.Println("No match found")
 	}
 
 	var rawURL string
@@ -249,19 +248,27 @@ func fetchMetadata(url string) map[string]interface{} {
 	return yamlData
 }
 
-func updateYaml(usesMap map[string]interface{}, c *ResolveCommand, file string){
-	if spec, ok := c.yamlAst["spec"].(map[string]interface{}); ok {
+func updateYaml(usesMap map[string]interface{}, c *ResolveCommand, file string) {
+	if spec, ok := c.yamlAst["spec"].(map[string]interface{}); ok { //looping through the input yaml
 		if stacks, ok := spec["stacks"].([]interface{}); ok {
 			for _, stack := range stacks {
 				if stackMap, ok := stack.(map[string]interface{}); ok {
 					if models, ok := stackMap["models"].([]interface{}); ok {
 						for _, model := range models {
 							if modelMap, ok := model.(map[string]interface{}); ok {
-								if uses, ok := modelMap["uses"].(string); ok {
-									if newValue, found := usesMap[uses]; found {
-										if newValueMap, ok := newValue.(map[string]interface{}); ok {
-											if metadata, ok := newValueMap["metadata"]; ok {
-												modelMap["metadata"] = metadata
+								if model_name_to_search, ok := modelMap["model"].(string); ok {
+									for _, usesItem := range usesMap { //looping through the cached uses items to find if 'model_name_to_search' is present in uses items model displayname
+										if modelObj, ok := usesItem.(map[string]interface{}); ok {
+											if metadata, exists := modelObj["metadata"].(map[string]interface{}); exists {
+												if uses_models, exists := metadata["models"].(map[string]interface{}); exists {
+													for _, use_model := range uses_models {
+														if usesModelMap, ok := use_model.(map[string]interface{}); ok {
+															if displayName, exists := usesModelMap["displayName"].(string); exists && displayName == model_name_to_search {
+																modelMap["metadata"] = usesModelMap
+															}
+														}
+													}
+												}
 											}
 										}
 									}

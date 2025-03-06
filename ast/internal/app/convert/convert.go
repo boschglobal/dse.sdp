@@ -197,6 +197,25 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 			if len(envList) > 0 {
 				model.Env = &envList
 			}
+			// File
+			fileList := buildList(value, "children.files", func(value gjson.Result) ast.File {
+				files := ast.File{
+					Name:  value.Get("object.payload.file_name.value").String(),
+					Value: value.Get("object.payload.file_value.value").String(),
+					Reference: func() *ast.FileReference {
+						v := value.Get("object.payload.file_reference_type.value")
+						if v.Exists() == true {
+							return (*ast.FileReference)(util.StringPtr(v.String()))
+						} else {
+							return nil
+						}
+					}(),
+				}
+				return files
+			})
+			if len(fileList) > 0 {
+				model.Files = &fileList
+			}
 			// Workflows
 			workflowList := buildList(value, "children.workflow", func(value gjson.Result) ast.Workflow {
 				workflow := ast.Workflow{

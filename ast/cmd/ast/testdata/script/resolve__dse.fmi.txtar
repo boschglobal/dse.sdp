@@ -18,12 +18,12 @@ yamlcontains ast.yaml $.spec.stacks[0].models[1].uses dse.fmi
 yamlcontains ast.yaml $.spec.stacks[0].models[1].workflows[0].name generate-fmimcl
 yamlcontains ast.yaml $.spec.stacks[0].models[1].workflows[0].vars[0].name FMU_DIR
 
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.container.image_var FMI_IMAGE
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.container.repository ghcr.io/boschglobal/dse-fmi
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.container.tag_var FMI_TAG
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.package.download {{.REPO}}/releases/download/v{{.TAG}}/Fmi-{{.TAG}}-{{.PLATFORM_ARCH}}.zip
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.workflows.generate-fmimcl.generates[0] data/model.yaml
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.workflows.generate-fmimcl.generates[1] data/signalgroup.yaml
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.name fmimcl
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.path dse/fmimcl
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.displayName dse.fmi.mcl
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.files[0] fmimcl/lib/libfmimcl.so
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.platforms[0] linux-amd64
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.workflows[0] generate-fmimcl
 
 yamlcontains ast.yaml $.spec.uses[1].name dse.fmi
 yamlcontains ast.yaml $.spec.uses[1].url https://github.com/boschglobal/dse.fmi
@@ -101,13 +101,21 @@ metadata:
     image_var: FMI_IMAGE
     tag_var: FMI_TAG
   models:
-    dse.fmi.mcl:
-      path: fmimcl
-      mcl: true
+    fmimcl:
+      name: fmimcl
+      displayName: dse.fmi.mcl
+      path: dse/fmimcl
       files:
-        - lib/libfmimcl.so
-  workflows:
-    generate-fmimcl:
-      generates:
-        - data/model.yaml
-        - data/signalgroup.yaml
+        - fmimcl/lib/libfmimcl.so
+      workflows:
+        - generate-fmimcl
+        - patch-signalgroup
+      platforms:
+        - linux-amd64
+        - linux-x86
+        - linux-i386
+        - windows-x64
+        - windows-x86
+      channels:
+        - alias: scalar_vector
+        - alias: network_vector

@@ -1,0 +1,532 @@
+{
+  "type": "Simulation",
+  "simulation": "simulation arch=linux-amd64",
+  "object": {
+    "image": "simulation arch=linux-amd64",
+    "startOffset": 0,
+    "endOffset": 26,
+    "startLine": 1,
+    "endLine": 1,
+    "startColumn": 1,
+    "endColumn": 27,
+    "tokenTypeIdx": 3,
+    "payload": {
+      "simulation_arch": {
+        "value": "linux-amd64",
+        "token_type": "simulation_arch",
+        "start_offset": 11,
+        "end_offset": 28
+      }
+    }
+  },
+  "children": {
+    "channels": [
+      {
+        "type": "Channel",
+        "object": {
+          "image": "channel physical",
+          "startOffset": 0,
+          "endOffset": 15,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 16,
+          "tokenTypeIdx": 4,
+          "payload": {
+            "channel_name": {
+              "value": "physical",
+              "token_type": "channel_name",
+              "start_offset": 8,
+              "end_offset": 17
+            },
+            "channel_alias": {
+              "value": "",
+              "token_type": "channel_alias",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        },
+        "children": {
+          "networks": []
+        }
+      }
+    ],
+    "uses": [
+      {
+        "type": "Uses",
+        "object": {
+          "image": "dse.modelc https://github.com/boschglobal/dse.modelc v2.1.15",
+          "startOffset": 0,
+          "endOffset": 59,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 60,
+          "tokenTypeIdx": 8,
+          "payload": {
+            "use_item": {
+              "value": "dse.modelc",
+              "token_type": "use_item",
+              "start_offset": 1,
+              "end_offset": 11
+            },
+            "link": {
+              "value": "https://github.com/boschglobal/dse.modelc",
+              "token_type": "link",
+              "start_offset": 11,
+              "end_offset": 53
+            },
+            "version": {
+              "value": "v2.1.15",
+              "token_type": "version",
+              "start_offset": 53,
+              "end_offset": 61
+            },
+            "path": {
+              "value": "",
+              "token_type": "path",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        }
+      },
+      {
+        "type": "Uses",
+        "object": {
+          "image": "dse.fmi https://github.com/boschglobal/dse.fmi v1.1.20",
+          "startOffset": 0,
+          "endOffset": 53,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 54,
+          "tokenTypeIdx": 8,
+          "payload": {
+            "use_item": {
+              "value": "dse.fmi",
+              "token_type": "use_item",
+              "start_offset": 1,
+              "end_offset": 8
+            },
+            "link": {
+              "value": "https://github.com/boschglobal/dse.fmi",
+              "token_type": "link",
+              "start_offset": 8,
+              "end_offset": 47
+            },
+            "version": {
+              "value": "v1.1.20",
+              "token_type": "version",
+              "start_offset": 47,
+              "end_offset": 55
+            },
+            "path": {
+              "value": "",
+              "token_type": "path",
+              "start_offset": null,
+              "end_offset": null
+            }
+          }
+        }
+      },
+      {
+        "type": "Uses",
+        "object": {
+          "image": "linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu",
+          "startOffset": 0,
+          "endOffset": 142,
+          "startLine": 1,
+          "endLine": 1,
+          "startColumn": 1,
+          "endColumn": 143,
+          "tokenTypeIdx": 8,
+          "payload": {
+            "use_item": {
+              "value": "linear_fmu",
+              "token_type": "use_item",
+              "start_offset": 1,
+              "end_offset": 11
+            },
+            "link": {
+              "value": "https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip",
+              "token_type": "link",
+              "start_offset": 11,
+              "end_offset": 103
+            },
+            "version": {
+              "value": "",
+              "token_type": "version",
+              "start_offset": 103,
+              "end_offset": 103
+            },
+            "path": {
+              "value": "examples/fmu/linear/fmi2/linear.fmu",
+              "token_type": "path",
+              "start_offset": 103,
+              "end_offset": 143
+            }
+          }
+        }
+      }
+    ],
+    "vars": [],
+    "stacks": [
+      {
+        "type": "Stack",
+        "name": "default",
+        "object": {},
+        "env_vars": [],
+        "children": {
+          "models": [
+            {
+              "type": "Model",
+              "object": {
+                "image": "model input dse.modelc.csv",
+                "startOffset": 0,
+                "endOffset": 25,
+                "startLine": 1,
+                "endLine": 1,
+                "startColumn": 1,
+                "endColumn": 26,
+                "tokenTypeIdx": 10,
+                "payload": {
+                  "model_name": {
+                    "value": "input",
+                    "token_type": "model_name",
+                    "start_offset": 6,
+                    "end_offset": 12
+                  },
+                  "model_repo_name": {
+                    "value": "dse.modelc.csv",
+                    "token_type": "model_repo_name",
+                    "start_offset": 13,
+                    "end_offset": 28
+                  },
+                  "model_arch": {
+                    "value": "",
+                    "token_type": "model_arch",
+                    "start_offset": null,
+                    "end_offset": null
+                  },
+                  "model_uid": {
+                    "value": "",
+                    "token_type": "model_uid",
+                    "start_offset": null,
+                    "end_offset": null
+                  }
+                }
+              },
+              "children": {
+                "channels": [
+                  {
+                    "type": "Channel",
+                    "object": {
+                      "image": "channel physical scalar_vector",
+                      "startOffset": 0,
+                      "endOffset": 29,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 30,
+                      "tokenTypeIdx": 4,
+                      "payload": {
+                        "channel_name": {
+                          "value": "physical",
+                          "token_type": "channel_name",
+                          "start_offset": 8,
+                          "end_offset": 17
+                        },
+                        "channel_alias": {
+                          "value": "scalar_vector",
+                          "token_type": "channel_alias",
+                          "start_offset": 18,
+                          "end_offset": 32
+                        }
+                      }
+                    },
+                    "children": {
+                      "networks": []
+                    }
+                  }
+                ],
+                "files": [
+                  {
+                    "type": "File",
+                    "object": {
+                      "image": "file input.csv",
+                      "startOffset": 0,
+                      "endOffset": 13,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 14,
+                      "tokenTypeIdx": 5,
+                      "payload": {
+                        "file_name": {
+                          "value": "input.csv",
+                          "token_type": "file_name",
+                          "start_offset": 5,
+                          "end_offset": 15
+                        },
+                        "file_reference_type": {
+                          "value": "",
+                          "token_type": "file_reference_type",
+                          "start_offset": null,
+                          "end_offset": null
+                        },
+                        "file_value": {
+                          "value": "",
+                          "token_type": "file_value",
+                          "start_offset": null,
+                          "end_offset": null
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "File",
+                    "object": {
+                      "image": "file signalgroup.yaml",
+                      "startOffset": 0,
+                      "endOffset": 20,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 21,
+                      "tokenTypeIdx": 5,
+                      "payload": {
+                        "file_name": {
+                          "value": "signalgroup.yaml",
+                          "token_type": "file_name",
+                          "start_offset": 5,
+                          "end_offset": 22
+                        },
+                        "file_reference_type": {
+                          "value": "",
+                          "token_type": "file_reference_type",
+                          "start_offset": null,
+                          "end_offset": null
+                        },
+                        "file_value": {
+                          "value": "",
+                          "token_type": "file_value",
+                          "start_offset": null,
+                          "end_offset": null
+                        }
+                      }
+                    }
+                  }
+                ],
+                "env_vars": null,
+                "workflow": []
+              }
+            },
+            {
+              "type": "Model",
+              "object": {
+                "image": "model linear dse.fmi.mcl",
+                "startOffset": 0,
+                "endOffset": 23,
+                "startLine": 1,
+                "endLine": 1,
+                "startColumn": 1,
+                "endColumn": 24,
+                "tokenTypeIdx": 10,
+                "payload": {
+                  "model_name": {
+                    "value": "linear",
+                    "token_type": "model_name",
+                    "start_offset": 6,
+                    "end_offset": 13
+                  },
+                  "model_repo_name": {
+                    "value": "dse.fmi.mcl",
+                    "token_type": "model_repo_name",
+                    "start_offset": 14,
+                    "end_offset": 26
+                  },
+                  "model_arch": {
+                    "value": "",
+                    "token_type": "model_arch",
+                    "start_offset": null,
+                    "end_offset": null
+                  },
+                  "model_uid": {
+                    "value": "",
+                    "token_type": "model_uid",
+                    "start_offset": null,
+                    "end_offset": null
+                  }
+                }
+              },
+              "children": {
+                "channels": [
+                  {
+                    "type": "Channel",
+                    "object": {
+                      "image": "channel physical scalar_vector",
+                      "startOffset": 0,
+                      "endOffset": 29,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 30,
+                      "tokenTypeIdx": 4,
+                      "payload": {
+                        "channel_name": {
+                          "value": "physical",
+                          "token_type": "channel_name",
+                          "start_offset": 8,
+                          "end_offset": 17
+                        },
+                        "channel_alias": {
+                          "value": "scalar_vector",
+                          "token_type": "channel_alias",
+                          "start_offset": 18,
+                          "end_offset": 32
+                        }
+                      }
+                    },
+                    "children": {
+                      "networks": []
+                    }
+                  }
+                ],
+                "files": null,
+                "env_vars": null,
+                "workflow": [
+                  {
+                    "type": "Workflow",
+                    "object": {
+                      "image": "workflow generate-fmimcl",
+                      "startOffset": 0,
+                      "endOffset": 23,
+                      "startLine": 1,
+                      "endLine": 1,
+                      "startColumn": 1,
+                      "endColumn": 24,
+                      "tokenTypeIdx": 12,
+                      "payload": {
+                        "workflow_name": {
+                          "value": "generate-fmimcl",
+                          "token_type": "workflow_name",
+                          "start_offset": 9,
+                          "end_offset": 25
+                        }
+                      }
+                    },
+                    "children": {
+                      "workflow_vars": [
+                        {
+                          "type": "Var",
+                          "object": {
+                            "image": "    var FMU_DIR uses linear_fmu",
+                            "startOffset": 4,
+                            "endOffset": 34,
+                            "startLine": 1,
+                            "endLine": 1,
+                            "startColumn": 5,
+                            "endColumn": 35,
+                            "tokenTypeIdx": 9,
+                            "payload": {
+                              "var_name": {
+                                "value": "FMU_DIR",
+                                "token_type": "variable_name",
+                                "start_offset": 4,
+                                "end_offset": 12
+                              },
+                              "var_reference_type": {
+                                "value": "uses",
+                                "token_type": "variable_reference_type",
+                                "start_offset": 12,
+                                "end_offset": 17
+                              },
+                              "var_value": {
+                                "value": "linear_fmu",
+                                "token_type": "variable_value",
+                                "start_offset": 17,
+                                "end_offset": 28
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "Var",
+                          "object": {
+                            "image": "    var MCL_PATH {{.PATH}}/lib/libfmimcl.so",
+                            "startOffset": 4,
+                            "endOffset": 46,
+                            "startLine": 1,
+                            "endLine": 1,
+                            "startColumn": 5,
+                            "endColumn": 47,
+                            "tokenTypeIdx": 9,
+                            "payload": {
+                              "var_name": {
+                                "value": "MCL_PATH",
+                                "token_type": "variable_name",
+                                "start_offset": 4,
+                                "end_offset": 13
+                              },
+                              "var_reference_type": {
+                                "value": "",
+                                "token_type": "variable_reference_type",
+                                "start_offset": null,
+                                "end_offset": null
+                              },
+                              "var_value": {
+                                "value": "{{.PATH}}/lib/libfmimcl.so",
+                                "token_type": "variable_value",
+                                "start_offset": 13,
+                                "end_offset": 40
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "type": "Var",
+                          "object": {
+                            "image": "    var OUT_DIR {{.PATH}}/data",
+                            "startOffset": 4,
+                            "endOffset": 33,
+                            "startLine": 1,
+                            "endLine": 1,
+                            "startColumn": 5,
+                            "endColumn": 34,
+                            "tokenTypeIdx": 9,
+                            "payload": {
+                              "var_name": {
+                                "value": "OUT_DIR",
+                                "token_type": "variable_name",
+                                "start_offset": 4,
+                                "end_offset": 12
+                              },
+                              "var_reference_type": {
+                                "value": "",
+                                "token_type": "variable_reference_type",
+                                "start_offset": null,
+                                "end_offset": null
+                              },
+                              "var_value": {
+                                "value": "{{.PATH}}/data",
+                                "token_type": "variable_value",
+                                "start_offset": 12,
+                                "end_offset": 27
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

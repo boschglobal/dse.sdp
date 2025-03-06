@@ -19,7 +19,6 @@ import {
 	type DocumentDiagnosticReport,
 	InsertTextFormat,
 } from 'vscode-languageserver/node';
-
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
@@ -34,7 +33,6 @@ const connection = createConnection(ProposedFeatures.all);
 let metadata_data: any;
 let selectedModel: string | undefined = '';
 let selectedWorkflow: string | undefined = '';
-let channel_data: any = [];
 let channels: string[] = [];
 let taskfile_data: { [key: string]: any } = {};
 let suggestion_data: { [key: string]: any } = {};
@@ -146,20 +144,24 @@ function metadataDataParser(metadata_data: any) {
 	}
 
 	for (const model in metadata_data['metadata']['models']) {
-		const model_obj: any = metadata_data['metadata']['models'][model];
-		const display_name = model_obj['displayName'];
-		const path = model_obj['path'];
-		const name = model_obj['name'];
-		const workflows = getWorkflowDetails(model_obj['workflows']);
-		const platforms = model_obj['platforms'];
-		const channels = getChannels(model_obj['channels']);
-		suggestion_data[display_name] = {
-			'workflows': workflows,
-			'path': path,
-			'name': name,
-			'platforms': platforms,
-			'channels': channels
-		};
+		try {
+			const model_obj: any = metadata_data['metadata']['models'][model];
+			const display_name = model_obj['displayName'];
+			const path = model_obj['path'];
+			const name = model_obj['name'];
+			const workflows = getWorkflowDetails(model_obj['workflows']);
+			const platforms = model_obj['platforms'];
+			const channels = getChannels(model_obj['channels']);
+			suggestion_data[display_name] = {
+				'workflows': workflows,
+				'path': path,
+				'name': name,
+				'platforms': platforms,
+				'channels': channels
+			};
+		} catch (error) {
+			console.log(error);
+		}
 	}
 
 	fillMissingSuggestionData(suggestion_data, taskfile_data);
@@ -211,11 +213,10 @@ function taskFileParser(yamlData: any, model: any) {
 
 function parseTaskfile(yamlData: any, repo: any) {
 	taskfile_data[repo] = {};
-	taskFileParser(yamlData, repo);
-	metadataDataParser(metadata_data);
-	// const jsonData = JSON.stringify(taskfile_data, null, 2);
-	// const outputPath = path.join(__dirname, 'taskfile_vars.json');
-	// fs.writeFileSync(outputPath, jsonData, 'utf-8');
+	if (metadata_data != undefined || metadata_data != '') {
+		taskFileParser(yamlData, repo);
+		metadataDataParser(metadata_data);
+	}
 }
 
 function gen_git_raw_url(repo: { [key: string]: any }, file: string): string {
@@ -233,8 +234,6 @@ function gen_git_raw_url(repo: { [key: string]: any }, file: string): string {
 		} catch {
 			path = '';
 		}
-	} else {
-		console.log("No match found");
 	}
 
 	let raw_url: string = '';
@@ -394,14 +393,14 @@ function fetchGitData(uses_items: { [key: string]: any }) {
 							parseTaskfile(yamlData, repo)
 						}
 					})
-						.catch((error) => {
-							console.log("Error in fetching taskfile ========>")
-							console.error(error);
-						});
+					.catch((error) => {
+						console.log("Error in fetching taskfile, ")
+						console.error(error);
+					});
 				}
 			}
 		}).catch((error) => {
-			console.log("Error in fetching metadata file ========>")
+			console.log("Error in fetching metadata file, ")
 			console.error(error);
 		});
 	}
@@ -499,11 +498,18 @@ connection.onCompletion(
 			const line = lines[textDocumentPosition.position.line];
 			const word = line.substring(0, textDocumentPosition.position.character);
 			if (selectedModel !== undefined && selectedModel !== '') {
-				architectures = suggestion_data[`${selectedModel}`]["platforms"];
-				channels = suggestion_data[`${selectedModel}`]["channels"];
+				architectures = [];
+				channels = []
+				if (selectedModel in suggestion_data) {
+					architectures = suggestion_data[`${selectedModel}`]["platforms"];
+					channels = suggestion_data[`${selectedModel}`]["channels"];
+				}
 			}
 			if (word.startsWith('s')) {
 				completionItems.length = 0;
+				const insertText = Object.keys(suggestion_data).length > 0
+									? "stack\nmodel\n${1:model_name} ${2|" + Object.keys(suggestion_data).join(',') + "|}"
+									: '';
 				const simulationCompletionItem: CompletionItem = {
 					label: "simulation",
 					kind: CompletionItemKind.Keyword,
@@ -512,7 +518,7 @@ connection.onCompletion(
 				const stackCompletionItem: CompletionItem = {
 					label: "stack",
 					kind: CompletionItemKind.Snippet,
-					insertText: "stack\nmodel\n${1:model_name} ${2|" + Object.keys(suggestion_data).join(',') + "|}",
+					insertText: insertText,
 					documentation: 'Inserts a stack snippet',
 					insertTextFormat: InsertTextFormat.Snippet,
 				};
@@ -539,10 +545,13 @@ connection.onCompletion(
 			}
 			else if (word.startsWith('m')) {
 				completionItems.length = 0;
+				const insertText = Object.keys(suggestion_data).length > 0
+									? 'model\n${1:model_name} ${2|' + Object.keys(suggestion_data).join(',') + '|}'
+									: '';
 				const modelCompletionItem: CompletionItem = {
 					label: "model",
 					kind: CompletionItemKind.Snippet,
-					insertText: 'model\n${1:model_name} ${2|' + Object.keys(suggestion_data).join(',') + '|}',
+					insertText: insertText,
 					documentation: 'Inserts a model snippet',
 					data: "model_suggestion",
 					insertTextFormat: InsertTextFormat.Snippet
