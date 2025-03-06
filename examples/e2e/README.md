@@ -37,10 +37,17 @@ $ export TASK_X_REMOTE_TASKFILES=1
 #### Build and Run the Project
 
 ```bash
-# Build the project.
-$ cd examples/e2e/project
+$ cd examples/e2e
+
+# Compile the DSL and generate the Simulation AST.
+# TODO
+
+# Build the Simulation.
+$ dse-ast generate -input openloop.yaml -output .
 $ task -y -v
 
 # Run the Simulation.
 dse-simer out/sim
+...
+
 ```

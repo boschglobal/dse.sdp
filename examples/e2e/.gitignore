@@ -1,0 +1,4 @@
+Taskfile.yml
+simulation.yaml
+out/
+.task/

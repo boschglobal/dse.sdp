@@ -22,7 +22,7 @@ spec:
               reference: uses
               value: input
             - name: signalgroup.yaml
-              value: signalgroup.yaml
+              value: input/signalgroup.yaml
           metadata:
             package:
               download: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
@@ -67,7 +67,7 @@ spec:
         container:
           repository: ghcr.io/boschglobal/dse-modelc
     - name: input
-      url: openloop_input.csv
+      url: input/openloop.csv
     - name: dse.fmi
       url: https://github.com/boschglobal/dse.fmi
       version: v1.1.20

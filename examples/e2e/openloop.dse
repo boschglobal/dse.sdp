@@ -9,8 +9,8 @@ linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-
 model input dse.modelc.csv
 channel physical scalar_vector
 envar CSV_FILE model/input/data/input.csv
-file input.csv project/openloop_input.csv
-file signalgroup.yaml project/signalgroup.yaml
+file input.csv input/openloop.csv
+file signalgroup.yaml input/signalgroup.yaml
 
 model liner dse.fmi.mcl
 channel physical scalar_vector
