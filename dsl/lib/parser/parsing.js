@@ -179,8 +179,8 @@ class FsilParser extends EmbeddedActionsParser {
                 const model = $.CONSUME(Model);
                 const model_channels = $.SUBRULE($.channels);
         
-                let model_files = null;
-                let env_vars = null;
+                let model_files = [];
+                let env_vars = [];
                 // Read model_files and env_vars in any order
                 while ($.LA(1).tokenType === File || $.LA(1).tokenType === EnvVar) {
                     if ($.LA(1).tokenType === File) {
@@ -255,29 +255,49 @@ class FsilParser extends EmbeddedActionsParser {
 const parserInstance = new FsilParser();
 export function parse(inputText) {
     const lines = inputText.split(/\r?\n/);
-    let lineStartOffset = 0;
     let lexingResult = {
         'tokens': [],
         "groups": {},
         "errors": []
     };
+    let lineIdx = 0;
+    let errorDict = [];
     lines.forEach((line) => {
-        if (line !== '') {
+        if (line.trim() !== '') {
             const res = fsilLexer.tokenize(line);
-            lexingResult['tokens'].push(...res['tokens']);
-            Object.assign(lexingResult['groups'], res['groups']);
-            lexingResult['errors'].push(...res['errors']);
-            if (lexingResult.errors.length > 0) {
-                console.log(lexingResult.errors);
-                throw Error("Lexing errors detected");
+            lineIdx +=1;
+            lexingResult.tokens.push(...res.tokens);
+            lexingResult.errors.push(...res.errors);
+            if (res.errors.length > 0){
+                errorDict.push({ 
+                    line_num: lineIdx < 10 ? lineIdx.toString() + " " : lineIdx.toString(), 
+                    line_val: lines[lineIdx - 1] 
+                })
             }
-            lineStartOffset += line.length + 1;
+        } else {
+            lineIdx +=1;
         }
     });
+
+    if (errorDict.length >0 ){
+        console.log("\nLexing errors detected on below lines!\n")
+        errorDict.forEach((err, index) => {
+            console.log(`\tline ${err.line_num} : \x1b[31m${err.line_val}\x1b[0m`); 
+        });
+        console.log("\n")
+        throw Error("Lexing errors")
+    }
+
     parserInstance.input = lexingResult.tokens;
     const astOutput = parserInstance.simulation();
     if (parserInstance.errors.length > 0) {
-        throw Error("Parsing errors detected!\n" + parserInstance.errors[0].message);
+        console.log("\nParsing errors detected!\n")
+        parserInstance.errors.forEach((err, idx) => {
+            const err_line = err.message.split(":").pop().trim()
+            console.log(`\tdeclaration out of scope : \x1b[31m${err_line}\x1b[0m`);
+        })
+        console.log("\n")
+        throw Error("Parsing errors");
     }
     return astOutput;
 }

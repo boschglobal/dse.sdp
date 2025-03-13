@@ -1,5 +1,5 @@
 env
-exec ast resolve -input $WORK/ast.yaml -uses dse.modelc -file $WORK/md_dse.modelc.yaml
+exec ast resolve -input $WORK/ast.yaml -uses dse-modelc-csv -file $WORK/md_dse.modelc.yaml
 exec ls -R $WORK
 exec cat ast.yaml
 
@@ -9,15 +9,16 @@ yamlcontains ast.yaml $.spec.vars[0].name sim_key
 yamlcontains ast.yaml $.spec.vars[0].value sim_value
 
 yamlcontains ast.yaml $.spec.stacks[0].models[0].name input
-yamlcontains ast.yaml $.spec.stacks[0].models[0].uses dse.modelc
+yamlcontains ast.yaml $.spec.stacks[0].models[0].uses dse-modelc-csv
 yamlcontains ast.yaml $.spec.stacks[0].models[0].files[0] input.csv
 yamlcontains ast.yaml $.spec.stacks[0].models[0].files[1] signalgroup.yaml
 
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.displayName dse.modelc.csv
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.channels[0].alias scalar_channel
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.name csv
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.path examples/csv
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.platforms[0] linux-amd64
+
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.dse-modelc-csv.displayName dse-modelc-csv
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.dse-modelc-csv.channels[0].alias scalar_channel
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.dse-modelc-csv.name csv
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.dse-modelc-csv.path examples/csv
+yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.dse-modelc-csv.platforms[0] linux-amd64
 
 yamlcontains ast.yaml $.spec.stacks[0].models[1].name linear
 yamlcontains ast.yaml $.spec.stacks[0].models[1].uses dse.fmi
@@ -39,7 +40,7 @@ spec:
     - name: default
       models:
         - name: input
-          model: dse.modelc.csv
+          model: dse-modelc-csv
           uses: dse.modelc
           channels:
             - alias: scalar_vector
@@ -98,9 +99,9 @@ metadata:
   container:
     repository: ghcr.io/boschglobal/dse-modelc
   models:
-    dse.modelc.csv:
+    dse-modelc-csv:
       name: csv
-      displayName: dse.modelc.csv
+      displayName: dse-modelc-csv
       path: examples/csv
       workflows: []
       platforms:

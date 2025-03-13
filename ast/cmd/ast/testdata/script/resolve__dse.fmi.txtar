@@ -1,5 +1,5 @@
 env
-exec ast resolve -input $WORK/ast.yaml -uses dse.fmi -file $WORK/md_dse.fmi.yaml
+exec ast resolve -input $WORK/ast.yaml -uses fmimcl -file $WORK/md_dse.fmi.yaml
 exec ls -R $WORK
 exec cat ast.yaml
 
@@ -14,16 +14,16 @@ yamlcontains ast.yaml $.spec.stacks[0].models[0].files[0] input.csv
 yamlcontains ast.yaml $.spec.stacks[0].models[0].files[1] signalgroup.yaml
 
 yamlcontains ast.yaml $.spec.stacks[0].models[1].name linear
-yamlcontains ast.yaml $.spec.stacks[0].models[1].uses dse.fmi
+yamlcontains ast.yaml $.spec.stacks[0].models[1].uses fmimcl
 yamlcontains ast.yaml $.spec.stacks[0].models[1].workflows[0].name generate-fmimcl
 yamlcontains ast.yaml $.spec.stacks[0].models[1].workflows[0].vars[0].name FMU_DIR
 
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.name fmimcl
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.path dse/fmimcl
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.displayName dse.fmi.mcl
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.files[0] fmimcl/lib/libfmimcl.so
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.platforms[0] linux-amd64
-yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.workflows[0] generate-fmimcl
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.models.fmimcl.name fmimcl
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.models.fmimcl.path dse/fmimcl
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.models.fmimcl.displayName dse.fmi.mcl
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.models.fmimcl.files[0] fmimcl/lib/libfmimcl.so
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.models.fmimcl.platforms[0] linux-amd64
+yamlcontains ast.yaml $.spec.stacks[0].models[1].metadata.models.fmimcl.workflows[0] generate-fmimcl
 
 yamlcontains ast.yaml $.spec.uses[1].name dse.fmi
 yamlcontains ast.yaml $.spec.uses[1].url https://github.com/boschglobal/dse.fmi
@@ -49,7 +49,7 @@ spec:
             - input.csv
             - signalgroup.yaml
         - name: linear
-          model: dse.fmi.mcl
+          model: fmimcl
           uses: dse.fmi
           channels:
             - alias: scalar_vector

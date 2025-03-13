@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/goccy/go-yaml"
+	"gopkg.in/yaml.v3"
 
 	"github.boschdevcloud.com/fsil/fsil.go/command"
 	"github.boschdevcloud.com/fsil/fsil.go/command/log"
@@ -146,7 +146,8 @@ func (c *ResolveCommand) loadYamlAST(file string) error {
 			return fmt.Errorf("Error parsing Metadata YAML file: %v", err)
 		}
 		usesMap[c.repoName] = c.yamlMetadata
-		updateYaml(usesMap, c, file)
+		updateModelMd(usesMap, c, file)
+		updateUsesMd(usesMap, c, file)
 	} else {
 		if spec, ok := c.yamlAst["spec"].(map[string]interface{}); ok {
 			if uses, ok := spec["uses"].([]interface{}); ok {
@@ -184,7 +185,8 @@ func (c *ResolveCommand) loadYamlAST(file string) error {
 				}
 			}
 		}
-		updateYaml(usesMap, c, file)
+		updateModelMd(usesMap, c, file)
+		updateUsesMd(usesMap, c, file)
 	}
 	return nil
 }
@@ -248,7 +250,117 @@ func fetchMetadata(url string) map[string]interface{} {
 	return yamlData
 }
 
-func updateYaml(usesMap map[string]interface{}, c *ResolveCommand, file string) {
+func updateFile(data interface{}, filePath string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("error creating file: %v", err)
+	}
+	defer file.Close()
+	encoder := yaml.NewEncoder(file)
+	encoder.SetIndent(2)
+	defer encoder.Close()
+	if err := encoder.Encode(data); err != nil {
+		return fmt.Errorf("error encoding YAML: %v", err)
+	}
+	return nil
+}
+
+func filterMetadataYaml(data map[string]interface{}, searchModelVal string) map[string]interface{} {
+	metadata, ok := data["metadata"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	models, ok := metadata["models"].(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	var selectedModel map[string]interface{}
+	var relatedWorkflows []interface{}
+	// find the model node with the searchModelVal
+	for key, model := range models {
+		modelMap, ok := model.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if key == searchModelVal {
+			selectedModel = modelMap
+			relatedWorkflows, _ = modelMap["workflows"].([]interface{})
+			metadata["models"] = map[string]interface{}{key: modelMap}
+			break
+		}
+	}
+
+	if selectedModel == nil {
+		return nil // No matching model found
+	}
+
+	tasks, ok := metadata["tasks"].(map[string]interface{})
+	if !ok {
+		return data
+	}
+
+	filteredTasks := make(map[string]interface{})
+
+	// Keep only the tasks that are associated with related workflows
+	for _, workflow := range relatedWorkflows {
+		if task, exists := tasks[workflow.(string)]; exists {
+			if taskMap, ok := task.(map[string]interface{}); ok {
+				_, exists := taskMap["generates"]
+				if exists {
+					delete(taskMap, "vars")
+					filteredTasks[workflow.(string)] = taskMap
+				} else {
+					delete(filteredTasks, workflow.(string))
+				}
+			}
+		}
+	}
+	metadata["tasks"] = filteredTasks
+	return data
+}
+
+func updateUsesMd(usesMap map[string]interface{}, c *ResolveCommand, file string) {
+	if spec, exists := c.yamlAst["spec"].(map[string]interface{}); exists {
+		if uses, exists := spec["uses"].([]interface{}); exists {
+			for i, item := range uses {
+				if useMap, ok := item.(map[string]interface{}); ok {
+					if name, nameExists := useMap["name"].(string); nameExists {
+						value, exists := usesMap[name]
+						if exists {
+							if valueMap, ok := value.(map[string]interface{}); ok {
+								if containerMap, ok := valueMap["metadata"].(map[string]interface{}); ok {
+									if container, ok := containerMap["container"].(map[string]interface{}); ok {
+										if value, exists := container["repository"]; exists {
+											if _, ok := useMap["metadata"].(map[string]interface{}); !ok {
+												useMap["metadata"] = make(map[string]interface{})
+												useMap["metadata"].(map[string]interface{})["container"] = map[string]interface{}{
+													"repository": value,
+												}
+												uses[i] = useMap
+											}
+										}
+									}
+								}
+							}
+						} else {
+							useMap["metadata"] = make(map[string]interface{})
+							uses[i] = useMap
+						}
+					}
+				}
+			}
+		}
+	}
+
+	err := updateFile(c.yamlAst, file)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+}
+
+func updateModelMd(usesMap map[string]interface{}, c *ResolveCommand, file string) {
 	if spec, ok := c.yamlAst["spec"].(map[string]interface{}); ok { //looping through the input yaml
 		if stacks, ok := spec["stacks"].([]interface{}); ok {
 			for _, stack := range stacks {
@@ -257,18 +369,14 @@ func updateYaml(usesMap map[string]interface{}, c *ResolveCommand, file string) 
 						for _, model := range models {
 							if modelMap, ok := model.(map[string]interface{}); ok {
 								if model_name_to_search, ok := modelMap["model"].(string); ok {
-									for _, usesItem := range usesMap { //looping through the cached uses items to find if 'model_name_to_search' is present in uses items model displayname
+									for key, usesItem := range usesMap { //looping through the cached uses items to find if 'model_name_to_search' is present in uses items model displayname
 										if modelObj, ok := usesItem.(map[string]interface{}); ok {
-											if metadata, exists := modelObj["metadata"].(map[string]interface{}); exists {
-												if uses_models, exists := metadata["models"].(map[string]interface{}); exists {
-													for _, use_model := range uses_models {
-														if usesModelMap, ok := use_model.(map[string]interface{}); ok {
-															if displayName, exists := usesModelMap["displayName"].(string); exists && displayName == model_name_to_search {
-																modelMap["metadata"] = usesModelMap
-															}
-														}
-													}
-												}
+											filteredMD := filterMetadataYaml(modelObj, model_name_to_search)
+											if filteredMD != nil {
+												metadata := filteredMD["metadata"].(map[string]interface{})
+												//delete(metadata, "container")
+												modelMap["metadata"] = metadata
+												modelMap["uses"] = key
 											}
 										}
 									}
@@ -281,15 +389,8 @@ func updateYaml(usesMap map[string]interface{}, c *ResolveCommand, file string) 
 		}
 	}
 
-	newYaml, err := yaml.Marshal(c.yamlAst)
+	err := updateFile(c.yamlAst, file)
 	if err != nil {
-		fmt.Println("Error marshaling YAML:", err)
-		return
-	}
-
-	err = os.WriteFile(file, newYaml, 0644)
-	if err != nil {
-		fmt.Println("Error writing to file:", err)
-		return
+		fmt.Println("Error:", err)
 	}
 }

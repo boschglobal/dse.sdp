@@ -176,7 +176,7 @@ export const Uses = createToken({
 });
 
 function matchUseItem(text) {
-    const useItemPattern = /^(\S+)([ ]+https\:\/\/\S+)([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?$/;
+    const useItemPattern = /^(\S+)([ ]+(?:(?:https\:\/\/\S+)|(?:\S+\.\S+)|(?:\S+\/\S+)))([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?$/;
     const execResult = useItemPattern.exec(text);
     if (execResult !== null) {
         const useItem = execResult[1];

@@ -42,7 +42,7 @@ $ cd examples/e2e
 # Compile the DSL and generate the Simulation AST.
 $ dse-parse2ast openloop.dse openloop.json
 $ dse-ast convert -input openloop.json -output openloop.yaml
-# TODO resolve metadata
+$ dse-ast resolve -input openloop.yaml
 
 # Build the Simulation.
 $ dse-ast generate -input openloop.yaml -output .

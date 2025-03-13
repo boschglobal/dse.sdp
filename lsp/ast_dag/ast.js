@@ -1,10 +1,10 @@
 "use strict";
 
 let channel_colors = [
-    "#FFDDC1",  "#FFD700", "#FFDAA5", "#FFC3A0", 
-    "#FFB6C1", "#C5E1A5", "#B3E5FC", "#D1C4E9", 
-    "#F8BBD0", "#F5DEB3", "#F0E68C", "#E0FFFF", 
-    "#D3E0EA", "#E6E6FA", "#FAECCC", "#FFFACD", 
+    "#FFDDC1", "#FFD700", "#FFDAA5", "#FFC3A0",
+    "#FFB6C1", "#C5E1A5", "#B3E5FC", "#D1C4E9",
+    "#F8BBD0", "#F5DEB3", "#F0E68C", "#E0FFFF",
+    "#D3E0EA", "#E6E6FA", "#FAECCC", "#FFFACD",
 ];
 
 const rect_height = 40;
@@ -21,17 +21,6 @@ function getRandomColor() {
     channel_colors = channel_colors.filter(color => color !== random_color);
     return random_color;
 }
-
-// function getModelCount(node) {
-//     const count = node.nodes && Array.isArray(node.nodes) ? node.nodes.length : 0;
-//     const width = window.innerWidth;
-//     const height = window.innerHeight;
-//     return {
-//         count,
-//         height,
-//         width
-//     };
-// }
 
 function truncateText(text, type, graph, id) {
     const maxTextLength = 13;
@@ -77,7 +66,7 @@ function plotTree(graph) {
     const gridSpacing = 200;
     const simulation = d3.forceSimulation(graph.nodes)
         .force("link", d3.forceLink(graph.links).id(d => d.id).distance(gridSpacing))
-        .force("charge", d3.forceManyBody().strength(-(gridSpacing*2)))
+        .force("charge", d3.forceManyBody().strength(-(gridSpacing * 2)))
         .force("x", d3.forceX(d => Math.round(d.x / gridSpacing) * gridSpacing).strength(1))
         .force("y", d3.forceY(d => Math.round(d.y / gridSpacing) * gridSpacing).strength(1))
         .force("collide", d3.forceCollide(gridSpacing * 0.8)) // Reduce overlap risk
