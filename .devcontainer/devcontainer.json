@@ -3,6 +3,9 @@
         "dockerfile": "Dockerfile",
         "context": ".."
     },
+    "extensions": [
+        "streetsidesoftware.code-spell-checker"
+    ],
     "features": {
     },
     "runArgs": [
@@ -12,8 +15,10 @@
     },
     "onCreateCommand": [
     ],
-    "postCreateCommand": [
-    ],
+    "postCreateCommand": {
+        "SDP build": "make",
+        "SDP install": "make install"
+    },
     "portsAttributes": {
         "2159": {
             "label": "gdb"
