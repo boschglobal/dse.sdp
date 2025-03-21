@@ -1,6 +1,6 @@
 {
-    "name": "fsil",
-    "description": "fsil language server",
+    "name": "dse",
+    "description": "dse language server",
     "author": "",
     "license": "",
     "version": "1.0.0",
@@ -18,7 +18,8 @@
     },
     "extensionDependencies": [],
     "activationEvents": [
-        "onLanguage:fsil"
+        "onLanguage:dse",
+        "onStartupFinished"
     ],
     "main": "./client/out/extension",
     "contributes": {
@@ -26,13 +27,13 @@
             "type": "object",
             "title": "configuration",
             "properties": {
-                "fsil.maxNumberOfProblems": {
+                "dse.maxNumberOfProblems": {
                     "scope": "resource",
                     "type": "number",
                     "default": 100,
                     "description": "Controls the maximum number of problems produced by the server."
                 },
-                "fsil.trace.server": {
+                "dse.trace.server": {
                     "scope": "window",
                     "type": "string",
                     "enum": [
@@ -46,88 +47,88 @@
             }
         },
         "languages": [{
-            "id": "fsil",
+            "id": "dse",
             "aliases": [
-                "Fsil",
-                "fsil"
+                "dse",
+                "DSE"
             ],
             "extensions": [
-                ".fsil",
-                ".fs",
                 ".dse"
             ]
         }],
         "grammars": [{
-            "language": "fsil",
-            "scopeName": "source.fsil",
-            "path": "./syntaxes/fsil.tmLanguage.json"
+            "language": "dse",
+            "scopeName": "source.dse",
+            "path": "./syntaxes/dse.tmLanguage.json"
         }],
         "keybindings": [{
                 "command": "livePreview.toggle",
                 "key": "ctrl+shift+V",
                 "mac": "cmd+shift+V",
-                "when": "editorLangId == fsil"
+                "when": "editorLangId == dse"
             },
             {
                 "command": "livePreview.toggleSideBySide",
                 "key": "ctrl+k v",
                 "mac": "cmd+k v",
-                "when": "editorLangId == fsil"
+                "when": "editorLangId == dse"
             }
         ],
         "menus": {
             "editor/title": [{
                 "command": "livePreview.toggleSideBySide",
-                "when": "editorLangId == fsil",
+                "when": "editorLangId == dse",
                 "group": "navigation"
             }]
         },
         "commands": [{
                 "command": "livePreview.toggle",
                 "title": "Open Preview",
-                "category": "Fsil",
+                "category": "DSE",
                 "icon": "$(open-preview)"
             },
             {
                 "command": "livePreview.toggleSideBySide",
                 "title": "Open Preview",
-                "category": "Fsil",
+                "category": "DSE",
                 "icon": "$(open-preview)"
             },
             {
                 "command": "Build",
                 "title": "Build",
-                "category": "Fsil"
+                "category": "DSE"
             },
             {
                 "command": "Check",
                 "title": "Check",
-                "category": "Fsil"
+                "category": "DSE"
             },
             {
                 "command": "Run",
                 "title": "Run",
-                "category": "Fsil"
+                "category": "DSE"
             },
             {
                 "command": "Clean",
                 "title": "Clean",
-                "category": "Fsil"
+                "category": "DSE"
             },
             {
                 "command": "Cleanall",
                 "title": "Cleanall",
-                "category": "Fsil"
+                "category": "DSE"
             }
         ]
     },
     "scripts": {
         "copy-ast-exec-file": "cp ../ast/bin/ast ./bin/",
-        "vscode:prepublish": "npm run compile && npm run copy-ast-exec-file",
+        "copy-graph-exec-file": "cp ../graph/bin/graph ./bin/graph/",
+        "copy-graph-report-yaml-file": "cp ../graph/cmd/graph/testdata/reports/yaml/report.yaml ./bin/graph/yaml",
+        "vscode:prepublish": "npm run compile && npm run copy-ast-exec-file && npm run copy-graph-exec-file && npm run copy-graph-report-yaml-file",
         "compile": "tsc -b",
         "watch": "tsc -b -w",
         "lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
-        "postinstall": "cd client && npm install && cd ../server && npm install  && cd ../ast_dag && npm install && cd .."
+        "postinstall": "cd client && npm install && cd ../server && npm install && cd ../ast_dag && npm install"
     },
     "devDependencies": {
         "@types/js-yaml": "^4.0.9",

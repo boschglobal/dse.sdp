@@ -24,7 +24,9 @@ import {
 } from 'vscode-languageserver-textdocument';
 import * as yaml from 'js-yaml';
 
-const agent = new HttpsProxyAgent('http://localhost:3128');
+const isCodespace = process.env.CODESPACES === 'true' || process.env.GITHUB_CODESPACES === 'true';
+const proxyUrl = isCodespace ? process.env.HTTPS_PROXY : "http://localhost:3128";
+const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -252,7 +254,9 @@ async function fetchGitHubRawFile(url: string) {
 				res.on('end', () => {
 					resolve('404');
 				});
+				return;
 			}
+
 			let data = '';
 			res.on('data', (chunk) => {
 				data += chunk;
@@ -265,6 +269,8 @@ async function fetchGitHubRawFile(url: string) {
 			res.on('error', (error) => {
 				reject(error);
 			});
+		}).on('error', (error) => {
+			reject(error);
 		});
 	});
 }
@@ -335,7 +341,7 @@ connection.onDidChangeConfiguration(change => {
 		documentSettings.clear();
 	} else {
 		globalSettings = <ExampleSettings>(
-			(change.settings.fsil || defaultSettings)
+			(change.settings.dse || defaultSettings)
 		);
 	}
 	connection.languages.diagnostics.refresh();
@@ -349,7 +355,7 @@ function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
 	if (!result) {
 		result = connection.workspace.getConfiguration({
 			scopeUri: resource,
-			section: 'fsil'
+			section: 'dse'
 		});
 		documentSettings.set(resource, result);
 	}
@@ -393,10 +399,10 @@ function fetchGitData(uses_items: { [key: string]: any }) {
 							parseTaskfile(yamlData, repo)
 						}
 					})
-					.catch((error) => {
-						console.log("Error in fetching taskfile, ")
-						console.error(error);
-					});
+						.catch((error) => {
+							console.log("Error in fetching taskfile, ")
+							console.error(error);
+						});
 				}
 			}
 		}).catch((error) => {
@@ -508,8 +514,8 @@ connection.onCompletion(
 			if (word.startsWith('s')) {
 				completionItems.length = 0;
 				const insertText = Object.keys(suggestion_data).length > 0
-									? "stack\nmodel\n${1:model_name} ${2|" + Object.keys(suggestion_data).join(',') + "|}"
-									: '';
+					? "stack\nmodel\n${1:model_name} ${2|" + Object.keys(suggestion_data).join(',') + "|}"
+					: '';
 				const simulationCompletionItem: CompletionItem = {
 					label: "simulation",
 					kind: CompletionItemKind.Keyword,
@@ -546,8 +552,8 @@ connection.onCompletion(
 			else if (word.startsWith('m')) {
 				completionItems.length = 0;
 				const insertText = Object.keys(suggestion_data).length > 0
-									? 'model\n${1:model_name} ${2|' + Object.keys(suggestion_data).join(',') + '|}'
-									: '';
+					? 'model\n${1:model_name} ${2|' + Object.keys(suggestion_data).join(',') + '|}'
+					: '';
 				const modelCompletionItem: CompletionItem = {
 					label: "model",
 					kind: CompletionItemKind.Snippet,

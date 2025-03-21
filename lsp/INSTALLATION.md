@@ -15,14 +15,12 @@ $ code --install-extension <path-to-your-extension>.vsix
 ## Extension Activation
 Extension gets activated for files with below extensions
 ```bash
-.fsil
-.fs
 .dse
 ```
 
 # Live AST View
 
-#### 1. Open the Fsil supported file.
+#### 1. Open the DSE supported file.
 #### 2. Click the `Open Preview` menu button in the right top corner of vs code.
 
 

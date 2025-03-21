@@ -46,6 +46,7 @@ Running command graph ...
 ...
 
 # Run the reports using tag filter.
+$ bin/graph import cmd/graph/testdata/reports/yaml/test.yaml
 $ bin/graph report -tag foo -tag bar cmd/graph/testdata/reports/yaml
 Running command: report
 Options:

@@ -10,6 +10,7 @@ import {
 } from 'vscode-languageclient/node';
 import * as util from 'util';
 import * as fs from 'fs';
+import { tmpdir } from "os";
 
 
 interface Node {
@@ -39,36 +40,45 @@ const execPromise = util.promisify(exec);
 let panel: vscode.WebviewPanel;
 let terminal: vscode.Terminal | undefined;
 let tmpterminal: vscode.Terminal | undefined;
-const supportedExtensions = new Set<string>(['.fsil', '.fs', '.dse']);
+const supportedExtensions = new Set<string>(['.dse']);
+const yamlExtensions = new Set<string>(['.yaml', '.yml']);
 const isCodespace = vscode.env.remoteName === "codespaces";
+let astYamlPath = '';
+let simulationYamlPath = '';
+let cdDirPath = '';
 export function activate(context: vscode.ExtensionContext) {
     let activeEditor = vscode.window.activeTextEditor;
-    const extPath = vscode.extensions.getExtension('dse.fsil')!.extensionPath;
+    const extPath = vscode.extensions.getExtension('dse.dse')!.extensionPath;
+    if (isCodespace) {
+        generateContainerHTML(path.join(extPath, 'ast_dag', 'ast.html'), process.env.CODESPACE_NAME);
+    }
     const switchPanel = async (isSideBySide: boolean) => {
         activeEditor = vscode.window.activeTextEditor;
-        if (activeEditor && activeEditor.document.languageId === 'fsil') {
+        if (activeEditor && activeEditor.document.languageId === 'dse') {
             const filePath = activeEditor.document.uri.fsPath;
             let convStatus = await dslToAstConvertion(filePath, extPath);
             if (convStatus === true) {
                 let status = processAndServeFile(extPath);
                 if (status === true) {
-                    try {
-                        panel.dispose();
-                    } catch (error) {
-                        console.log(error);
-                    }
-
+                    panel?.dispose();
                     panel = vscode.window.createWebviewPanel(
                         'livePreview',
-                        'Live Preview',
+                        'DSE Live Preview',
                         isSideBySide
                             ? vscode.ViewColumn.Beside  // Open in the side-by-side panel
                             : vscode.ViewColumn.Active, // Open in a single panel
                         {
-                            enableScripts: true
+                            enableScripts: true,
+                            retainContextWhenHidden: false
                         }
                     );
-                    const url = `http://127.0.0.1:${port}/ast.html`;
+
+                    let url = '';
+                    if (isCodespace) {
+                        url = `https://${process.env.CODESPACE_NAME}-${port}.app.github.dev/ast.html?t=${new Date().getTime()}`;
+                    } else {
+                        url = `http://127.0.0.1:${port}/ast.html?t=${new Date().getTime()}`;
+                    }
                     panel.webview.html = getWebviewContent(url);
                     let debounceTimer: NodeJS.Timeout;
                     const debounceDelay = 1000;
@@ -81,6 +91,7 @@ export function activate(context: vscode.ExtensionContext) {
                                 debounceTimer = setTimeout(() => {
                                     const cacheBustedUrl = `${url}?t=${new Date().getTime()}`;
                                     panel.webview.html = getWebviewContent(cacheBustedUrl);
+                                    panel.webview.postMessage('refresh');
                                 }, debounceDelay);
                             }
                         }
@@ -122,14 +133,16 @@ export function activate(context: vscode.ExtensionContext) {
         const editor = vscode.window.activeTextEditor;
         if (editor) {
             const [filePath, activeFileExt, activeFileName, activeFileDirPath] = getActiveFileInfo(editor);
+            cdDirPath = isCodespace ? activeFileDirPath : convertToMntPath(activeFileDirPath.replace(/\\/g, "/"));
             const genSimulationPath = path.join(activeFileDirPath, 'simulation.yaml');
             const genTaskfilePath = path.join(activeFileDirPath, 'Taskfile.yml');
             const astJsonPath = path.join(activeFileDirPath, activeFileName + '.ast.json');
             const astOutputPath = isCodespace ? astJsonPath : convertToMntPath(astJsonPath.replace(/\\/g, "/"));
             if (supportedExtensions.has(activeFileExt)) {
                 terminal?.show();
+                terminal?.sendText(`cd ${cdDirPath}`);
                 tmpterminal = terminalSetup(tmpterminal);
-                let astYamlPath = path.join(activeFileDirPath, activeFileName + '.yaml');
+                astYamlPath = path.join(activeFileDirPath, activeFileName + '.yaml');
                 astYamlPath = isCodespace ? astYamlPath : convertToMntPath(astYamlPath.replace(/\\/g, "/"));
                 removeFile(astYamlPath);
                 removeFile(genTaskfilePath);
@@ -143,6 +156,7 @@ export function activate(context: vscode.ExtensionContext) {
                 const genFilesPath = isCodespace ? activeFileDirPath : convertToMntPath(activeFileDirPath.replace(/\\/g, "/"));
                 terminal?.sendText(`${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath} -taskfile true`);
                 terminal?.sendText(`${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath} -simulation true`);
+                simulationYamlPath = path.join(activeFileDirPath, 'simulation.yaml');
 
                 tmpterminal?.sendText('touch /tmp/done'); // for checking command completion
                 const checkInterval = 1000;
@@ -155,7 +169,7 @@ export function activate(context: vscode.ExtensionContext) {
                         openFile(genSimulationPath);
                         tmpterminal?.sendText('rm /tmp/done');
                         removeFile(astJsonPath);
-                        removeFile(astYamlPath);
+                        removeFile(path.join(activeFileDirPath, activeFileName + '.json'));
                     } else if (Date.now() - startTime > timeout) {
                         clearInterval(interval);
                     }
@@ -169,10 +183,21 @@ export function activate(context: vscode.ExtensionContext) {
 
     let check_cmd = vscode.commands.registerCommand('Check', () => {
         terminal = terminalSetup(terminal);
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-            const [filePath, activeFileExt, activeFileName, activeFileDirPath] = getActiveFileInfo(editor);
-            vscode.window.showInformationMessage(`Check command called.`);
+        if (astYamlPath != '' && simulationYamlPath != '') {
+            terminal?.show();
+            simulationYamlPath = isCodespace ? simulationYamlPath : convertToMntPath(simulationYamlPath.replace(/\\/g, "/"));
+            const graphExecPath = isCodespace ? path.join(extPath, 'bin', 'graph', 'graph') : convertToMntPath(path.join(extPath, 'bin', 'graph', 'graph').replace(/\\/g, "/"));
+            terminal?.sendText(`docker stop memgraph 2>/dev/null || true && docker rm memgraph 2>/dev/null || true`); // Ignore errors if container doesn't exist
+            terminal?.sendText(`docker run -d --rm --name memgraph -p 3000:3000 -p 7444:7444 -p 7687:7687 -v mg_lib:/var/lib/memgraph memgraph/memgraph-platform`);
+            terminal?.sendText(`${graphExecPath} drop --all`);
+            let mergedYamlFile = mergeYAMLWithSeparator(simulationYamlPath, astYamlPath);
+            mergedYamlFile = isCodespace ? mergedYamlFile : convertToMntPath(mergedYamlFile.replace(/\\/g, "/"));
+            terminal?.sendText(`${graphExecPath} import ${mergedYamlFile}`);
+            terminal?.sendText(`${graphExecPath} export export.cyp`);
+            const graphReportYamlPath = isCodespace ? path.join(extPath, 'bin', 'graph', 'yaml') : convertToMntPath(path.join(extPath, 'bin', 'graph', 'yaml').replace(/\\/g, "/"));
+            terminal?.sendText(`${graphExecPath} report -tag foo -tag bar ${graphReportYamlPath}`);
+        } else {
+            vscode.window.showWarningMessage(`Please run the DSE build command to Generate the files required for the check command.`);
         }
     });
     context.subscriptions.push(check_cmd);
@@ -182,28 +207,38 @@ export function activate(context: vscode.ExtensionContext) {
         const editor = vscode.window.activeTextEditor;
         if (editor) {
             const [filePath, activeFileExt, activeFileName, activeFileDirPath] = getActiveFileInfo(editor);
-            vscode.window.showInformationMessage(`Run command called.`);
+            if (astYamlPath != '') {
+                terminal?.show();
+                terminal?.sendText(`cd ${cdDirPath}`);
+
+                if (!isCodespace) {
+                    terminal?.sendText(`DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest`);
+                    terminal?.sendText(`function dse-simer() { ( if test -d "$1"; then cd "$1" && shift; fi && docker run -it --rm -v $(pwd):/sim -p 2159:2159 -p 6379:6379 $DSE_SIMER_IMAGE "$@"; ); }`);
+                    terminal?.sendText(`export -f dse-simer`);
+                    terminal?.sendText(`export TASK_X_REMOTE_TASKFILES=1`);
+                }
+
+                terminal?.sendText(`dse-ast generate -input ${astYamlPath} -output .`);
+                terminal?.sendText(`task -y -v`);
+                terminal?.sendText(`dse-simer out/sim`);
+            } else {
+                vscode.window.showWarningMessage(`Please run the DSE build command to process dse supported files.`);
+            }
         }
     });
     context.subscriptions.push(run_cmd);
 
     let clean_cmd = vscode.commands.registerCommand('Clean', () => {
         terminal = terminalSetup(terminal);
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-            const [filePath, activeFileExt, activeFileName, activeFileDirPath] = getActiveFileInfo(editor);
-            vscode.window.showInformationMessage(`Clean command called.`);
-        }
+        terminal?.show();
+        terminal?.sendText(`task clean`);
     });
     context.subscriptions.push(clean_cmd);
 
     let cleanall_cmd = vscode.commands.registerCommand('Cleanall', () => {
         terminal = terminalSetup(terminal);
-        const editor = vscode.window.activeTextEditor;
-        if (editor) {
-            const [filePath, activeFileExt, activeFileName, activeFileDirPath] = getActiveFileInfo(editor);
-            vscode.window.showInformationMessage(`Cleanall command called.`);
-        }
+        terminal?.show();
+        terminal?.sendText(`task clean && task cleanall`);
     });
     context.subscriptions.push(cleanall_cmd);
 
@@ -224,7 +259,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Options to control the language client
     const clientOptions: LanguageClientOptions = {
-        documentSelector: [{ scheme: 'file', language: 'fsil' }],
+        documentSelector: [{ scheme: 'file', language: 'dse' }],
         synchronize: {
             // Notify the server about file changes to '.clientrc files contained in the workspace
             fileEvents: vscode.workspace.createFileSystemWatcher('**/.clientrc')
@@ -233,8 +268,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Create the language client and start the client.
     client = new LanguageClient(
-        'fsil',
-        'Fsil',
+        'dse',
+        'DSE',
         serverOptions,
         clientOptions
     );
@@ -248,15 +283,28 @@ vscode.window.onDidCloseTerminal((closedTerminal) => {
     }
 });
 
-function getActiveFileInfo(editor: vscode.TextEditor): [string, string, string, string]{ 
+function mergeYAMLWithSeparator(simulationYamlPath: string, astYamlPath: string): string {
+    simulationYamlPath = isCodespace ? simulationYamlPath : convertToWinPath(simulationYamlPath);
+    astYamlPath = isCodespace ? astYamlPath : convertToWinPath(astYamlPath);
+    const simulationYamlContent = fs.readFileSync(simulationYamlPath, "utf8").trim();
+    const astYamlContent = fs.readFileSync(astYamlPath, "utf8").trim();
+    const mergedYaml = simulationYamlContent && astYamlContent
+        ? `${simulationYamlContent}\n---\n${astYamlContent}`
+        : simulationYamlContent || astYamlContent;
+    const mergedYamlFilePath = path.join(tmpdir(), `merged_yaml-${Date.now()}.yaml`);
+    fs.writeFileSync(mergedYamlFilePath, mergedYaml, "utf8");
+    return mergedYamlFilePath;
+}
+
+function getActiveFileInfo(editor: vscode.TextEditor): [string, string, string, string] {
     const filePath = editor.document.uri.fsPath;
     const activeFileExt = path.extname(filePath);
     const activeFileName = path.basename(filePath, path.extname(filePath));
     const activeFileDirPath = path.dirname(filePath);
-    return [filePath, activeFileExt, activeFileName, activeFileDirPath]; 
+    return [filePath, activeFileExt, activeFileName, activeFileDirPath];
 }
 
-function removeFile(filePath: string){
+function removeFile(filePath: string) {
     if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
     }
@@ -280,6 +328,11 @@ function terminalSetup(terminal: vscode.Terminal | undefined): vscode.Terminal |
 function convertToMntPath(winPath: string): string {
     return winPath.replace(/\\/g, "/")
         .replace(/^([A-Za-z]):/, (_, drive) => `/mnt/${drive.toLowerCase()}`);
+}
+
+function convertToWinPath(mntPath: string): string {
+    return mntPath.replace(/^\/mnt\/([a-z])\//, (_, drive) => `${drive.toUpperCase()}:\\`)
+        .replace(/\//g, "\\");
 }
 
 async function openFile(filePath: string) {
@@ -327,6 +380,42 @@ function processAndServeFile(extPath: string) {
     return true;
 }
 
+function generateContainerHTML(outputPath: string, codespaceHost: string | undefined) {
+    const url = `https://${codespaceHost}-${port}.app.github.dev/input.json`;
+    const htmlContent = `<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AST</title>
+        <style>
+            .node {
+                text-align: center;
+            }
+            .link {
+                stroke: #00000081;
+            }
+            .node text {
+                font: 14px sans-serif;
+                pointer-events: none;
+                color: black;
+            }
+            svg {
+                padding: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="tree-container">
+            <svg></svg>
+        </div>
+        <script src="https://d3js.org/d3.v6.min.js"></script>
+        <script type="text/javascript" src="./ast.js?v=${new Date().getTime()}" codespace_url="${url}"></script>
+    </body>
+    </html>`;
+    fs.writeFileSync(outputPath, htmlContent, 'utf8');
+}
+
 function getWebviewContent(url: string): string {
     return `
         <!DOCTYPE html>
@@ -355,9 +444,24 @@ function getWebviewContent(url: string): string {
             </style>
         </head>
         <body>
-            <iframe id="livePreviewIframe" src="${url}?t=${new Date().getTime()}" sandbox="allow-scripts allow-same-origin"></iframe>
+            <iframe id="livePreviewIframe" src="${url}?t=${new Date().getTime()}"></iframe>
             <script>
                 const vscode = acquireVsCodeApi();
+
+                function refreshIframe() {
+                    const iframe = document.getElementById('livePreviewIframe');
+                    if (iframe) {
+                        iframe.src = "${url}?t=" + new Date().getTime(); // Force reload by appending timestamp
+                    }
+                }
+
+                // Listen for messages from the extension
+                window.addEventListener('message', event => {
+                    if (event.data === 'refresh') {
+                        refreshIframe();
+                    }
+                });
+
                 window.addEventListener('resize', function () {
                     const iframe = document.querySelector('iframe');
                     if (iframe) {
@@ -365,8 +469,10 @@ function getWebviewContent(url: string): string {
                         iframe.style.height = window.innerHeight - 40 + 'px';
                     }
                 });
+
                 window.dispatchEvent(new Event('resize'));
             </script>
+
         </body>
         </html>
     `;
@@ -487,6 +593,7 @@ function jsonFormatterD3(json_data: any): typeof default_struct {
         outJson = { ...default_struct };
         console.log(error);
     }
+    console.log(JSON.stringify(outJson, null, 2));
     return outJson;
 }
 
@@ -499,7 +606,7 @@ function updateD3InputFile(extPath: string): void {
             return;
         }
 
-        let json_data: any;
+        let json_data: JSON;
         try {
             json_data = JSON.parse(data);
             console.log(json_data);

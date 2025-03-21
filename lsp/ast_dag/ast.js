@@ -250,7 +250,7 @@ updateSVGSize();
 
 async function loadLocalJSONFile() {
     try {
-        const url = `http://127.0.0.1:3001/input.json?t=${new Date().getTime()}`;
+        const url = document.currentScript?.hasAttribute("codespace_url") ? `${document.currentScript.getAttribute("codespace_url")}?t=${new Date().getTime()}` : `http://127.0.0.1:3001/input.json?t=${new Date().getTime()}`;
         const response = await fetch(url, {
             method: 'GET',
             cache: "no-store",
@@ -265,7 +265,6 @@ async function loadLocalJSONFile() {
         }
 
         const jsonData = await response.json();
-        console.log(jsonData);
         plotTree(jsonData);
         return jsonData;
     } catch (error) {

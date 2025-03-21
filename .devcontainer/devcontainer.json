@@ -6,19 +6,13 @@
     "extensions": [
         "streetsidesoftware.code-spell-checker"
     ],
-    "features": {
-    },
+    "features": {},
     "runArgs": [
-        "--env-file",".devcontainer/devcontainer.env"
+        "--env-file", ".devcontainer/devcontainer.env"
     ],
-    "remoteEnv": {
-    },
-    "onCreateCommand": [
-    ],
-    "postCreateCommand": {
-        "SDP build": "make",
-        "SDP install": "make install"
-    },
+    "remoteEnv": {},
+    "onCreateCommand": [],
+    "postCreateCommand": "make && make install",
     "portsAttributes": {
         "2159": {
             "label": "gdb"

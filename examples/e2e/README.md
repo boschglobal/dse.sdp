@@ -98,7 +98,7 @@ $ dse-ast generate -input openloop.yaml -output .
 $ task -y -v
 
 # Run the Simulation.
-dse-simer out/sim
+$ dse-simer out/sim
 ...
 
 ```

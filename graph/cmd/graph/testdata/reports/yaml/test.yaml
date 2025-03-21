@@ -1,0 +1,107 @@
+---
+kind: Stack
+metadata:
+  name: openloop
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 5
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 5
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: physical
+          expectedModelCount: 2
+        - name: Network
+          expectedModelCount: 1
+ 
+    - name: input
+      uid: 24
+      model:
+        name: Csv
+      channels:
+        - name: physical
+          alias: scalar
+          selectors:
+            model: input
+            channel: signal_vector
+      runtime:
+        env:
+          # These values can be set by simer option: simer -env input:CSV_FILE=somefile.csv
+          CSV_FILE: model/input/data/input.csv
+          SIMBUS_LOGLEVEL: 5
+        files:
+          - model/input/data/signalgroup.yaml
+ 
+    - name: linear
+      uid: 42
+      model:
+        name: linear
+      channels:
+        - name: physical
+          alias: signal_channel
+          selectors:
+            model: linear
+            channel: signal_vector
+        - name: Network
+          alias: network_channel
+          selectors:
+            model: linear
+            channel: network_vector
+      runtime:
+        env:
+          SIMBUS_LOGLEVEL: 4
+        files:
+          - model/linear/data/signalgroup.yaml
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: Simulation
+metadata:
+  name: project
+  annotations:
+    input: somefile.json
+    generator: parse2ast
+spec:
+  arch: linux-amd64
+  channels:
+    - name: physical
+    - name: network
+      networks:
+        - name: CAN
+          mime_type: application/x
+  uses:
+    - name: model.linear
+      url: https://github.com/boschglobal/dse.fmi
+      version: 1.1.15
+      path: model/linear/path
+  vars:
+    - name: enable
+      value: true
+  stacks:
+    - name: stack_name
+      stacked: true
+      arch: linux-amd64
+      models:
+        - name: linear
+          model: model.linear
+          channels:
+            - name: physical
+              alias: scalar
+          env:
+            - name: SIMBUS_LOGLEVEL
+              value: 4
+          workflows:
+            - name: generate-fmimcl
+              vars:
+                - name: FMU_DIR
+                  value: '{{.PATH}}/fmu'
+ 
