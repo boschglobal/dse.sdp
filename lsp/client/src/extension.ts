@@ -147,29 +147,27 @@ export function activate(context: vscode.ExtensionContext) {
                 removeFile(astYamlPath);
                 removeFile(genTaskfilePath);
                 removeFile(genSimulationPath);
-                terminal?.sendText(`parse2ast ${isCodespace ? filePath : convertToMntPath(filePath.replace(/\\/g, "/"))} ${astOutputPath}`); // executing `parse2ast` command
+                
+                terminal?.sendText(`parse2ast ${isCodespace ? filePath : convertToMntPath(filePath.replace(/\\/g, "/"))} ${astOutputPath} && touch /tmp/dse_parsing_done`); // executing `parse2ast` command
 
                 const astExecPath = isCodespace ? path.join(extPath, 'bin', 'ast') : convertToMntPath(path.join(extPath, 'bin', 'ast').replace(/\\/g, "/"));
-                terminal?.sendText(`${astExecPath} convert -input ${astOutputPath} -output ${astYamlPath}`); // executing ast `convert` command
-                terminal?.sendText(`${astExecPath} resolve -input ${astYamlPath} -cache out/cache`); // executing ast `resolve` command
-
+                terminal?.sendText(`if [ -f /tmp/dse_parsing_done ]; then ${astExecPath} convert -input ${astOutputPath} -output ${astYamlPath} && touch /tmp/dse_convert_done; fi\n`);
+                terminal?.sendText(`if [ -f /tmp/dse_convert_done ]; then ${astExecPath} resolve -input ${astYamlPath} -cache out/cache && touch /tmp/dse_resolve_done; fi\n`);
+                
                 const genFilesPath = isCodespace ? activeFileDirPath : convertToMntPath(activeFileDirPath.replace(/\\/g, "/"));
-                terminal?.sendText(`${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath} -taskfile true`);
-                terminal?.sendText(`${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath} -simulation true`);
+                terminal?.sendText(`if [ -f /tmp/dse_resolve_done ]; then ${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath}; fi\n`);
                 simulationYamlPath = path.join(activeFileDirPath, 'simulation.yaml');
 
-                tmpterminal?.sendText('touch /tmp/done'); // for checking command completion
                 const checkInterval = 1000;
                 const timeout = 30000;
                 const startTime = Date.now();
                 const interval = setInterval(() => {
                     if (fs.existsSync(genSimulationPath) && fs.existsSync(genTaskfilePath)) {
                         clearInterval(interval);
-                        openFile(genTaskfilePath);
                         openFile(genSimulationPath);
-                        tmpterminal?.sendText('rm /tmp/done');
                         removeFile(astJsonPath);
                         removeFile(path.join(activeFileDirPath, activeFileName + '.json'));
+                        tmpterminal?.sendText(`rm -f /tmp/dse_*`);
                     } else if (Date.now() - startTime > timeout) {
                         clearInterval(interval);
                     }

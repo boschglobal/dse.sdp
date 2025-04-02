@@ -141,6 +141,10 @@ func generateModelRuntime(model ast.Model) *kind.ModelInstanceRuntime {
 			fmt.Sprintf("model/%s/data", model.Name),
 		},
 	}
+	var i386 bool = true
+	if *model.Arch == "linux-i386" {
+		runtime.I386 = &i386
+	}
 	return &runtime
 }
 

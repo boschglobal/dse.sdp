@@ -28,3 +28,13 @@ Extension gets activated for files with below extensions
 - Press <b>`Ctrl + K V`</b> to open Preview to the side.
 - Press <b>`Ctrl + Shift + V`</b> to open Preview.
 
+# DSE Commands
+
+
+| Command | Description |
+|---------|-------------|
+| **Build** (`DSE: Build`) | Builds `simulation.yaml` and `Taskfile.yml` from dse file|
+| **Check** (`DSE: Check`) | Runs graph reporting to visualize and verify simulation |
+| **Run** (`DSE: Run`) | Runs the simulation |
+| **Clean** (`DSE: Clean`) | Runs `task: clean` |
+| **Cleanall** (`DSE: Cleanall`) | Runs `task: cleanall` |

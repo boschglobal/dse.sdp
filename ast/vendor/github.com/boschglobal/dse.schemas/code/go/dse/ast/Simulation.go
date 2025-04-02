@@ -67,6 +67,8 @@ type Uses struct {
 	Path     *string                 `yaml:"path,omitempty"`
 	Url      string                  `yaml:"url"`
 	Version  *string                 `yaml:"version,omitempty"`
+	User     *string                 `yaml:"user,omitempty"`
+	Token    *string                 `yaml:"token,omitempty"`
 }
 type Var struct {
 	Name      string        `yaml:"name"`

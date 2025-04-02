@@ -115,6 +115,8 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 			Url:     value.Get("object.payload.link.value").String(),
 			Version: util.StringPtr(value.Get("object.payload.version.value").String()),
 			Path:    util.StringPtr(value.Get("object.payload.path.value").String()),
+			User:    util.StringPtr(value.Get("object.payload.user.value").String()),
+			Token:   util.StringPtr(value.Get("object.payload.token.value").String()),
 		}
 		return uses
 	})

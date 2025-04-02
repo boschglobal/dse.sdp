@@ -8,6 +8,7 @@ import {
 } from "chevrotain";
 
 const defaultArch = 'linux-amd64';
+let parsedStackArch = '';
 
 function matchSimulation(text) {
     const simulationPattern = /^simulation([ ]+arch\=\S+)?$/
@@ -176,7 +177,7 @@ export const Uses = createToken({
 });
 
 function matchUseItem(text) {
-    const useItemPattern = /^(\S+)([ ]+(?:(?:https\:\/\/\S+)|(?:\S+\.\S+)|(?:\S+\/\S+)))([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?$/;
+    const useItemPattern = /^(\S+)([ ]+(?:(?:https\:\/\/\S+)|(?:\S+\.\S+)|(?:\S+\/\S+)))([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?(?:[ ]+(user\=\S+))?(?:[ ]+(token\=\S+))?$/;
     const execResult = useItemPattern.exec(text);
     if (execResult !== null) {
         const useItem = execResult[1];
@@ -189,6 +190,14 @@ function matchUseItem(text) {
         if (execResult[4] !== undefined) {
             path = execResult[4];
         }
+        let user = '';
+        if (execResult[5] !== undefined) {
+            user = execResult[5];
+        }
+        let token = '';
+        if (execResult[6] !== undefined) {
+            token = execResult[6];
+        }
         const useItemStart = execResult.index + 1;
         const useItemEnd = useItemStart + useItem.length;
         const linkStart = execResult.index + useItem.length + 1;
@@ -200,6 +209,18 @@ function matchUseItem(text) {
         if (path !== '') {
             pathStart = execResult.index + useItem.length + link.length + version.length + 1;
             pathEnd = pathStart + path.length;
+        }
+        let userStart = null;
+        let userEnd = null;
+        if (user !== '') {
+            userStart = execResult.index + useItem.length + link.length + version.length + 1;
+            userEnd = userStart + user.length;
+        }
+        let tokenStart = null;
+        let tokenEnd = null;
+        if (token !== '') {
+            tokenStart = execResult.index + useItem.length + link.length + version.length + user.length + 1;
+            tokenEnd = tokenStart + token.length;
         }
         execResult.payload = {
             use_item: {
@@ -225,6 +246,18 @@ function matchUseItem(text) {
                 token_type: 'path',
                 start_offset: pathStart,
                 end_offset: pathEnd
+            },
+            user: {
+                value: user.replace('user=', '').trim(),
+                token_type: 'user',
+                start_offset: userStart,
+                end_offset: userEnd
+            },
+            token: {
+                value: token.replace('token=', '').trim(),
+                token_type: 'token',
+                start_offset: tokenStart,
+                end_offset: tokenEnd
             }
         }
     }
@@ -296,6 +329,10 @@ function matchModel(text) {
         let modelArch = '';
         if (execResult[3] !== undefined) {
             modelArch = execResult[3];
+        } else if (parsedStackArch !== '') {
+            modelArch = parsedStackArch;
+        } else {
+            modelArch = defaultArch;
         }
         let modelUid = '';
         if (execResult[4] !== undefined) {
@@ -417,6 +454,7 @@ function matchStack(text) {
     const stackPattern = /^stack([ ]+\S+)([ ]+stacked\=\w+)?([ ]+arch\=\S+)?$/;
     const execResult = stackPattern.exec(text);
     if (execResult !== null) {
+        parsedStackArch = ''
         const stackName = execResult[1];
         let stacked = ''
         if (execResult[2] !== undefined) {
@@ -425,6 +463,9 @@ function matchStack(text) {
         let stackArch = ''
         if (execResult[3] !== undefined) {
             stackArch = execResult[3];
+            parsedStackArch = stackArch;
+        } else {
+            stackArch = defaultArch;
         }
         const stackNameStart = execResult.index + 'stack'.length + 1;
         const stackNameEnd = stackNameStart + stackName.length;

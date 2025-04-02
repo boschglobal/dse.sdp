@@ -297,7 +297,7 @@ export function parse(inputText) {
             console.log(`\tdeclaration out of scope : \x1b[31m${err_line}\x1b[0m`);
         })
         console.log("\n")
-        throw Error("Parsing errors");
+        process.exit(1);
     }
     return astOutput;
 }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"strings"
 
 	"github.com/elliotchance/orderedmap/v2"
 
@@ -53,6 +54,20 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("URL", "{{.PACKAGE_URL}}")
 				om.Set("FILE", "downloads/{{base .PACKAGE_URL}}")
+				if modelUses.User != nil {
+					if strings.HasPrefix(*modelUses.User, "$") {
+						om.Set("USER", fmt.Sprintf("{{.%s}}", (*modelUses.User)[1:]))
+					} else {
+						om.Set("USER", *modelUses.User)
+					}
+				}
+				if modelUses.Token != nil {
+					if strings.HasPrefix(*modelUses.Token, "$") {
+						om.Set("TOKEN", fmt.Sprintf("{{.%s}}", (*modelUses.Token)[1:]))
+					} else {
+						om.Set("TOKEN", *modelUses.Token)
+					}
+				}
 				return &om
 			}(),
 		},
@@ -87,6 +102,7 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 			}
 			om.Set("MODEL", model.Name)
 			om.Set("PATH", fmt.Sprintf("model/%s", model.Name))
+			om.Set("PLATFORM_ARCH", *model.Arch)
 
 			func() {
 				defer func() {
@@ -97,7 +113,6 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 				om.Set("PACKAGE_PATH", md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string))
 			}()
 
-			// TODO need PLATFORM_ARCH if specified on Stack or Model
 			return &om
 		}(),
 		Deps:      &deps,
