@@ -14,7 +14,7 @@ stdout 'uses = 1'
 stdout 'models = 4'
 stdout 'stacks = 3'
 stdout 'vars = 5'
-stdout 'envar = 6'
+stdout 'envar = 9'
 stdout 'files = 0'
 
 # Evaluate the AST path/structure.
@@ -73,6 +73,8 @@ network CAN_1 'application/x-automotive-bus;interface=stream;type=frame;bus=can;
 
 uses
 dse.network https://github.com/boschglobal/dse.network v1.0.7
+
+envar MDF_FILE measurement.mf4
 
 model FMU dse.fmi.mcl
 channel network_ch network_vector

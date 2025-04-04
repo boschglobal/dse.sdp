@@ -30,6 +30,7 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*;
 
 RUN npm install -g typescript
+RUN pip install asammdf[gui]
 
 COPY .devcontainer/.bash_aliases /home/codespace/.bash_aliases
 COPY --from=go /usr/local/bin/testscript /usr/local/bin/testscript

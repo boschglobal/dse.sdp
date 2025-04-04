@@ -4,7 +4,9 @@
         "context": ".."
     },
     "extensions": [
-        "streetsidesoftware.code-spell-checker"
+        "streetsidesoftware.code-spell-checker",
+        "janisdd.vscode-edit-csv",
+        "rafaelarvelo.vsplotter"
     ],
     "features": {},
     "runArgs": [

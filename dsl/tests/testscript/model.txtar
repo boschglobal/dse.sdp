@@ -56,7 +56,7 @@ stdout 'children.stacks.0.children.models.0.children.workflow.0.children.workflo
 stdout 'children.stacks.0.children.models.1.object.image: "model FMU_2 dse.fmi.mcl uid=41" :'
 stdout 'children.stacks.0.children.models.1.object.payload.model_name.value: "FMU_2" :'
 stdout 'children.stacks.0.children.models.1.object.payload.model_repo_name.value: "dse.fmi.mcl" :'
-stdout 'children.stacks.0.children.models.1.object.payload.model_arch.value: "" :'
+stdout 'children.stacks.0.children.models.1.object.payload.model_arch.value: "linux-amd64" :'
 stdout 'children.stacks.0.children.models.1.object.payload.model_uid.value: "41" :'
 stdout 'children.stacks.0.children.models.1.object.payload.model_uid.token_type: "model_uid" :'
 stdout 'children.stacks.0.children.models.1.children.channels.0.object.image: "channel physical scalar_vector" :'

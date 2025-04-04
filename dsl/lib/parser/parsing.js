@@ -32,13 +32,24 @@ class FsilParser extends EmbeddedActionsParser {
             return updatedObj;
         }
 
+        let global_env_vars = [];
         // The main rule that parses the entire simulation statement.
         $.RULE("simulation", () => {
             const simulation = $.CONSUME(Simulation);
             const children = {};
             children.channels = $.SUBRULE($.channels);
             children.uses = $.SUBRULE($.uses);
-            children.vars = $.SUBRULE($.vars);
+
+            let vars = [];
+            while ($.LA(1).tokenType === Var || $.LA(1).tokenType === EnvVar) {
+                if ($.LA(1).tokenType === Var) {
+                    vars = $.SUBRULE($.vars);
+                } else if ($.LA(1).tokenType === EnvVar) {
+                    global_env_vars = $.SUBRULE($.envvars);
+                }
+            }
+            children.vars = vars;
+
             children.stacks = $.SUBRULE($.stacked_models);
             return {
                 type: simulation.tokenType.name,
@@ -224,11 +235,18 @@ class FsilParser extends EmbeddedActionsParser {
             $.MANY({
                 DEF: () => {
                     const stack = $.SUBRULE($.stack);
-                    const env_vars = $.SUBRULE($.envvars);
+                    
+                    let env_vars = $.SUBRULE($.envvars);
+                    env_vars = Array.isArray(env_vars) ? env_vars : [env_vars]
+                    if (global_env_vars.length > 0) {
+                        env_vars.push(...global_env_vars);
+                    }
+
                     let name = 'default'
                     if (stack && 'tokenType' in stack) {
-                        name = stack.payload.stack_name.value;
+                        name = stack.payload.stack_name.value; 
                     }
+
                     const stacked_models = $.SUBRULE($.models);
                     if (stacked_models.length !== 0) {
                         stacks.push({

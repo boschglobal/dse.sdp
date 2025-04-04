@@ -567,9 +567,9 @@ connection.onCompletion(
 			else if (word.startsWith('e')) {
 				completionItems.length = 0;
 				const completionItem: CompletionItem = {
-					label: "env ",
+					label: "envar ",
 					kind: CompletionItemKind.Keyword,
-					data: "env_keyword"
+					data: "envar_keyword"
 				};
 				completionItems.push(completionItem);
 			}

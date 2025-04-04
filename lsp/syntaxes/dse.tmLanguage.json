@@ -13,7 +13,7 @@
         "keywords": {
             "patterns": [{
                 "name": "keyword.control.dse",
-                "match": "\\b(simulation|env|model|channel|uses|workflow|from|as|stack|network|var|arch|file|uid|envar)\\b",
+                "match": "\\b(simulation|model|channel|uses|workflow|from|as|stack|network|var|arch|file|uid|envar)\\b",
                 "scope": "keyword.control"
             }]
         }

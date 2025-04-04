@@ -46,6 +46,9 @@ const isCodespace = vscode.env.remoteName === "codespaces";
 let astYamlPath = '';
 let simulationYamlPath = '';
 let cdDirPath = '';
+const checkInterval = 1000;
+const timeout = 30000;
+const envVars: Record<string, string> = {};
 export function activate(context: vscode.ExtensionContext) {
     let activeEditor = vscode.window.activeTextEditor;
     const extPath = vscode.extensions.getExtension('dse.dse')!.extensionPath;
@@ -147,27 +150,25 @@ export function activate(context: vscode.ExtensionContext) {
                 removeFile(astYamlPath);
                 removeFile(genTaskfilePath);
                 removeFile(genSimulationPath);
-                
+
                 terminal?.sendText(`parse2ast ${isCodespace ? filePath : convertToMntPath(filePath.replace(/\\/g, "/"))} ${astOutputPath} && touch /tmp/dse_parsing_done`); // executing `parse2ast` command
 
                 const astExecPath = isCodespace ? path.join(extPath, 'bin', 'ast') : convertToMntPath(path.join(extPath, 'bin', 'ast').replace(/\\/g, "/"));
                 terminal?.sendText(`if [ -f /tmp/dse_parsing_done ]; then ${astExecPath} convert -input ${astOutputPath} -output ${astYamlPath} && touch /tmp/dse_convert_done; fi\n`);
                 terminal?.sendText(`if [ -f /tmp/dse_convert_done ]; then ${astExecPath} resolve -input ${astYamlPath} -cache out/cache && touch /tmp/dse_resolve_done; fi\n`);
-                
+
                 const genFilesPath = isCodespace ? activeFileDirPath : convertToMntPath(activeFileDirPath.replace(/\\/g, "/"));
                 terminal?.sendText(`if [ -f /tmp/dse_resolve_done ]; then ${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath}; fi\n`);
                 simulationYamlPath = path.join(activeFileDirPath, 'simulation.yaml');
 
-                const checkInterval = 1000;
-                const timeout = 30000;
                 const startTime = Date.now();
                 const interval = setInterval(() => {
                     if (fs.existsSync(genSimulationPath) && fs.existsSync(genTaskfilePath)) {
                         clearInterval(interval);
                         openFile(genSimulationPath);
-                        removeFile(astJsonPath);
                         removeFile(path.join(activeFileDirPath, activeFileName + '.json'));
                         tmpterminal?.sendText(`rm -f /tmp/dse_*`);
+                        setEnvVars(astJsonPath, terminal);
                     } else if (Date.now() - startTime > timeout) {
                         clearInterval(interval);
                     }
@@ -218,7 +219,20 @@ export function activate(context: vscode.ExtensionContext) {
 
                 terminal?.sendText(`dse-ast generate -input ${astYamlPath} -output .`);
                 terminal?.sendText(`task -y -v`);
-                terminal?.sendText(`dse-simer out/sim`);
+
+
+                const postRunPath = path.join(activeFileDirPath, 'post_run.sh');
+                if (fs.existsSync(postRunPath)) {
+                    // This block gets executed if `post_run.sh` file is found in the `.dse` file path.
+                    let measurementFilePath = path.join(activeFileDirPath, 'out', 'sim', envVars["MDF_FILE"]);
+                    removeFile(measurementFilePath);
+                    terminal?.sendText(`dse-simer out/sim -env linear:MEASUREMENT_FILE=/sim/$MDF_FILE -stepsize 0.0005 -endtime 0.005 && export QT_QPA_PLATFORM=offscreen DISPLAY=:0`);
+                    waitForFile(measurementFilePath, () => {
+                        terminal?.sendText(`sh post_run.sh`);
+                    });
+                } else {
+                    terminal?.sendText(`dse-simer out/sim`);
+                }
             } else {
                 vscode.window.showWarningMessage(`Please run the DSE build command to process dse supported files.`);
             }
@@ -280,6 +294,29 @@ vscode.window.onDidCloseTerminal((closedTerminal) => {
         terminal = undefined;
     }
 });
+
+function waitForFile(path: string, callback: () => void, interval = 1000) {
+    const checkInterval = setInterval(() => {
+        if (fs.existsSync(path)) {
+            clearInterval(checkInterval);
+            callback();
+        }
+    }, interval);
+}
+
+function setEnvVars(astJsonPath: string, terminal: vscode.Terminal | undefined) {
+    const rawData = fs.readFileSync(astJsonPath, 'utf-8');
+    const jsonData = JSON.parse(rawData);
+
+    jsonData.children.stacks.forEach((stack: { env_vars: any[]; }) => {
+        stack.env_vars?.forEach(envVar => {
+            const name = envVar.object.payload.env_var_name.value;
+            const value = envVar.object.payload.env_var_value.value;
+            envVars[name] = value;
+            terminal?.sendText(`export ${name}=${value}`);
+        });
+    });
+}
 
 function mergeYAMLWithSeparator(simulationYamlPath: string, astYamlPath: string): string {
     simulationYamlPath = isCodespace ? simulationYamlPath : convertToWinPath(simulationYamlPath);

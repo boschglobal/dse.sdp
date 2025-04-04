@@ -2,12 +2,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+SCRIPTS_DIR	:= $(CURDIR)/scripts
+
 default: build
 
 .PHONY: build
 build:
 	mkdir -p out/bin
 	mkdir -p bin/graph/yaml
+	chmod +x $(SCRIPTS_DIR)/dse-mdf2csv.sh
+	ln -sf $(SCRIPTS_DIR)/dse-mdf2csv.sh ~/.local/bin/dse-mdf2csv
 	npm install && npm install -g vsce && npm install -g http-server
 	vsce package --out ./out/bin/dse.vsix
 
