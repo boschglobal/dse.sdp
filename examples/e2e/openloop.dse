@@ -14,6 +14,7 @@ file signalgroup.yaml input/signalgroup.yaml
 
 model linear dse.fmi.mcl
 channel physical signal_channel
+envar MEASUREMENT_FILE /sim/measurement.mf4
 workflow generate-fmimcl
 var FMU_DIR uses linear_fmu
 var OUT_DIR {{.PATH}}/data

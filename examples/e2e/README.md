@@ -1,43 +1,50 @@
-# E2E DSE SDP Toolchain Example
+# VS Code Integration Example
 
 ## Introduction
 
-This example introduces the DSE SDP Toolchains which can be used to build a run a simulation written in a
-simple DSE Simulation Language. The DSE Simulation Language is supported by the DSE SDP integration with
-VS Code, including a Simulation visualization.
+This example demonstrates the VS Code Integration including: DSE Support, Preview, Commands and Measurement Plotting.
 
 
-### Example DSE Simulation Language
+## Usage
 
-```text
-simulation arch=linux-amd64
-channel physical
+### Using VS Code Integration with a Codespace
 
-uses
-dse.modelc https://github.com/boschglobal/dse.modelc v2.1.23
-dse.fmi https://github.com/boschglobal/dse.fmi v1.1.23
-linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.23/Fmi-1.1.23-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
+1. Open a Codespace for the [DSE SDP](https://github.com/boschglobal/dse.sdp) repository.
+2. Navigate to the examples/vscode folder.
+3. Open the file `openloop.dse` in an editor.
+4. Use the preview button (or type `Ctrl + K then V`) to view a visualization of the Simulation.
+5. Build the simulation: type `Ctrl + Shift + P` and then select command `DSE:Build`.
+6. Run the simulation: type `Ctrl + Shift + P` and then select command `DSE:Run`.
+7. Open the generated measurement file `out/sim/measurement.csv`.
 
-model input dse.modelc.csv
-channel physical signal_channel
-envar CSV_FILE model/input/data/input.csv
-file input.csv input/openloop.csv
-file signalgroup.yaml input/signalgroup.yaml
 
-model linear dse.fmi.mcl
-channel physical signal_channel
-workflow generate-fmimcl
-var FMU_DIR uses linear_fmu
-var OUT_DIR {{.PATH}}/data
-var MCL_PATH {{.PATH}}/lib/libfmimcl.so
+### Using Terminal
+
+```bash
+$ cd examples/vscode
+
+# Build the simulation.
+$ make build
+
+# Run the simulation.
+$ make run
+
+# Cleanup any generated files.
+$ make clean
 ```
 
+
+## Details
 
 ### Simulation Project Layout
 
 ```text
 (Git committed files)
-L- openloop.dse        DSE Simulation Language.
+L- .gitignore          Git ignore file.
+L- Makefile            Makefile automation.
+L- openloop.dse        Simulation script written in DSE Simulation Language.
+L- post_run.sh         Post simulation-run script (processes measurement).
+L- README.md           Readme file supporting this example.        
 L- extra           
   L- openloop.yaml     Reference ASL for the openloop simulation.
 L- input
@@ -48,57 +55,9 @@ L- input
 L- simulation.yaml     Generated simulation (contains stacks).
 L- Taskfile.yaml       Generated taskfile (constructs the simulation).
 L- out     
-  L- cache       	   Cached metadata.
+  L- cache       	     Cached metadata.
   L- downloads         Downloaded content (models, tools ...).
   L- sim               Generated simulation (with Simer layout).
-```
-
-
-## Usage
-
-### Using VS Code
-
-
-
-### Using the CLI
-
-Operating the E2E example via the CLI introduces the complete toolchain.
-
-
-#### Toolchain Setup
-
-> Note: the Codespace will have all Toolchains already installed and ready to use.
-
-```bash
-# Build and install the toolchains.
-$ make
-$ make install
-
-# Setup additional commands.
-$ function dse-simer() { ( if test -d "$1"; then cd "$1" && shift; fi && docker run -it --rm -v $(pwd):/sim -p 2159:2159 -p 6379:6379 $DSE_SIMER_IMAGE "$@"; ); }
-$ export -f dse-simer
-
-# Configure Task.
-$ export TASK_X_REMOTE_TASKFILES=1
-```
-
-
-#### Build and Run the Project
-
-```bash
-$ cd examples/e2e
-
-# Compile the DSL and generate the Simulation AST.
-$ dse-parse2ast openloop.dse openloop.json
-$ dse-ast convert -input openloop.json -output openloop.yaml
-$ dse-ast resolve -input openloop.yaml
-
-# Build the Simulation.
-$ dse-ast generate -input openloop.yaml -output .
-$ task -y -v
-
-# Run the Simulation.
-$ dse-simer out/sim
-...
-
+    L- measurement.mf4 Measurement file (from the linear model).
+    L- measurement.csv Measurement file converted to CSV format.
 ```
