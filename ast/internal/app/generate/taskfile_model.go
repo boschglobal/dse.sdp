@@ -55,17 +55,19 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 				om.Set("URL", "{{.PACKAGE_URL}}")
 				om.Set("FILE", "downloads/{{base .PACKAGE_URL}}")
 				if modelUses.User != nil {
-					if strings.HasPrefix(*modelUses.User, "$") {
-						om.Set("USER", fmt.Sprintf("{{.%s}}", (*modelUses.User)[1:]))
+					userValue := *modelUses.User
+					if strings.HasPrefix(userValue, "$") {
+						om.Set("USER", fmt.Sprintf("{{.%s}}", userValue[1:]))
 					} else {
-						om.Set("USER", *modelUses.User)
+						om.Set("USER", userValue)
 					}
 				}
 				if modelUses.Token != nil {
-					if strings.HasPrefix(*modelUses.Token, "$") {
-						om.Set("TOKEN", fmt.Sprintf("{{.%s}}", (*modelUses.Token)[1:]))
+					tokenValue := *modelUses.Token
+					if strings.HasPrefix(tokenValue, "$") {
+						om.Set("TOKEN", fmt.Sprintf("{{.%s}}", tokenValue[1:]))
 					} else {
-						om.Set("TOKEN", *modelUses.Token)
+						om.Set("TOKEN", tokenValue)
 					}
 				}
 				return &om
@@ -102,7 +104,9 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 			}
 			om.Set("MODEL", model.Name)
 			om.Set("PATH", fmt.Sprintf("model/%s", model.Name))
-			om.Set("PLATFORM_ARCH", *model.Arch)
+			if model.Arch != nil {
+				om.Set("PLATFORM_ARCH", *model.Arch)
+			}
 
 			func() {
 				defer func() {

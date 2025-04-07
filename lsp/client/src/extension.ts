@@ -219,19 +219,15 @@ export function activate(context: vscode.ExtensionContext) {
 
                 terminal?.sendText(`dse-ast generate -input ${astYamlPath} -output .`);
                 terminal?.sendText(`task -y -v`);
-
-
+                const tmpPath = path.join(tmpdir(), 'sim_run_completed');
+                const simCompletionStatusFile = isCodespace ? tmpPath : convertToMntPath(tmpPath.replace(/\\/g, "/"));
+                terminal?.sendText(`dse-simer out/sim -stepsize 0.0005 -endtime 0.005 && touch ${simCompletionStatusFile}`);
                 const postRunPath = path.join(activeFileDirPath, 'post_run.sh');
                 if (fs.existsSync(postRunPath)) {
-                    // This block gets executed if `post_run.sh` file is found in the `.dse` file path.
-                    let measurementFilePath = path.join(activeFileDirPath, 'out', 'sim', envVars["MDF_FILE"]);
-                    removeFile(measurementFilePath);
-                    terminal?.sendText(`dse-simer out/sim -env linear:MEASUREMENT_FILE=/sim/$MDF_FILE -stepsize 0.0005 -endtime 0.005 && export QT_QPA_PLATFORM=offscreen DISPLAY=:0`);
-                    waitForFile(measurementFilePath, () => {
+                    waitForFile(tmpPath, () => {
                         terminal?.sendText(`sh post_run.sh`);
                     });
-                } else {
-                    terminal?.sendText(`dse-simer out/sim`);
+                    removeFile(tmpPath);
                 }
             } else {
                 vscode.window.showWarningMessage(`Please run the DSE build command to process dse supported files.`);

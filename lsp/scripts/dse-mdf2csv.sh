@@ -7,6 +7,12 @@ if [ $# -ne 1 ]; then
 fi
 
 MF4_FILE=$1
+
+if [ ! -f "$MF4_FILE" ]; then
+    echo "Error: File '$MF4_FILE' does not exist."
+    exit 1
+fi
+
 BASE_NAME=$(basename "$MF4_FILE" .mf4)
 CSV_FILE="${BASE_NAME}.csv"
 FULL_PATH=$(realpath "$CSV_FILE")

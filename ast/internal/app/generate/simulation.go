@@ -142,7 +142,7 @@ func generateModelRuntime(model ast.Model) *kind.ModelInstanceRuntime {
 		},
 	}
 	var i386 bool = true
-	if *model.Arch == "linux-i386" {
+	if model.Arch != nil && *model.Arch == "linux-i386" {
 		runtime.I386 = &i386
 	}
 	return &runtime
