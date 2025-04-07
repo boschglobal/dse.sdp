@@ -11,12 +11,12 @@ This example demonstrates the VS Code Integration including: DSE Support, Previe
 
 ### Using VS Code Integration with a Codespace
 
-1. Open a Codespace for the [DSE SDP](https://github.com/boschglobal/dse.sdp) repository.
+1. Open a Codespace for the [DSE SDP](https://github.com/boschglobal/dse.sdp) repository. Once connected to the Codespace, the `postCreateCommand` may take some moments to complete (i.e. automatically running `make && make install`).
 2. Navigate to the examples/vscode folder.
 3. Open the file `openloop.dse` in an editor.
 4. Use the preview button (or type `Ctrl + K then V`) to view a visualization of the Simulation.
-5. Build the simulation: type `Ctrl + Shift + P` and then select command `DSE:Build`.
-6. Run the simulation: type `Ctrl + Shift + P` and then select command `DSE:Run`.
+5. Build the simulation: type `Ctrl + Shift + P` and then select command `DSE:Build`. Output of the build command will appear in the `TERMINAL` window.
+6. Run the simulation: type `Ctrl + Shift + P` and then select command `DSE:Run`. Output of the run command will appear in the `TERMINAL` window.
 7. Generate a measurement plot:
     1. Type `Ctrl + Shift + P` and then select command `VSPlotter: Create new plot from a workspace file`.
     2. Select `out/sim/measurement.csv`.
