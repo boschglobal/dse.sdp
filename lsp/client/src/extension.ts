@@ -165,7 +165,6 @@ export function activate(context: vscode.ExtensionContext) {
                 const interval = setInterval(() => {
                     if (fs.existsSync(genSimulationPath) && fs.existsSync(genTaskfilePath)) {
                         clearInterval(interval);
-                        openFile(genSimulationPath);
                         removeFile(path.join(activeFileDirPath, activeFileName + '.json'));
                         tmpterminal?.sendText(`rm -f /tmp/dse_*`);
                         setEnvVars(astJsonPath, terminal);

@@ -13,9 +13,7 @@ if [ ! -f "$MF4_FILE" ]; then
     exit 1
 fi
 
-BASE_NAME=$(basename "$MF4_FILE" .mf4)
-CSV_FILE="${BASE_NAME}.csv"
-FULL_PATH=$(realpath "$CSV_FILE")
+CSV_PATH="$(dirname "$MF4_FILE")"/"$(basename "$MF4_FILE" .mf4).csv"
 
 python3 - <<EOF
 import os
@@ -24,6 +22,6 @@ from asammdf import MDF
 
 mdf = MDF("$MF4_FILE")
 df = mdf.to_dataframe()
-df.to_csv("$CSV_FILE")
-print("✅ CSV file created: $FULL_PATH")
+df.to_csv("$CSV_PATH")
+print("✅ CSV file created: $CSV_PATH")
 EOF

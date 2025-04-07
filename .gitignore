@@ -8,3 +8,5 @@ node_modules/
 
 *.cyp
 package-lock.json
+
+tsconfig.tsbuildinfo

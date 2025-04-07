@@ -4,6 +4,8 @@
 
 This example demonstrates the VS Code Integration including: DSE Support, Preview, Commands and Measurement Plotting.
 
+![VS Code Simulation Dashboard](image.png)
+
 
 ## Usage
 
@@ -15,10 +17,16 @@ This example demonstrates the VS Code Integration including: DSE Support, Previe
 4. Use the preview button (or type `Ctrl + K then V`) to view a visualization of the Simulation.
 5. Build the simulation: type `Ctrl + Shift + P` and then select command `DSE:Build`.
 6. Run the simulation: type `Ctrl + Shift + P` and then select command `DSE:Run`.
-7. Open the generated measurement file `out/sim/measurement.csv`.
+7. Generate a measurement plot:
+    1. Type `Ctrl + Shift + P` and then select command `VSPlotter: Create new plot from a workspace file`.
+    2. Select `out/sim/measurement.csv`.
+    3. For the x-axis column, select `timestamps`.
+    4. For the y-axis columns, select the remaining data fields.
 
 
-### Using Terminal
+### Alternative: Using the Terminal
+
+Open a new Bash terminal in the Codespace, and then run the following commands.
 
 ```bash
 $ cd examples/vscode
