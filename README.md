@@ -33,7 +33,7 @@ L- licenses       Third Party Licenses.
 
 ### Examples
 
-* [VS Code Integration Example](examples/e2e/README.md)
+* [VS Code Integration Example](examples/vscode/README.md)
 * [Notebook Based Simulation Example](examples/notebook/README.md)
 * [Open Loop Simulation Example](examples/openloop/README.md)
 
