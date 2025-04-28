@@ -6,7 +6,7 @@
 
 import {
     parse
-} from "../lib/parser/parsing.js";
+} from "../lib/parser/parsing";
 import {
     readFileSync,
     writeFileSync

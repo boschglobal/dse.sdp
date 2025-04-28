@@ -88,6 +88,12 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 	arch := gjson.GetBytes(c.dslAst, "object.payload.simulation_arch.value")
 	simulation.Spec.Arch = arch.String()
 
+	stepsize := gjson.GetBytes(c.dslAst, "object.payload.stepsize.value").Float()
+	simulation.Spec.Stepsize = &stepsize
+
+	endtime := gjson.GetBytes(c.dslAst, "object.payload.endtime.value").Float()
+	simulation.Spec.Endtime = &endtime
+
 	root := gjson.GetBytes(c.dslAst, "children")
 
 	// Channels
@@ -149,6 +155,15 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 				if v.Exists() == true && v.Bool() == true {
 					stacked := v.Bool()
 					return &stacked
+				} else {
+					return nil
+				}
+			}(),
+			Sequential: func() *bool {
+				v := value.Get("object.payload.sequential.value")
+				if v.Exists() == true && v.Bool() == true {
+					sequential := v.Bool()
+					return &sequential
 				} else {
 					return nil
 				}

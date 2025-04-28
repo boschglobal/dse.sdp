@@ -1,0 +1,82 @@
+
+env http_proxy=http://localhost:3128
+env https_proxy=http://localhost:3128
+env DSE_DIR=$REPODIR/examples/e2e
+
+exec mkdir -p $WORK/input
+exec cp -r $DSE_DIR/input/. $WORK/input
+
+exec dse-parse2ast $DSE_DIR/openloop.dse openloop.ast.json
+
+stdout 'Parameters:'
+stdout '  input_file = .*/openloop\.dse'
+stdout '  output_file = openloop.ast.json'
+stdout 'Read from file: .*/openloop.dse'
+stdout 'Parsing ...'
+stdout 'Writing to file: openloop.ast.json'
+
+exec dse-ast convert -input openloop.ast.json -output openloop.yaml
+
+stderr 'Running command: convert'
+stderr '  input          : openloop.ast.json'
+stderr '  log            : 4'
+stderr '  output         : openloop.yaml'
+stderr 'Reading file: openloop.ast.json'
+stderr 'Writing file: openloop.yaml'
+
+exec dse-ast resolve -input openloop.yaml -cache out/cache
+
+stderr 'Running command: resolve'
+stderr '  cache          : out/cache'
+stderr '  input          : openloop.yaml'
+stderr 'Reading file: openloop.yaml'
+stderr 'Updating file: openloop.yaml'
+
+exec dse-ast generate -input openloop.yaml -output .
+
+stderr 'Running command: generate'
+stderr '  input          : openloop.yaml'
+stderr '  log            : 4'
+stderr '  simulation     : false'
+stderr '  taskfile       : false'
+stderr 'Reading file: openloop.yaml'
+stderr 'Writing to folder: .'
+stderr 'Writing taskfile: Taskfile.yml'
+stderr 'Writing simulation: simulation.yaml'
+
+exec sh -e $WORK/test.sh
+
+stdout 'SIM Model input -> sim/model/input'
+stdout 'SIM Model linear -> sim/model/linear'
+stderr 'task: "default" started'
+stderr 'task: "build" started'
+stderr 'task: "build-models" started'
+stderr 'task: "model-input" started'
+stderr 'task: "model-linear" started'
+stderr 'task: "download-file" started'
+stderr 'task: "download-file" finished'
+stderr 'task: "model-input" finished'
+stderr 'task: "dse.fmi-v1.1.23:generate-fmimcl" started'
+stderr 'task: "dse.fmi-v1.1.23:gen-mcl" started'
+stderr 'task: "dse.fmi-v1.1.23:gen-mcl" finished'
+stderr 'task: "dse.fmi-v1.1.23:gen-signalgroup" started'
+stderr 'task: "dse.fmi-v1.1.23:gen-signalgroup" finished'
+stderr 'task: "dse.fmi-v1.1.23:generate-fmimcl" finished'
+stderr 'task: "model-linear" finished'
+stderr 'task: "build-models" finished'
+stderr 'task: "build" finished'
+stderr 'task: "default" finished'
+
+stdout '3\) Load YAML File: data/simulation\.yaml'
+stdout '2\) Load YAML File: model/input/data/model.yaml'
+stdout '2\) Loading symbol: model_create \.\.\. ok'
+stdout '2\) Loading symbol: model_step \.\.\. ok'
+stdout '2\) Loading symbol: model_destroy \.\.\. ok'
+stdout '3\) Measurement File: /sim/measurement\.mf4'
+
+-- test.sh --
+DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
+export TASK_X_REMOTE_TASKFILES=1
+task -y -v
+cd out/sim
+docker run -i --rm -v "$(pwd)":/sim -p 2159:2159 -p 6379:6379 "$DSE_SIMER_IMAGE" sh

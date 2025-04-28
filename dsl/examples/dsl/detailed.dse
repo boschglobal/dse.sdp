@@ -1,4 +1,4 @@
-simulation arch=linux-amd64
+simulation arch=linux-amd64 stepsize=0.0005 endtime=0.005
 channel physical
 channel network_ch
 network CAN_1 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
@@ -6,7 +6,7 @@ network CAN_2 'application/x-automotive-bus;interface=stream;type=frame;bus=can;
 
 uses
 dse.network https://github.com/boschglobal/dse.network v1.0.7
-dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8 user=$AR_USER token=$AR_TOKEN
 NetA_dbc https://github.com/boschglobal/dse.network/blob/main/dse/network/examples/stub/stub.dbc v1.0.7
 fmu https://artifactory.bosch/examples/fmu.zip v1.0.0
 fmu_1 https://artifactory.bosch/examples/fmu_release_package.zip path=folder/to/fmu.zip

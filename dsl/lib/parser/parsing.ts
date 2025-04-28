@@ -16,27 +16,40 @@ import {
     EnvVar,
     Workflow,
     Stack,
-} from "../lexer/lexing.js";
+} from "../lexer/lexing";
 import {
-    EmbeddedActionsParser
+    EmbeddedActionsParser,
+    IToken,
+    ILexingError
 } from "chevrotain";
-
 class FsilParser extends EmbeddedActionsParser {
+    public simulation!: () => any;
+    public channels!: () => any;
+    public uses!: () => any;
+    public vars!: () => any;
+    public envvars!: () => any;
+    public stacked_models!: () => any;
+    public networks!: () => any;
+    public workflow_vars!: () => any;
+    public workflow!: () => any;
+    public files!: () => any;
+    public stack!: () => any;
+    public models!: () => any;
     constructor() {
         super(allTokens);
         const $ = this;
 
-        function updateTokenObject(tokenObject) {
-            let updatedObj = Object.assign({}, tokenObject);
-            delete updatedObj.tokenType;
-            return updatedObj;
+        function updateTokenObject(tokenObject: IToken): Omit<IToken, "tokenType"> {
+            const { tokenType, ...rest } = tokenObject;
+            return rest;
         }
 
-        let global_env_vars = [];
+        let global_env_vars: string[] = [];
+
         // The main rule that parses the entire simulation statement.
         $.RULE("simulation", () => {
             const simulation = $.CONSUME(Simulation);
-            const children = {};
+            const children: Record<string, any> = {};
             children.channels = $.SUBRULE($.channels);
             children.uses = $.SUBRULE($.uses);
 
@@ -61,7 +74,7 @@ class FsilParser extends EmbeddedActionsParser {
 
         // Rule for parsing the channels.
         $.RULE("channels", () => {
-            const channels = [];
+            const channels: any[] = [];
             $.MANY({
                 DEF: () => {
                     const channel = $.CONSUME(Channel);
@@ -80,7 +93,7 @@ class FsilParser extends EmbeddedActionsParser {
 
         // Rule for parsing the networks.
         $.RULE("networks", () => {
-            const networks = [];
+            const networks: any[] = [];
             $.MANY({
                 DEF: () => {
                     const network = $.CONSUME(Network);
@@ -95,7 +108,7 @@ class FsilParser extends EmbeddedActionsParser {
 
         // Rule for parsing the uses.
         $.RULE("uses", () => {
-            const uses = [];
+            const uses: any[] = [];
             const useBlock = $.CONSUME(Uses);
             $.MANY({
                 DEF: () => {
@@ -110,7 +123,7 @@ class FsilParser extends EmbeddedActionsParser {
         });
 
         $.RULE("vars", () => {
-            const vars = [];
+            const vars: any[] = [];
             $.MANY({
                 DEF: () => {
                     const variable = $.CONSUME(Var);
@@ -124,7 +137,7 @@ class FsilParser extends EmbeddedActionsParser {
         });
 
         $.RULE("files", () => {
-            const files = [];
+            const files: any[] = [];
             $.MANY({
                 DEF: () => {
                     const file = $.CONSUME(File);
@@ -138,7 +151,7 @@ class FsilParser extends EmbeddedActionsParser {
         });
 
         $.RULE("envvars", () => {
-            const env_vars = [];
+            const env_vars: any[] = [];
             $.MANY({
                 DEF: () => {
                     const variable = $.CONSUME(EnvVar);
@@ -152,7 +165,7 @@ class FsilParser extends EmbeddedActionsParser {
         });
 
         $.RULE("workflow_vars", () => {
-            const workflow_vars = [];
+            const workflow_vars: any[] = [];
             $.MANY({
                 DEF: () => {
                     const variable = $.CONSUME(Var);
@@ -166,7 +179,7 @@ class FsilParser extends EmbeddedActionsParser {
         });
 
         $.RULE("workflow", () => {
-            const workflows = [];
+            const workflows: any[] = [];
             $.MANY({
                 DEF: () => {
                     const workflow = $.CONSUME(Workflow);
@@ -184,12 +197,12 @@ class FsilParser extends EmbeddedActionsParser {
         });
 
         $.RULE("models", () => {
-            const models = [];
-            
+            const models: any[] = [];
+
             $.MANY(() => {
                 const model = $.CONSUME(Model);
                 const model_channels = $.SUBRULE($.channels);
-        
+
                 let model_files = [];
                 let env_vars = [];
                 // Read model_files and env_vars in any order
@@ -200,9 +213,9 @@ class FsilParser extends EmbeddedActionsParser {
                         env_vars = $.SUBRULE($.envvars);
                     }
                 }
-        
+
                 const workflow = $.SUBRULE($.workflow);
-        
+
                 models.push({
                     type: model.tokenType.name,
                     object: updateTokenObject(model),
@@ -214,14 +227,14 @@ class FsilParser extends EmbeddedActionsParser {
                     }
                 });
             });
-        
+
             return models;
         });
-        
-        
+
+
 
         $.RULE("stack", () => {
-            let stack = '';
+            let stack: any = '';
             $.MANY({
                 DEF: () => {
                     stack = $.CONSUME(Stack);
@@ -231,11 +244,11 @@ class FsilParser extends EmbeddedActionsParser {
         });
 
         $.RULE("stacked_models", () => {
-            let stacks = []
+            let stacks: any[] = []
             $.MANY({
                 DEF: () => {
                     const stack = $.SUBRULE($.stack);
-                    
+
                     let env_vars = $.SUBRULE($.envvars);
                     env_vars = Array.isArray(env_vars) ? env_vars : [env_vars]
                     if (global_env_vars.length > 0) {
@@ -244,7 +257,7 @@ class FsilParser extends EmbeddedActionsParser {
 
                     let name = 'default'
                     if (stack && 'tokenType' in stack) {
-                        name = stack.payload.stack_name.value; 
+                        name = stack.payload.stack_name.value;
                     }
 
                     const stacked_models = $.SUBRULE($.models);
@@ -270,52 +283,74 @@ class FsilParser extends EmbeddedActionsParser {
 }
 
 // Initialize the parser instance.
-const parserInstance = new FsilParser();
-export function parse(inputText) {
+export const parserInstance = new FsilParser();
+type DiagnosticLike = {
+    severity: number; // you can define 0 = Error, 1 = Warning, etc.
+    message: string;
+    range: {
+        start: { line: number; character: number };
+        end: { line: number; character: number };
+    };
+    source: string;
+};
+export function parse(inputText: string): DiagnosticLike[] | any {
     const lines = inputText.split(/\r?\n/);
+    const diagnostics: DiagnosticLike[] = [];
     let lexingResult = {
-        'tokens': [],
-        "groups": {},
-        "errors": []
+        tokens: [] as IToken[],
+        groups: {} as Record<string, IToken[]>,
+        errors: [] as ILexingError[]
     };
     let lineIdx = 0;
-    let errorDict = [];
     lines.forEach((line) => {
         if (line.trim() !== '') {
             const res = fsilLexer.tokenize(line);
-            lineIdx +=1;
+            lineIdx += 1;
+            res.tokens.forEach(token => {
+                token.startLine = lineIdx - 1;
+                token.startColumn = token.startOffset ?? 0;
+            });
             lexingResult.tokens.push(...res.tokens);
             lexingResult.errors.push(...res.errors);
-            if (res.errors.length > 0){
-                errorDict.push({ 
-                    line_num: lineIdx < 10 ? lineIdx.toString() + " " : lineIdx.toString(), 
-                    line_val: lines[lineIdx - 1] 
-                })
+            if (res.errors.length > 0) {
+                diagnostics.push({
+                    severity: 0,
+                    message: "Syntax error: Unexpected token or malformed statement.",
+                    range: {
+                        start: { line: lineIdx - 1, character: 0 },
+                        end: { line: lineIdx - 1, character: lines[lineIdx - 1].length }
+                    },
+                    source: "parser"
+                });
             }
         } else {
-            lineIdx +=1;
+            lineIdx += 1;
         }
     });
-
-    if (errorDict.length >0 ){
-        console.log("\nLexing errors detected on below lines!\n")
-        errorDict.forEach((err, index) => {
-            console.log(`\tline ${err.line_num} : \x1b[31m${err.line_val}\x1b[0m`); 
-        });
-        console.log("\n")
-        throw Error("Lexing errors")
-    }
 
     parserInstance.input = lexingResult.tokens;
     const astOutput = parserInstance.simulation();
     if (parserInstance.errors.length > 0) {
         console.log("\nParsing errors detected!\n")
         parserInstance.errors.forEach((err, idx) => {
-            const err_line = err.message.split(":").pop().trim()
-            console.log(`\tdeclaration out of scope : \x1b[31m${err_line}\x1b[0m`);
+            const token = err.token;
+            const line = token?.startLine ?? 0;
+            const col = err.message?.split(":").pop()?.length ?? 0;
+
+            diagnostics.push({
+                severity: 0,
+                message: "Syntax error: Token declaration out of scope.",
+                range: {
+                    start: { line: line, character: 0 },
+                    end: { line: line, character: col + 1 }
+                },
+                source: "parser"
+            });
         })
-        console.log("\n")
-        process.exit(1);
+    }
+
+    if (diagnostics.length > 0) {
+        return diagnostics;
     }
     return astOutput;
 }

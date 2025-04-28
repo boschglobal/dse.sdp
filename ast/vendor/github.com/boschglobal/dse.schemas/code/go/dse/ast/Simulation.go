@@ -50,25 +50,28 @@ type SimulationNetwork struct {
 type SimulationSpec struct {
 	Arch     string              `yaml:"arch"`
 	Channels []SimulationChannel `yaml:"channels"`
+	Endtime  *float64            `yaml:"endtime,omitempty"`
 	Stacks   []Stack             `yaml:"stacks"`
+	Stepsize *float64            `yaml:"stepsize,omitempty"`
 	Uses     *[]Uses             `yaml:"uses,omitempty"`
 	Vars     *[]Var              `yaml:"vars,omitempty"`
 }
 type Stack struct {
-	Arch    *string `yaml:"arch,omitempty"`
-	Env     *[]Var  `yaml:"env,omitempty"`
-	Models  []Model `yaml:"models"`
-	Name    string  `yaml:"name"`
-	Stacked *bool   `yaml:"stacked,omitempty"`
+	Arch       *string `yaml:"arch,omitempty"`
+	Env        *[]Var  `yaml:"env,omitempty"`
+	Models     []Model `yaml:"models"`
+	Name       string  `yaml:"name"`
+	Sequential *bool   `yaml:"sequential,omitempty"`
+	Stacked    *bool   `yaml:"stacked,omitempty"`
 }
 type Uses struct {
 	Metadata *map[string]interface{} `yaml:"metadata,omitempty"`
 	Name     string                  `yaml:"name"`
 	Path     *string                 `yaml:"path,omitempty"`
-	Url      string                  `yaml:"url"`
-	Version  *string                 `yaml:"version,omitempty"`
-	User     *string                 `yaml:"user,omitempty"`
 	Token    *string                 `yaml:"token,omitempty"`
+	Url      string                  `yaml:"url"`
+	User     *string                 `yaml:"user,omitempty"`
+	Version  *string                 `yaml:"version,omitempty"`
 }
 type Var struct {
 	Name      string        `yaml:"name"`

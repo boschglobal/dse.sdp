@@ -5,22 +5,21 @@
     "homepage": "https://github.com/boschglobal/dse.sdp.git",
     "license": "Apache-2.0",
     "author": "Robert Bosch GmbH",
-    "type": "module",
-    "main": "bin/parse2ast.js",
+    "main": "out/bin/parse2ast.js",
     "preferGlobal": true,
     "bin": {
-        "dse-parse2ast": "./bin/parse2ast.js",
-        "parse2ast": "./bin/parse2ast.js"
+        "dse-parse2ast": "out/bin/parse2ast.js",
+        "parse2ast": "out/bin/parse2ast.js"
     },
     "directories": {
         "lib": "./lib"
     },
     "dependencies": {
-        "chevrotain": "^11.0.3",
+        "chevrotain": "^9.1.0",
         "esbuild": "^0.25.1"
     },
     "devDependencies": {
-        "@types/node": "^22.10.1",
+        "@types/node": "^22.14.1",
         "tsx": "^4.19.2"
     }
 }

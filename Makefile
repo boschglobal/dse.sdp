@@ -8,6 +8,16 @@ export DSE_MODELC_URL ?= https://github.com/boschglobal/dse.modelc/releases/down
 
 SUBDIRS = ast graph dsl lsp 
 
+###############
+## Docker Images.
+TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
+SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:$(DSE_MODELC_VERSION)
+
+## Test Parameters.
+export HOST_ENTRYDIR ?= $(shell pwd -P)
+export HOST_DOCKER_WORKSPACE ?= $(shell pwd -P)
+export TESTSCRIPT_E2E_DIR ?= tests/testscript/e2e
+TESTSCRIPT_E2E_FILES = $(wildcard $(TESTSCRIPT_E2E_DIR)/*/*.txtar)
 
 default: build
 
@@ -48,3 +58,21 @@ clean:
 cleanall: clean
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d cleanall ); done
 	rm -rf build
+
+
+.PHONY: test_e2e
+test_e2e: do-test_testscript-e2e
+
+
+do-test_testscript-e2e:
+# Test debug;
+#   Additional logging: add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
+#   Retain work folder: add '-work' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -work \).
+	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
+	do \
+		echo "Running Test: $$t" ;\
+		testscript \
+			-e ENTRYDIR=$(HOST_ENTRYDIR) \
+			-e REPODIR=$(HOST_DOCKER_WORKSPACE) \
+			$$t ;\
+	done;

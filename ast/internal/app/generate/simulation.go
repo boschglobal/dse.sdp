@@ -42,9 +42,38 @@ func (c *GenerateCommand) GenerateSimulation() error {
 			Kind: "Stack",
 			Metadata: &kind.ObjectMetadata{
 				Name: util.StringPtr(astStack.Name),
+				Annotations: &kind.Annotations{
+					"simulation": map[string]interface{}{
+						"stepsize": simSpec.Stepsize,
+						"endtime":  simSpec.Endtime,
+					},
+				},
 			},
 		}
 		configureConnection(&stack)
+
+		if (astStack.Stacked != nil && *astStack.Stacked) ||
+			(astStack.Sequential != nil && *astStack.Sequential) ||
+			(astStack.Env != nil && len(*astStack.Env) > 0) {
+
+			stack.Spec.Runtime = &kind.StackRuntime{}
+
+			if astStack.Stacked != nil && *astStack.Stacked {
+				stack.Spec.Runtime.Stacked = astStack.Stacked
+			}
+
+			if astStack.Sequential != nil && *astStack.Sequential {
+				stack.Spec.Runtime.Sequential = astStack.Sequential
+			}
+
+			if astStack.Env != nil && len(*astStack.Env) > 0 {
+				envMap := make(map[string]string)
+				for _, v := range *astStack.Env {
+					envMap[v.Name] = v.Value
+				}
+				stack.Spec.Runtime.Env = &envMap
+			}
+		}
 
 		// Generate the Models.
 		models := []kind.ModelInstance{}

@@ -442,7 +442,7 @@ async function getUsesItems(textDocument: TextDocument) {
 	uses_items = { 'repos': {}, 'files': {} };
 	const text = textDocument.getText();
 	const uses_pattern = /\b(uses)\b/g
-	const uses_item_pattern = /\b^(\w+(?:.\w+)?)\s+(https\:\/\/.*)\s(v[.0-9]+)\s*\b/
+	const uses_item_pattern = /\b^(\S+)([ ]+(?:(?:https\:\/\/\S+)|(?:\S+\.\S+)|(?:\S+\/\S+)))([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?(?:[ ]+(user\=\S+))?(?:[ ]+(token\=\S+))?\b/
 	let usesMatch: RegExpExecArray | null;
 	let usesFlag = false;
 
@@ -455,22 +455,25 @@ async function getUsesItems(textDocument: TextDocument) {
 
 		if (usesFlag && line.trim() != "") {
 			let uses_items_match = uses_item_pattern.exec(line)
-			if (uses_items_match) {
+			if (uses_items_match !== null) {
 				let repo = uses_items_match[1];
 				let git_link = uses_items_match[2];
-				let version = uses_items_match[3];
-
-				let link_pattern = /https\:\/\/github\.com\/(\w+)\/(\w+(?:\.\w+))$/;
+				let version = '';
+				if (uses_items_match[3] !== undefined) {
+					version = uses_items_match[3];
+				}
+				let link_pattern = /^\s*https\:\/\/github\.com\/(\w+)\/(\w+(?:\.\w+))$/;
 				let link_match = link_pattern.exec(git_link)
+
 				if (link_match) {
 					uses_items['repos'][repo] = {
-						'link': git_link,
-						'version': version
+						'link': git_link.trim(),
+						'version': version.trim()
 					};
 				} else {
 					uses_items['files'][repo] = {
-						'link': git_link,
-						'version': version
+						'link': git_link.trim(),
+						'version': version.trim()
 					};
 				}
 			}
@@ -499,10 +502,15 @@ connection.onCompletion(
 		const completionItems: CompletionItem[] = [];
 		const document = documents.get(textDocumentPosition.textDocument.uri);
 		if (document) {
-			const text = document.getText();
-			const lines = text.split('\n');
-			const line = lines[textDocumentPosition.position.line];
-			const word = line.substring(0, textDocumentPosition.position.character);
+			const line = textDocumentPosition.position.line;
+			const character = textDocumentPosition.position.character;
+			const lines = document.getText().split('\n');
+			const currentLine = lines[line];
+			// Extracting the word
+			const left = currentLine.slice(0, character).match(/[a-zA-Z_\=]+$/)?.[0] ?? '';
+			const right = currentLine.slice(character).match(/^[a-zA-Z_\=]+/)?.[0] ?? '';
+			const word = left + right;
+
 			if (selectedModel !== undefined && selectedModel !== '') {
 				architectures = [];
 				channels = []
@@ -514,7 +522,7 @@ connection.onCompletion(
 			if (word.startsWith('s')) {
 				completionItems.length = 0;
 				const insertText = Object.keys(suggestion_data).length > 0
-					? "stack\nmodel\n${1:model_name} ${2|" + Object.keys(suggestion_data).join(',') + "|}"
+					? "stack ${1:stack_name} stacked=${2|" + ['true', 'false'].join(',') + "|} sequential=${3|" + ['true', 'false'].join(',') + "|} arch=${4|" + architectures.join(',') + "|}\nmodel ${5:model_name} ${6|" + Object.keys(suggestion_data).join(',') + "|}"
 					: '';
 				const simulationCompletionItem: CompletionItem = {
 					label: "simulation",
@@ -528,7 +536,22 @@ connection.onCompletion(
 					documentation: 'Inserts a stack snippet',
 					insertTextFormat: InsertTextFormat.Snippet,
 				};
-				completionItems.push(simulationCompletionItem, stackCompletionItem);
+				const stepsizeCompletionItem: CompletionItem = {
+					label: "stepsize",
+					kind: CompletionItemKind.Keyword,
+					data: "stepsize_keyword"
+				};
+				const stackedCompletionItem: CompletionItem = {
+					label: "stacked",
+					kind: CompletionItemKind.Keyword,
+					data: "stacked_keyword"
+				};
+				const sequentialCompletionItem: CompletionItem = {
+					label: "sequential",
+					kind: CompletionItemKind.Keyword,
+					data: "sequential_keyword"
+				};
+				completionItems.push(simulationCompletionItem, stackCompletionItem, stepsizeCompletionItem, stackedCompletionItem, sequentialCompletionItem);
 			}
 			else if (word.startsWith('c')) {
 				completionItems.length = 0;
@@ -552,7 +575,7 @@ connection.onCompletion(
 			else if (word.startsWith('m')) {
 				completionItems.length = 0;
 				const insertText = Object.keys(suggestion_data).length > 0
-					? 'model\n${1:model_name} ${2|' + Object.keys(suggestion_data).join(',') + '|}'
+					? 'model ${1:model_name} ${2|' + Object.keys(suggestion_data).join(',') + '|}'
 					: '';
 				const modelCompletionItem: CompletionItem = {
 					label: "model",
@@ -571,16 +594,12 @@ connection.onCompletion(
 					kind: CompletionItemKind.Keyword,
 					data: "envar_keyword"
 				};
-				completionItems.push(completionItem);
-			}
-			else if (word.startsWith('f')) {
-				completionItems.length = 0;
-				const completionItem: CompletionItem = {
-					label: "from",
-					kind: CompletionItemKind.Keyword,
-					data: "from_keyword"
+				const endtimecompletionItem: CompletionItem = {
+					label: "endtime",
+					kind: CompletionItemKind.Variable,
+					data: "endtime_keyword"
 				};
-				completionItems.push(completionItem);
+				completionItems.push(completionItem, endtimecompletionItem);
 			}
 			else if (word.startsWith('a')) {
 				completionItems.length = 0;
@@ -589,16 +608,40 @@ connection.onCompletion(
 					kind: CompletionItemKind.Keyword,
 					data: "as_keyword"
 				};
-				completionItems.push(asCompletionItem);
+				const archCompletionItem: CompletionItem = {
+					label: "arch",
+					kind: CompletionItemKind.Keyword,
+					data: "arch_keyword"
+				};
+				completionItems.push(asCompletionItem, archCompletionItem);
 			}
 			else if (word.startsWith('u')) {
 				completionItems.length = 0;
 				const completionItem: CompletionItem = {
-					label: "uses ",
+					label: "uses",
 					kind: CompletionItemKind.Keyword,
 					data: "uses_keyword"
 				};
-				completionItems.push(completionItem);
+				const userCompletionItem: CompletionItem = {
+					label: "user",
+					kind: CompletionItemKind.Keyword,
+					data: "user_keyword"
+				};
+				const uidCompletionItem: CompletionItem = {
+					label: "uid",
+					kind: CompletionItemKind.Keyword,
+					data: "uid_keyword"
+				};
+				completionItems.push(completionItem, userCompletionItem, uidCompletionItem);
+			}
+			else if (word.startsWith('t')) {
+				completionItems.length = 0;
+				const tokenCompletionItem: CompletionItem = {
+					label: "token",
+					kind: CompletionItemKind.Keyword,
+					data: "token_keyword"
+				};
+				completionItems.push(tokenCompletionItem);
 			}
 			else if (word.startsWith('n')) {
 				completionItems.length = 0;
@@ -645,20 +688,20 @@ connection.onCompletion(
 					completionItems.push(completionItem);
 				});
 			}
-			else if (word.endsWith('from')) {
+			else if (word.endsWith('uses')) {
 				completionItems.length = 0;
 				Object.keys(uses_items['files']).forEach((file: string) => {
 					const completionItem: CompletionItem = {
 						label: file,
 						kind: CompletionItemKind.Value,
 						detail: 'file name',
-						filterText: "from",
-						data: "from_suggestion"
+						filterText: "uses",
+						data: "uses_suggestion"
 					};
 					completionItems.push(completionItem);
 				});
 			}
-			else if (word.endsWith('arch=')) {
+			else if (/arch=/.test(word)) {
 				completionItems.length = 0;
 				architectures.forEach((arch: string) => {
 					const completionItem: CompletionItem = {
@@ -667,6 +710,32 @@ connection.onCompletion(
 						detail: 'architecture name',
 						filterText: "arch=",
 						data: "architecture_suggestion"
+					};
+					completionItems.push(completionItem);
+				});
+			}
+			else if (/stacked=/.test(word)) {
+				completionItems.length = 0;
+				['true', 'false'].forEach((stacked: string) => {
+					const completionItem: CompletionItem = {
+						label: stacked,
+						kind: CompletionItemKind.Value,
+						detail: 'stack type',
+						filterText: "stacked=",
+						data: "stacked_suggestion"
+					};
+					completionItems.push(completionItem);
+				});
+			}
+			else if (/sequential=/.test(word)) {
+				completionItems.length = 0;
+				['true', 'false'].forEach((sequential: string) => {
+					const completionItem: CompletionItem = {
+						label: sequential,
+						kind: CompletionItemKind.Value,
+						detail: 'sequential type',
+						filterText: "sequential=",
+						data: "sequential_suggestion"
 					};
 					completionItems.push(completionItem);
 				});
@@ -730,10 +799,10 @@ connection.onCompletionResolve(
 					const r_var = requiredVars[i];
 
 					if (r_var in workflow_obj['default_values']) {
-						const value_suggestions = [workflow_obj['default_values'][r_var], ...Object.keys(uses_items['files'])];
+						const value_suggestions = [workflow_obj['default_values'][r_var]];
 						required_vars += "\nvar " + r_var + " ${" + (i + 1) + "|" + value_suggestions.join(',') + "|}";
 					} else {
-						required_vars += "\nvar " + r_var + " ${" + (i + 1) + "|" + Object.keys(uses_items['files']).join(',') + "|}";
+						required_vars += "\nvar " + r_var + " ${" + (i + 1) + ":value}";
 					}
 				}
 			} else {
@@ -742,17 +811,17 @@ connection.onCompletionResolve(
 			item.insertTextFormat = InsertTextFormat.Snippet;
 			item.insertText = `workflow ${selectedWorkflow}${required_vars}`;
 		}
-		else if (item.data == "from_keyword") {
+		else if (item.data == "uses_keyword") {
 			item.label = `${item.label}`;
-			item.insertText = `from`;
+			item.insertText = `uses`;
 			item.command = {
 				title: "files",
 				command: "editor.action.triggerSuggest",
 			}
 		}
-		else if (item.data == "from_suggestion") {
+		else if (item.data == "uses_suggestion") {
 			item.label = `${item.label}`;
-			item.insertText = `from ${item.label}`;
+			item.insertText = `uses ${item.label}`;
 		}
 		else if (item.data == "var_keyword") {
 			item.label = `${item.label}`;
@@ -763,18 +832,78 @@ connection.onCompletionResolve(
 			}
 		}
 		else if (item.data == "var_suggestion") {
-			item.label = `${item.label}`;
+			item.label = `${item.label.trim()}`;
 			item.insertTextFormat = InsertTextFormat.Snippet;
-
 			const workflow_obj = suggestion_data[`${selectedModel}`]["workflows"][workflowNames.indexOf(selectedWorkflow)][`${selectedWorkflow}`];
-			if (item.label in workflow_obj['default_values']) {
-				const value_suggestions = Object.keys(uses_items['files']);
-				value_suggestions.unshift(workflow_obj['default_values'][item.label]);
-				item.insertText = "var " + item.label + " ${1|" + value_suggestions.join(',') + "|}";
-			} else {
-				item.insertText = "var " + item.label + " ${1|" + Object.keys(uses_items['files']).join(',') + "|}";
-			}
 			item.detail = workflow_obj['vars_desc'][`${item.label}`];
+			if (workflow_obj['vars'].includes(item.label)) {
+				const value_suggestions = workflow_obj['default_values'][item.label];
+				item.insertText = "var " + item.label + " ${1|" + value_suggestions + "|}";
+			}
+		}
+		else if (item.data == "stacked_keyword") {
+			item.label = `${item.label}`;
+			item.insertText = `stacked=`;
+			item.command = {
+				title: "stacked",
+				command: "editor.action.triggerSuggest",
+			}
+		}
+		else if (item.data == "sequential_keyword") {
+			item.label = `${item.label}`;
+			item.insertText = `sequential=`;
+			item.command = {
+				title: "sequential",
+				command: "editor.action.triggerSuggest",
+			}
+		}
+		else if (item.data == "arch_keyword") {
+			item.label = `${item.label}`;
+			item.insertText = `arch=`;
+			item.command = {
+				title: "arch",
+				command: "editor.action.triggerSuggest",
+			}
+		}
+		else if (item.data == "uid_keyword") {
+			item.label = `${item.label}`;
+			item.insertText = `uid=`;
+			item.command = {
+				title: "uid",
+				command: "editor.action.triggerSuggest",
+			}
+		}
+		else if (item.data == "stepsize_keyword") {
+			item.label = `${item.label}`;
+			item.insertText = `stepsize=`;
+			item.command = {
+				title: "stepsize",
+				command: "editor.action.triggerSuggest",
+			}
+		}
+		else if (item.data == "endtime_keyword") {
+			item.label = `${item.label}`;
+			item.insertText = `endtime=`;
+			item.command = {
+				title: "endtime",
+				command: "editor.action.triggerSuggest",
+			}
+		}
+		else if (item.data == "user_keyword") {
+			item.label = `${item.label}`;
+			item.insertText = `user=`;
+			item.command = {
+				title: "user",
+				command: "editor.action.triggerSuggest",
+			}
+		}
+		else if (item.data == "token_keyword") {
+			item.label = `${item.label}`;
+			item.insertText = `token=`;
+			item.command = {
+				title: "token",
+				command: "editor.action.triggerSuggest",
+			}
 		}
 		return item;
 	}

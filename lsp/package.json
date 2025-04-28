@@ -46,22 +46,27 @@
                 }
             }
         },
-        "languages": [{
-            "id": "dse",
-            "aliases": [
-                "dse",
-                "DSE"
-            ],
-            "extensions": [
-                ".dse"
-            ]
-        }],
-        "grammars": [{
-            "language": "dse",
-            "scopeName": "source.dse",
-            "path": "./syntaxes/dse.tmLanguage.json"
-        }],
-        "keybindings": [{
+        "languages": [
+            {
+                "id": "dse",
+                "aliases": [
+                    "dse",
+                    "DSE"
+                ],
+                "extensions": [
+                    ".dse"
+                ]
+            }
+        ],
+        "grammars": [
+            {
+                "language": "dse",
+                "scopeName": "source.dse",
+                "path": "./syntaxes/dse.tmLanguage.json"
+            }
+        ],
+        "keybindings": [
+            {
                 "command": "livePreview.toggle",
                 "key": "ctrl+shift+V",
                 "mac": "cmd+shift+V",
@@ -75,13 +80,16 @@
             }
         ],
         "menus": {
-            "editor/title": [{
-                "command": "livePreview.toggleSideBySide",
-                "when": "editorLangId == dse",
-                "group": "navigation"
-            }]
+            "editor/title": [
+                {
+                    "command": "livePreview.toggleSideBySide",
+                    "when": "editorLangId == dse",
+                    "group": "navigation"
+                }
+            ]
         },
-        "commands": [{
+        "commands": [
+            {
                 "command": "livePreview.toggle",
                 "title": "Open Preview",
                 "category": "DSE",
@@ -121,13 +129,16 @@
         ]
     },
     "scripts": {
+        "create-grammer-folder": "mkdir -p ./client/src/grammar/lib/lexer ./client/src/grammar/lib/parser",
+        "copy-lexer-file": "cp -f ../dsl/lib/lexer/lexing.ts ./client/src/grammar/lib/lexer/",
+        "copy-parser-file": "cp -f ../dsl/lib/parser/parsing.ts ./client/src/grammar/lib/parser/",
         "copy-ast-exec-file": "cp ../ast/bin/ast ./bin/",
         "copy-graph-exec-file": "cp ../graph/bin/graph ./bin/graph/",
         "copy-graph-report-yaml-file": "cp ../graph/cmd/graph/testdata/reports/yaml/report.yaml ./bin/graph/yaml",
-        "vscode:prepublish": "npm run compile && npm run copy-ast-exec-file && npm run copy-graph-exec-file && npm run copy-graph-report-yaml-file",
+        "vscode:prepublish": "npm run create-grammer-folder &&  npm run copy-lexer-file &&  npm run copy-parser-file && npm run compile && npm run copy-ast-exec-file && npm run copy-graph-exec-file && npm run copy-graph-report-yaml-file",
         "compile": "tsc -b",
         "watch": "tsc -b -w",
-        "lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
+        "lint": "eslint ./client/src ./client/src/grammar ./server/src --ext .ts,.tsx",
         "postinstall": "cd client && npm install && cd ../server && npm install && cd ../ast_dag && npm install"
     },
     "devDependencies": {
@@ -141,5 +152,7 @@
         "mocha": "^10.3.0",
         "typescript": "^5.3.3"
     },
-    "dependencies": {}
+    "dependencies": {
+        "chevrotain": "^9.1.0"
+    }
 }

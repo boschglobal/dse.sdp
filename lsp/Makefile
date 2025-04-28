@@ -33,7 +33,7 @@ install: build
 
 .PHONY: clean
 clean:
-	rm -rf out
+	rm -rf out client/out server/out
 	rm -rf package-lock.json
 	rm -rf node_modules
 

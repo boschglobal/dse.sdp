@@ -1,4 +1,4 @@
-# github.boschdevcloud.com/fsil/fsil.go/command v0.0.0-20250116142848-f4bd40a5babd
+# github.boschdevcloud.com/fsil/fsil.go/command v1.0.4
 ## explicit; go 1.23.4
 github.boschdevcloud.com/fsil/fsil.go/command
 github.boschdevcloud.com/fsil/fsil.go/command/log
@@ -10,7 +10,7 @@ github.boschdevcloud.com/fsil/fsil.go/file/handler/kind
 # github.com/apapsch/go-jsonmerge/v2 v2.0.0
 ## explicit; go 1.12
 github.com/apapsch/go-jsonmerge/v2
-# github.com/boschglobal/dse.schemas/code/go/dse v1.2.17
+# github.com/boschglobal/dse.schemas/code/go/dse v1.2.21
 ## explicit; go 1.21.6
 github.com/boschglobal/dse.schemas/code/go/dse/ast
 github.com/boschglobal/dse.schemas/code/go/dse/kind

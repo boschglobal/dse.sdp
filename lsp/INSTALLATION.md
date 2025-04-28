@@ -28,6 +28,15 @@ Extension gets activated for files with below extensions
 - Press <b>`Ctrl + K V`</b> to open Preview to the side.
 - Press <b>`Ctrl + Shift + V`</b> to open Preview.
 
+### Important Note:
+If you are trying the live ast view locally in VS Code (not in Codespace), you may need to run the following command in PowerShell:
+```powershell
+cd dse.sdp/dsl
+npm install -g --force
+```
+This will ensure that all necessary global dependencies are installed properly.
+
+
 # DSE Commands
 
 

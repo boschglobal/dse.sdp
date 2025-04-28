@@ -4,7 +4,7 @@
 
 import {
     lex
-} from "../../lib/lexer/lexing.js";
+} from "../../lib/lexer/lexing";
 import {
     readFileSync
 } from 'fs';

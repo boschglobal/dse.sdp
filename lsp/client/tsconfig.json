@@ -6,8 +6,10 @@
         "outDir": "out",
         "rootDir": "src",
         "sourceMap": true,
-        "strict": true
+        "strict": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
     },
-    "include": ["src"],
+    "include": ["src/*", "src/grammar/*"],
     "exclude": ["node_modules", ".vscode-test"]
 }

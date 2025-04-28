@@ -54,7 +54,7 @@ detailed.dse
 $ cd dse.sdp/dsl/examples/scripts
 
 # Test lexer.
-$ node lexer.js
+$ npx tsx lexer.ts
 ```
 
 ### Parser

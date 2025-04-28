@@ -4,28 +4,75 @@
 
 import {
     Lexer,
-    createToken
+    createToken,
+    IToken,
+    ILexingError
 } from "chevrotain";
 
 const defaultArch = 'linux-amd64';
+const defaultStepsize = '0.0005';
+const defaultEndtime = '0.005';
 let parsedStackArch = '';
+interface CustomRegExpExecArray extends RegExpExecArray {
+    payload?: any;
+}
 
-function matchSimulation(text) {
-    const simulationPattern = /^simulation([ ]+arch\=\S+)?$/
-    const execResult = simulationPattern.exec(text);
+function matchSimulation(text: string) {
+    const simulationPattern = /^simulation([ ]+arch\=\S+)?([ ]+stepsize\=(?:\d*\.?\d+))?([ ]+endtime\=(?:\d*\.?\d+))?\s*$/
+    const execResult = simulationPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         let simulationArch = defaultArch;
         if (execResult[1] !== undefined) {
             simulationArch = execResult[1];
         }
+        let stepsize = '';
+        if (execResult[2] !== undefined) {
+            stepsize = execResult[2];
+        } else {
+            stepsize = defaultStepsize;
+        }
+        let endtime = '';
+        if (execResult[3] !== undefined) {
+            endtime = execResult[3];
+        } else {
+            endtime = defaultEndtime;
+        }
+
         const simulationArchStart = execResult.index + 'simulation'.length + 1;
         const simulationArchEnd = simulationArchStart + simulationArch.length;
+
+        let stepsizeStart = null;
+        let stepsizeEnd = null;
+        if (stepsize !== '') {
+            stepsizeStart = execResult.index + 'simulation'.length + simulationArch.length + 1;
+            stepsizeEnd = stepsizeStart + stepsize.length;
+        }
+
+        let endtimeStart = null;
+        let endtimeEnd = null;
+        if (endtime !== '') {
+            endtimeStart = execResult.index + 'simulation'.length + simulationArch.length + stepsize.length + 1;
+            endtimeEnd = endtimeStart + endtime.length;
+        }
+
         execResult.payload = {
             simulation_arch: {
                 value: simulationArch.replace('arch=', '').trim(),
                 token_type: 'simulation_arch',
                 start_offset: simulationArchStart,
                 end_offset: simulationArchEnd
+            },
+            stepsize: {
+                value: stepsize.replace('stepsize=', '').trim(),
+                token_type: 'stepsize',
+                start_offset: stepsizeStart,
+                end_offset: stepsizeEnd
+            },
+            endtime: {
+                value: endtime.replace('endtime=', '').trim(),
+                token_type: 'endtime',
+                start_offset: endtimeStart,
+                end_offset: endtimeEnd
             }
         };
     }
@@ -38,9 +85,9 @@ export const Simulation = createToken({
     line_breaks: false,
 });
 
-function matchChannel(text) {
-    const channelPattern = /^channel([ ]+\w+)(?:([ ]+\w+))?$/;
-    const execResult = channelPattern.exec(text);
+function matchChannel(text: string) {
+    const channelPattern = /^channel([ ]+\w+)(?:([ ]+\w+))?\s*$/;
+    const execResult = channelPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         const channelName = execResult[1];
         let channelAlias = '';
@@ -79,9 +126,9 @@ export const Channel = createToken({
     line_breaks: false,
 });
 
-function matchFile(text) {
-    const filePattern = /^file([ ]+\S+)([ ]+(?:uses))?([ ]+\S+)?$/;
-    const execResult = filePattern.exec(text);
+function matchFile(text: string) {
+    const filePattern = /^file([ ]+\S+)([ ]+(?:uses))?([ ]+\S+)?\s*$/;
+    const execResult = filePattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         const fileName = execResult[1];
         let fileReferenceType = '';
@@ -137,9 +184,9 @@ export const File = createToken({
     line_breaks: false,
 });
 
-function matchNetwork(text) {
-    const networkPattern = /^network([ ]+\S+)([ ]+\'\S+\')$/;
-    const execResult = networkPattern.exec(text);
+function matchNetwork(text: string) {
+    const networkPattern = /^network([ ]+\S+)([ ]+\'\S+\')\s*$/;
+    const execResult = networkPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         const networkName = execResult[1];
         const mimeType = execResult[2];
@@ -176,9 +223,9 @@ export const Uses = createToken({
     pattern: /uses\s*/,
 });
 
-function matchUseItem(text) {
-    const useItemPattern = /^(\S+)([ ]+(?:(?:https\:\/\/\S+)|(?:\S+\.\S+)|(?:\S+\/\S+)))([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?(?:[ ]+(user\=\S+))?(?:[ ]+(token\=\S+))?$/;
-    const execResult = useItemPattern.exec(text);
+function matchUseItem(text: string) {
+    const useItemPattern = /^(\S+)([ ]+(?:(?:https\:\/\/\S+)|(?:\S+\.\S+)|(?:\S+\/\S+)))([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?(?:[ ]+(user\=\S+))?(?:[ ]+(token\=\S+))?\s*$/;
+    const execResult = useItemPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         const useItem = execResult[1];
         const link = execResult[2];
@@ -270,9 +317,9 @@ export const UseItem = createToken({
     line_breaks: false,
 });
 
-function matchVar(text) {
-    const varPattern = /^[ ]*var([ ]+\S+)([ ]+(?:uses|network|var))?([ ]+\S+)$/;
-    const execResult = varPattern.exec(text);
+function matchVar(text: string) {
+    const varPattern = /^[ ]*var([ ]+\S+)([ ]+(?:uses|network|var))?([ ]+\S+)\s*$/;
+    const execResult = varPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         const varName = execResult[1];
         let varReferenceType = '';
@@ -320,9 +367,9 @@ export const Var = createToken({
     line_breaks: false
 });
 
-function matchModel(text) {
-    const modelPattern = /^model([ ]+\S+)([ ]+\S+)([ ]+arch\=\S+)?([ ]+uid\=\S+)?$/;
-    const execResult = modelPattern.exec(text);
+function matchModel(text: string) {
+    const modelPattern = /^model([ ]+\S+)([ ]+\S+)([ ]+arch\=\S+)?([ ]+uid\=\d+)?\s*$/;
+    const execResult = modelPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         const modelName = execResult[1];
         const modelRepoValue = execResult[2];
@@ -391,9 +438,9 @@ export const Model = createToken({
     line_breaks: false
 });
 
-function matchEnvVar(text) {
-    const varPattern = /^envar([ ]+\S+)([ ]+\S+)$/;
-    const execResult = varPattern.exec(text);
+function matchEnvVar(text: string) {
+    const varPattern = /^envar([ ]+\S+)([ ]+\S+)\s*$/;
+    const execResult = varPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         const varName = execResult[1];
         const varValue = execResult[2];
@@ -425,9 +472,9 @@ export const EnvVar = createToken({
     line_breaks: false
 });
 
-function matchWorkflow(text) {
-    const workflowPattern = /^workflow([ ]+\S+)$/;
-    const execResult = workflowPattern.exec(text);
+function matchWorkflow(text: string) {
+    const workflowPattern = /^workflow([ ]+\S+)\s*$/;
+    const execResult = workflowPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         const workflowName = execResult[1];
         const workflowNameStart = execResult.index + 'workflow'.length + 1;
@@ -450,9 +497,9 @@ export const Workflow = createToken({
     line_breaks: false
 });
 
-function matchStack(text) {
-    const stackPattern = /^stack([ ]+\S+)([ ]+stacked\=\w+)?([ ]+arch\=\S+)?$/;
-    const execResult = stackPattern.exec(text);
+function matchStack(text: string) {
+    const stackPattern = /^stack([ ]+\S+)([ ]+stacked\=(?:true|false))?([ ]+sequential\=(?:true|false))?([ ]+arch\=\S+)?\s*$/;
+    const execResult = stackPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         parsedStackArch = ''
         const stackName = execResult[1];
@@ -460,9 +507,13 @@ function matchStack(text) {
         if (execResult[2] !== undefined) {
             stacked = execResult[2];
         }
-        let stackArch = ''
+        let sequential = ''
         if (execResult[3] !== undefined) {
-            stackArch = execResult[3];
+            sequential = execResult[3];
+        }
+        let stackArch = ''
+        if (execResult[4] !== undefined) {
+            stackArch = execResult[4];
             parsedStackArch = stackArch;
         } else {
             stackArch = defaultArch;
@@ -471,7 +522,9 @@ function matchStack(text) {
         const stackNameEnd = stackNameStart + stackName.length;
         const stackedStart = execResult.index + 'stack'.length + stackName.length + 1;
         const stackedEnd = stackedStart + stacked.length;
-        const stackArchStart = execResult.index + 'stack'.length + stackName.length + stacked.length + 1;
+        const sequentialStart = execResult.index + 'stack'.length + stackName.length + stacked.length + 1;
+        const sequentialEnd = sequentialStart + sequential.length;
+        const stackArchStart = execResult.index + 'stack'.length + stackName.length + stacked.length + sequential.length + 1;
         const stackArchEnd = stackArchStart + stackArch.length;
         execResult.payload = {
             stack_name: {
@@ -485,6 +538,12 @@ function matchStack(text) {
                 token_type: 'stacked',
                 start_offset: stackedStart,
                 end_offset: stackedEnd
+            },
+            sequential: {
+                value: sequential.replace('sequential=', '').trim(),
+                token_type: 'sequential',
+                start_offset: sequentialStart,
+                end_offset: sequentialEnd
             },
             stack_arch: {
                 value: stackArch.replace('arch=', '').trim(),
@@ -526,14 +585,13 @@ export const allTokens = [
 ];
 
 export const fsilLexer = new Lexer(allTokens);
-
-export function lex(inputText) {
+export function lex(inputText: string) {
     const lines = inputText.split(/\r?\n/);
     let lineStartOffset = 0;
     let lexingResult = {
-        'tokens': [],
-        "groups": {},
-        "errors": []
+        tokens: [] as IToken[],
+        groups: {} as Record<string, IToken[]>,
+        errors: [] as ILexingError[]
     };
     lines.forEach((line) => {
         if (line !== '') {

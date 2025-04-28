@@ -11,7 +11,7 @@ import {
 import * as util from 'util';
 import * as fs from 'fs';
 import { tmpdir } from "os";
-
+import { parse } from './grammar/lib/parser/parsing';
 
 interface Node {
     id: number;
@@ -41,17 +41,41 @@ let panel: vscode.WebviewPanel;
 let terminal: vscode.Terminal | undefined;
 let tmpterminal: vscode.Terminal | undefined;
 const supportedExtensions = new Set<string>(['.dse']);
-const yamlExtensions = new Set<string>(['.yaml', '.yml']);
 const isCodespace = vscode.env.remoteName === "codespaces";
-let astYamlPath = '';
-let simulationYamlPath = '';
-let cdDirPath = '';
+let astYamlPath: string = '';
+let simulationYamlPath: string = '';
+let cdDirPath: string = '';
+let stepSize: string;
+let endTime: string;
 const checkInterval = 1000;
 const timeout = 30000;
 const envVars: Record<string, string> = {};
+let dseDirPath: string;
+const tmpPreBuild = 'pre_build_completed';
+const tmpPreRun = 'pre_run_completed';
+const tmpPreClean = 'pre_clean_completed';
+const tmpPreCleanall = 'pre_cleanall_completed';
+const tmpSimRun = 'sim_run_completed';
+
 export function activate(context: vscode.ExtensionContext) {
+    let diagnosticCollection = vscode.languages.createDiagnosticCollection('dse');
+    context.subscriptions.push(diagnosticCollection);
+    vscode.workspace.onDidChangeTextDocument((event) => {
+        const document = event.document;
+        if (document.languageId === 'dse') {
+            const text = document.getText();
+            const diagnostics = parse(text);
+            diagnosticCollection.clear();
+            if (Array.isArray(diagnostics)) {
+                diagnosticCollection.set(document.uri, diagnostics);
+            }
+        }
+    });
+
+
     let activeEditor = vscode.window.activeTextEditor;
     const extPath = vscode.extensions.getExtension('dse.dse')!.extensionPath;
+
     if (isCodespace) {
         generateContainerHTML(path.join(extPath, 'ast_dag', 'ast.html'), process.env.CODESPACE_NAME);
     }
@@ -111,7 +135,11 @@ export function activate(context: vscode.ExtensionContext) {
             const filePath = editor.document.uri.fsPath;
             const activeFileExt = path.extname(filePath);
             if (supportedExtensions.has(activeFileExt)) {
-                switchPanel(false);  // Open preview in the active panel
+                if (validateDiagnostics(editor, diagnosticCollection)) {
+                    switchPanel(false);  // Open preview in the active panel
+                } else {
+                    vscode.window.showErrorMessage(`This file contains error(s). Please fix them before proceeding.`);
+                }
             } else {
                 vscode.window.showWarningMessage(`File extension ${activeFileExt} is NOT supported.`);
             }
@@ -124,7 +152,11 @@ export function activate(context: vscode.ExtensionContext) {
             const filePath = editor.document.uri.fsPath;
             const activeFileExt = path.extname(filePath);
             if (supportedExtensions.has(activeFileExt)) {
-                switchPanel(true);  // Open preview in the side-by-side panel
+                if (validateDiagnostics(editor, diagnosticCollection)) {
+                    switchPanel(true);  // Open preview in the side-by-side panel
+                } else {
+                    vscode.window.showErrorMessage(`This file contains error(s). Please fix them before proceeding.`);
+                }
             } else {
                 vscode.window.showWarningMessage(`File extension ${activeFileExt} is NOT supported.`);
             }
@@ -132,6 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
     }));
 
     let build_cmd = vscode.commands.registerCommand('Build', () => {
+        clearTempFiles();
         terminal = terminalSetup(terminal);
         const editor = vscode.window.activeTextEditor;
         if (editor) {
@@ -142,36 +175,34 @@ export function activate(context: vscode.ExtensionContext) {
             const astJsonPath = path.join(activeFileDirPath, activeFileName + '.ast.json');
             const astOutputPath = isCodespace ? astJsonPath : convertToMntPath(astJsonPath.replace(/\\/g, "/"));
             if (supportedExtensions.has(activeFileExt)) {
-                terminal?.show();
-                terminal?.sendText(`cd ${cdDirPath}`);
-                tmpterminal = terminalSetup(tmpterminal);
-                astYamlPath = path.join(activeFileDirPath, activeFileName + '.yaml');
-                astYamlPath = isCodespace ? astYamlPath : convertToMntPath(astYamlPath.replace(/\\/g, "/"));
-                removeFile(astYamlPath);
-                removeFile(genTaskfilePath);
-                removeFile(genSimulationPath);
+                if (validateDiagnostics(editor, diagnosticCollection)) {
+                    terminal?.show();
+                    terminal?.sendText(`cd ${cdDirPath}`);
+                    tmpterminal = terminalSetup(tmpterminal);
+                    astYamlPath = path.join(activeFileDirPath, activeFileName + '.yaml');
+                    astYamlPath = isCodespace ? astYamlPath : convertToMntPath(astYamlPath.replace(/\\/g, "/"));
+                    removeFile(astYamlPath);
+                    removeFile(genTaskfilePath);
+                    removeFile(genSimulationPath);
 
-                terminal?.sendText(`parse2ast ${isCodespace ? filePath : convertToMntPath(filePath.replace(/\\/g, "/"))} ${astOutputPath} && touch /tmp/dse_parsing_done`); // executing `parse2ast` command
-
-                const astExecPath = isCodespace ? path.join(extPath, 'bin', 'ast') : convertToMntPath(path.join(extPath, 'bin', 'ast').replace(/\\/g, "/"));
-                terminal?.sendText(`if [ -f /tmp/dse_parsing_done ]; then ${astExecPath} convert -input ${astOutputPath} -output ${astYamlPath} && touch /tmp/dse_convert_done; fi\n`);
-                terminal?.sendText(`if [ -f /tmp/dse_convert_done ]; then ${astExecPath} resolve -input ${astYamlPath} -cache out/cache && touch /tmp/dse_resolve_done; fi\n`);
-
-                const genFilesPath = isCodespace ? activeFileDirPath : convertToMntPath(activeFileDirPath.replace(/\\/g, "/"));
-                terminal?.sendText(`if [ -f /tmp/dse_resolve_done ]; then ${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath}; fi\n`);
-                simulationYamlPath = path.join(activeFileDirPath, 'simulation.yaml');
-
-                const startTime = Date.now();
-                const interval = setInterval(() => {
-                    if (fs.existsSync(genSimulationPath) && fs.existsSync(genTaskfilePath)) {
-                        clearInterval(interval);
-                        removeFile(path.join(activeFileDirPath, activeFileName + '.json'));
-                        tmpterminal?.sendText(`rm -f /tmp/dse_*`);
-                        setEnvVars(astJsonPath, terminal);
-                    } else if (Date.now() - startTime > timeout) {
-                        clearInterval(interval);
+                    //if 'pre_build.sh' is present it gets executed first.
+                    const execFile = 'pre_build.sh';
+                    const tmpPath: string = path.join(tmpdir(), tmpPreBuild);
+                    const preBuildCompletionStatusFile = isCodespace ? tmpPath : convertToMntPath(tmpPath.replace(/\\/g, "/"));
+                    const preBuildPath = path.join(activeFileDirPath, execFile);
+                    if (fs.existsSync(preBuildPath)) {
+                        terminal?.sendText(`sh ${execFile} && touch ${preBuildCompletionStatusFile}`);
+                        waitForFile(tmpPath, () => {
+                            console.log(`executing ${execFile}`);
+                            build(filePath, astOutputPath, extPath, activeFileDirPath, genSimulationPath, genTaskfilePath, activeFileName, astJsonPath);
+                        });
+                        removeFile(tmpPath);
+                    } else {
+                        build(filePath, astOutputPath, extPath, activeFileDirPath, genSimulationPath, genTaskfilePath, activeFileName, astJsonPath);
                     }
-                }, checkInterval);
+                } else {
+                    vscode.window.showErrorMessage(`This file contains error(s). Please fix them before proceeding.`);
+                }
             } else {
                 vscode.window.showWarningMessage(`File extension ${activeFileExt} is NOT supported.`);
             }
@@ -201,6 +232,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(check_cmd);
 
     let run_cmd = vscode.commands.registerCommand('Run', () => {
+        clearTempFiles();
         terminal = terminalSetup(terminal);
         const editor = vscode.window.activeTextEditor;
         if (editor) {
@@ -216,17 +248,20 @@ export function activate(context: vscode.ExtensionContext) {
                     terminal?.sendText(`export TASK_X_REMOTE_TASKFILES=1`);
                 }
 
-                terminal?.sendText(`dse-ast generate -input ${astYamlPath} -output .`);
-                terminal?.sendText(`task -y -v`);
-                const tmpPath = path.join(tmpdir(), 'sim_run_completed');
-                const simCompletionStatusFile = isCodespace ? tmpPath : convertToMntPath(tmpPath.replace(/\\/g, "/"));
-                terminal?.sendText(`dse-simer out/sim -stepsize 0.0005 -endtime 0.005 && touch ${simCompletionStatusFile}`);
-                const postRunPath = path.join(activeFileDirPath, 'post_run.sh');
-                if (fs.existsSync(postRunPath)) {
+                //if 'pre_run.sh' is present it gets executed first.
+                const execFile = 'pre_run.sh';
+                const tmpPath: string = path.join(tmpdir(), tmpPreRun);
+                const preRunCompletionStatusFile = isCodespace ? tmpPath : convertToMntPath(tmpPath.replace(/\\/g, "/"));
+                const preRunPath = path.join(activeFileDirPath, execFile);
+                if (fs.existsSync(preRunPath)) {
+                    terminal?.sendText(`sh ${execFile} && touch ${preRunCompletionStatusFile}`);
                     waitForFile(tmpPath, () => {
-                        terminal?.sendText(`sh post_run.sh`);
+                        console.log(`executing ${execFile}`);
+                        run(astYamlPath, activeFileDirPath);
                     });
                     removeFile(tmpPath);
+                } else {
+                    run(astYamlPath, activeFileDirPath)
                 }
             } else {
                 vscode.window.showWarningMessage(`Please run the DSE build command to process dse supported files.`);
@@ -236,16 +271,44 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(run_cmd);
 
     let clean_cmd = vscode.commands.registerCommand('Clean', () => {
+        clearTempFiles();
         terminal = terminalSetup(terminal);
         terminal?.show();
-        terminal?.sendText(`task clean`);
+        const execFile = 'pre_clean.sh';
+        const tmpPath: string = path.join(tmpdir(), tmpPreClean);
+        const preCleanCompletionStatusFile = isCodespace ? tmpPath : convertToMntPath(tmpPath.replace(/\\/g, "/"));
+        const preCleanPath = path.join(dseDirPath, execFile);
+        if (fs.existsSync(preCleanPath)) {
+            terminal?.sendText(`sh ${execFile} && touch ${preCleanCompletionStatusFile}`);
+            waitForFile(tmpPath, () => {
+                console.log(`executing ${execFile}`);
+                clean(false);
+            });
+            removeFile(tmpPath);
+        } else {
+            clean(false);
+        }
     });
     context.subscriptions.push(clean_cmd);
 
     let cleanall_cmd = vscode.commands.registerCommand('Cleanall', () => {
+        clearTempFiles();
         terminal = terminalSetup(terminal);
         terminal?.show();
-        terminal?.sendText(`task clean && task cleanall`);
+        const execFile = 'pre_clean.sh';
+        const tmpPath: string = path.join(tmpdir(), tmpPreCleanall);
+        const preCleanCompletionStatusFile = isCodespace ? tmpPath : convertToMntPath(tmpPath.replace(/\\/g, "/"));
+        const preCleanPath = path.join(dseDirPath, execFile);
+        if (fs.existsSync(preCleanPath)) {
+            terminal?.sendText(`sh ${execFile} && touch ${preCleanCompletionStatusFile}`);
+            waitForFile(tmpPath, () => {
+                console.log(`executing ${execFile}`);
+                clean(true);
+            });
+            removeFile(tmpPath);
+        } else {
+            clean(true);
+        }
     });
     context.subscriptions.push(cleanall_cmd);
 
@@ -291,18 +354,116 @@ vscode.window.onDidCloseTerminal((closedTerminal) => {
 });
 
 function waitForFile(path: string, callback: () => void, interval = 1000) {
+    let hasRun = false;
     const checkInterval = setInterval(() => {
-        if (fs.existsSync(path)) {
+        if (fs.existsSync(path) && !hasRun) {
+            hasRun = true;
             clearInterval(checkInterval);
             callback();
         }
     }, interval);
 }
 
-function setEnvVars(astJsonPath: string, terminal: vscode.Terminal | undefined) {
+function validateDiagnostics(activeEditor: typeof vscode.window.activeTextEditor, diagnosticCollection: vscode.DiagnosticCollection): boolean {
+    if (!activeEditor) {
+        return false;
+    }
+    const documentUri = activeEditor?.document.uri;
+    const existingDiagnostics = diagnosticCollection.get(documentUri);
+    if (existingDiagnostics && existingDiagnostics.length > 0) {
+        return false
+    }
+    return true
+}
+
+function build(filePath: string, astOutputPath: string, extPath: string, activeFileDirPath: string, genSimulationPath: string, genTaskfilePath: string, activeFileName: string, astJsonPath: string) {
+    terminal?.sendText(`parse2ast ${isCodespace ? filePath : convertToMntPath(filePath.replace(/\\/g, "/"))} ${astOutputPath} && touch /tmp/dse_parsing_done`); // executing `parse2ast` command
+
+    const astExecPath = isCodespace ? path.join(extPath, 'bin', 'ast') : convertToMntPath(path.join(extPath, 'bin', 'ast').replace(/\\/g, "/"));
+    terminal?.sendText(`if [ -f /tmp/dse_parsing_done ]; then ${astExecPath} convert -input ${astOutputPath} -output ${astYamlPath} && touch /tmp/dse_convert_done; fi\n`);
+    terminal?.sendText(`if [ -f /tmp/dse_convert_done ]; then ${astExecPath} resolve -input ${astYamlPath} -cache out/cache && touch /tmp/dse_resolve_done; fi\n`);
+
+    const genFilesPath = isCodespace ? activeFileDirPath : convertToMntPath(activeFileDirPath.replace(/\\/g, "/"));
+    terminal?.sendText(`if [ -f /tmp/dse_resolve_done ]; then ${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath}; fi\n`);
+    simulationYamlPath = path.join(activeFileDirPath, 'simulation.yaml');
+
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+        if (fs.existsSync(genSimulationPath) && fs.existsSync(genTaskfilePath)) {
+            clearInterval(interval);
+            openFile(genSimulationPath);
+            removeFile(path.join(activeFileDirPath, activeFileName + '.json'));
+            tmpterminal?.sendText(`rm -f /tmp/dse_*`);
+            setVars(astJsonPath, terminal);
+
+            //if 'post_build.sh' is present in active dsl dir path it gets executed.
+            const execFile = 'post_build.sh';
+            const postBuildPath = path.join(activeFileDirPath, execFile);
+            if (fs.existsSync(postBuildPath)) {
+                console.log(`executing ${execFile}`);
+                terminal?.sendText(`sh ${execFile}`);
+            }
+
+        } else if (Date.now() - startTime > timeout) {
+            clearInterval(interval);
+        }
+    }, checkInterval);
+}
+
+function run(astYamlPath: string, activeFileDirPath: string) {
+    terminal?.sendText(`dse-ast generate -input ${astYamlPath} -output .`);
+    terminal?.sendText(`task -y -v`);
+
+    const tmpPath = path.join(tmpdir(), tmpSimRun);
+    const simCompletionStatusFile = isCodespace ? tmpPath : convertToMntPath(tmpPath.replace(/\\/g, "/"));
+    terminal?.sendText(`dse-simer out/sim -stepsize ${stepSize} -endtime ${endTime} && touch ${simCompletionStatusFile}`);
+    const execFile = 'post_run.sh';
+    const postRunPath = path.join(activeFileDirPath, execFile);
+    if (fs.existsSync(postRunPath)) {
+        waitForFile(tmpPath, () => {
+            console.log(`executing ${execFile}`);
+            terminal?.sendText(`sh ${execFile}`);
+        });
+        removeFile(tmpPath);
+    }
+}
+
+function clean(all: boolean = false) {
+    const tmpPathClean = path.join(tmpdir(), 'clean_completed');
+    const cleanCompletionStatusFile = isCodespace ? tmpPathClean : convertToMntPath(tmpPathClean.replace(/\\/g, "/"));
+
+    const tmpPathCleanall = path.join(tmpdir(), 'cleanall_completed');
+    const cleanallCompletionStatusFile = isCodespace ? tmpPathCleanall : convertToMntPath(tmpPathCleanall.replace(/\\/g, "/"));
+
+    const execFile = 'post_clean.sh';
+    const postCleanPath = path.join(dseDirPath, execFile);
+
+    if (all === false) {
+        terminal?.sendText(`task clean && touch ${cleanCompletionStatusFile}`);
+        if (fs.existsSync(postCleanPath)) {
+            waitForFile(tmpPathClean, () => {
+                console.log(`executing ${execFile}`);
+                terminal?.sendText(`sh ${execFile}`);
+                removeFile(tmpPathClean);
+            });
+        }
+    } else {
+        terminal?.sendText(`task clean && task cleanall && touch ${cleanallCompletionStatusFile}`);
+        if (fs.existsSync(postCleanPath)) {
+            waitForFile(tmpPathCleanall, () => {
+                console.log(`executing ${execFile}`);
+                terminal?.sendText(`sh ${execFile}`);
+                removeFile(tmpPathCleanall);
+            });
+        }
+    }
+}
+
+function setVars(astJsonPath: string, terminal: vscode.Terminal | undefined) {
     const rawData = fs.readFileSync(astJsonPath, 'utf-8');
     const jsonData = JSON.parse(rawData);
 
+    // setting env vars
     jsonData.children.stacks.forEach((stack: { env_vars: any[]; }) => {
         stack.env_vars?.forEach(envVar => {
             const name = envVar.object.payload.env_var_name.value;
@@ -311,6 +472,8 @@ function setEnvVars(astJsonPath: string, terminal: vscode.Terminal | undefined) 
             terminal?.sendText(`export ${name}=${value}`);
         });
     });
+    stepSize = jsonData.object.payload.stepsize.value;
+    endTime = jsonData.object.payload.endtime.value;
 }
 
 function mergeYAMLWithSeparator(simulationYamlPath: string, astYamlPath: string): string {
@@ -331,6 +494,7 @@ function getActiveFileInfo(editor: vscode.TextEditor): [string, string, string, 
     const activeFileExt = path.extname(filePath);
     const activeFileName = path.basename(filePath, path.extname(filePath));
     const activeFileDirPath = path.dirname(filePath);
+    dseDirPath = activeFileDirPath;
     return [filePath, activeFileExt, activeFileName, activeFileDirPath];
 }
 
@@ -340,6 +504,17 @@ function removeFile(filePath: string) {
     }
 }
 
+function clearTempFiles() {
+    const fileNames: string[] = [tmpPreBuild, tmpPreRun, tmpPreClean, tmpPreCleanall, tmpSimRun];
+    fileNames.forEach(file => {
+        const fullPath = path.join(tmpdir(), file);
+        try {
+            removeFile(fullPath);
+        } catch (err) {
+            console.error(err);
+        }
+    });
+}
 
 function terminalSetup(terminal: vscode.Terminal | undefined): vscode.Terminal | undefined {
     if (!terminal || terminal.exitStatus !== undefined) {
