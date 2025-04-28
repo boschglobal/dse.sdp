@@ -15,6 +15,12 @@
  * limitations under the License.
  */
 
-package metadata
+package gql
 
-const DriverVersion = "5.28.0"
+func NewDefaultDiagnosticRecord() map[string]any {
+	return map[string]any{
+		"OPERATION":      "",
+		"OPERATION_CODE": "0",
+		"CURRENT_SCHEMA": "/",
+	}
+}

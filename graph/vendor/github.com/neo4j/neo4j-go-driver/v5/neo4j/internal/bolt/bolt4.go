@@ -21,7 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
+	"io"
 	"reflect"
 	"time"
 
@@ -94,7 +94,7 @@ type bolt4 struct {
 	state         int
 	txId          idb.TxHandle
 	streams       openstreams
-	conn          net.Conn
+	conn          io.ReadWriteCloser
 	serverName    string
 	connId        string
 	logId         string
@@ -116,7 +116,7 @@ type bolt4 struct {
 
 func NewBolt4(
 	serverName string,
-	conn net.Conn,
+	conn io.ReadWriteCloser,
 	errorListener ConnectionErrorListener,
 	logger log.Logger,
 	boltLog log.BoltLogger,
@@ -172,6 +172,10 @@ func (b *bolt4) checkStreams() {
 
 func (b *bolt4) ServerName() string {
 	return b.serverName
+}
+
+func (b *bolt4) ConnId() string {
+	return b.connId
 }
 
 func (b *bolt4) ServerVersion() string {
@@ -236,11 +240,8 @@ func (b *bolt4) Connect(
 	hello := map[string]any{
 		"user_agent": userAgent,
 	}
-	// On bolt >= 4.1 add routing to enable/disable routing
-	if b.minor >= 1 {
-		if routingContext != nil {
-			hello["routing"] = routingContext
-		}
+	if routingContext != nil {
+		hello["routing"] = routingContext
 	}
 	checkUtcPatch := b.minor >= 3
 	if checkUtcPatch {
@@ -988,6 +989,14 @@ func (b *bolt4) Telemetry(telemetry.API, func()) {
 	// TELEMETRY not support by this protocol version, so we ignore it.
 }
 
+func (b *bolt4) SetPinHomeDatabaseCallback(func(context.Context, string)) {
+	// Home database not supported by this protocol version, so we ignore it.
+}
+
+func (b *bolt4) IsSsrEnabled() bool {
+	return false
+}
+
 func (b *bolt4) helloResponseHandler(checkUtcPatch bool) responseHandler {
 	return b.expectedSuccessHandler(b.onHelloSuccess(checkUtcPatch))
 }
@@ -1034,6 +1043,9 @@ func (b *bolt4) discardResponseHandler(stream *stream) responseHandler {
 func (b *bolt4) pullResponseHandler(stream *stream) responseHandler {
 	return responseHandler{
 		onRecord: func(record *db.Record) {
+			if record != nil {
+				stream.hadRecord = true
+			}
 			if stream.discarding {
 				stream.emptyRecords()
 			} else {
@@ -1181,6 +1193,7 @@ func (b *bolt4) extractSummary(success *success, stream *stream) *db.Summary {
 	summary.Minor = b.minor
 	summary.ServerName = b.serverName
 	summary.TFirst = stream.tfirst
+	summary.StreamSummary = stream.ToSummary()
 	return summary
 }
 

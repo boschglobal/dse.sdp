@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 
-package metadata
+package db
 
-const DriverVersion = "5.28.0"
+// DatabaseSelection encapsulates the database name and whether it is guessed.
+type DatabaseSelection struct {
+	Name          string
+	IsHomeDbGuess bool
+}

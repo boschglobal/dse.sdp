@@ -3,19 +3,31 @@ package ast
 import ()
 
 const (
+	FileReferenceUses FileReference = "uses"
+)
+const (
 	SimulationKindSimulation SimulationKind = "Simulation"
 )
 const (
 	VarReferenceUses VarReference = "uses"
 )
 
-type Model struct {
-	Arch      *string        `yaml:"arch,omitempty"`
-	Channels  []ModelChannel `yaml:"channels"`
-	Env       *[]Var         `yaml:"env,omitempty"`
-	Model     string         `yaml:"model"`
+type File struct {
 	Name      string         `yaml:"name"`
-	Workflows *[]Workflow    `yaml:"workflows,omitempty"`
+	Reference *FileReference `yaml:"reference,omitempty"`
+	Value     string         `yaml:"value"`
+}
+type FileReference string
+type Model struct {
+	Arch      *string                 `yaml:"arch,omitempty"`
+	Channels  []ModelChannel          `yaml:"channels"`
+	Env       *[]Var                  `yaml:"env,omitempty"`
+	Files     *[]File                 `yaml:"files,omitempty"`
+	Metadata  *map[string]interface{} `yaml:"metadata,omitempty"`
+	Model     string                  `yaml:"model"`
+	Name      string                  `yaml:"name"`
+	Uses      string                  `yaml:"uses"`
+	Workflows *[]Workflow             `yaml:"workflows,omitempty"`
 }
 type ModelChannel struct {
 	Alias string `yaml:"alias"`
@@ -38,22 +50,28 @@ type SimulationNetwork struct {
 type SimulationSpec struct {
 	Arch     string              `yaml:"arch"`
 	Channels []SimulationChannel `yaml:"channels"`
+	Endtime  *float64            `yaml:"endtime,omitempty"`
 	Stacks   []Stack             `yaml:"stacks"`
+	Stepsize *float64            `yaml:"stepsize,omitempty"`
 	Uses     *[]Uses             `yaml:"uses,omitempty"`
 	Vars     *[]Var              `yaml:"vars,omitempty"`
 }
 type Stack struct {
-	Arch    *string `yaml:"arch,omitempty"`
-	Env     *[]Var  `yaml:"env,omitempty"`
-	Models  []Model `yaml:"models"`
-	Name    string  `yaml:"name"`
-	Stacked *bool   `yaml:"stacked,omitempty"`
+	Arch       *string `yaml:"arch,omitempty"`
+	Env        *[]Var  `yaml:"env,omitempty"`
+	Models     []Model `yaml:"models"`
+	Name       string  `yaml:"name"`
+	Sequential *bool   `yaml:"sequential,omitempty"`
+	Stacked    *bool   `yaml:"stacked,omitempty"`
 }
 type Uses struct {
-	Name    string  `yaml:"name"`
-	Path    *string `yaml:"path,omitempty"`
-	Url     string  `yaml:"url"`
-	Version *string `yaml:"version,omitempty"`
+	Metadata *map[string]interface{} `yaml:"metadata,omitempty"`
+	Name     string                  `yaml:"name"`
+	Path     *string                 `yaml:"path,omitempty"`
+	Token    *string                 `yaml:"token,omitempty"`
+	Url      string                  `yaml:"url"`
+	User     *string                 `yaml:"user,omitempty"`
+	Version  *string                 `yaml:"version,omitempty"`
 }
 type Var struct {
 	Name      string        `yaml:"name"`

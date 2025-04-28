@@ -20,14 +20,15 @@ package bolt
 import (
 	"errors"
 	"fmt"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/errorutil"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/gql"
 	"time"
-
-	idb "github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/db"
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j/log"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/db"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/dbtype"
+	idb "github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/db"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/packstream"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j/log"
 )
 
 const containsSystemUpdatesKey = "contains-system-updates"
@@ -49,6 +50,7 @@ type success struct {
 	plan               *db.Plan
 	profile            *db.ProfiledPlan
 	notifications      []db.Notification
+	statuses           []db.GqlStatusObject
 	routingTable       *idb.RoutingTable
 	num                uint32
 	configurationHints map[string]any
@@ -78,6 +80,7 @@ func (s *success) summary() *db.Summary {
 		Plan:                  s.plan,
 		ProfiledPlan:          s.profile,
 		Notifications:         s.notifications,
+		GqlStatusObjects:      s.statuses,
 		Database:              s.db,
 		ContainsSystemUpdates: extractBoolPointer(s.counters, containsSystemUpdatesKey),
 		ContainsUpdates:       extractBoolPointer(s.counters, containsUpdatesKey),
@@ -155,7 +158,7 @@ func (h *hydrator) hydrate(buf []byte) (x any, err error) {
 	case msgIgnored:
 		x = h.ignored(n)
 	case msgFailure:
-		x = h.failure(n)
+		x = h.failure(n, false)
 	case msgRecord:
 		x = h.record(n)
 	default:
@@ -176,27 +179,42 @@ func (h *hydrator) ignored(n uint32) *ignored {
 	return &h.cachedIgnored
 }
 
-func (h *hydrator) failure(n uint32) *db.Neo4jError {
+func (h *hydrator) failure(n uint32, isNestedError bool) *db.Neo4jError {
 	h.assertLength("failure", 1, n)
 	if h.getErr() != nil {
 		return nil
 	}
 	dberr := db.Neo4jError{}
-	h.unp.Next() // Detect map
+	// Skip h.unp.Next() for nested errors to avoid reprocessing the unpacker,
+	// as it's already handled by the recursive call.
+	if !isNestedError {
+		h.unp.Next() // Detect map
+	}
 	for maplen := h.unp.Len(); maplen > 0; maplen-- {
 		h.unp.Next()
 		key := h.unp.String()
 		h.unp.Next()
 		switch key {
+		case "gql_status":
+			dberr.GqlStatus = h.unp.String()
+		case "description":
+			dberr.GqlStatusDescription = h.unp.String()
+		case "neo4j_code":
+			fallthrough
 		case "code":
 			dberr.Code = h.unp.String()
 		case "message":
 			dberr.Msg = h.unp.String()
+		case "diagnostic_record":
+			dberr.GqlDiagnosticRecord = h.amap()
+		case "cause":
+			dberr.GqlCause = h.failure(1, true)
 		default:
 			// Do not fail on unknown value in map
 			h.trash()
 		}
 	}
+	errorutil.PolyfillGqlError(&dberr)
 	if h.boltLogger != nil {
 		h.boltLogger.LogServerMessage(h.logId, "FAILURE %s", loggableFailure(dberr))
 	}
@@ -272,6 +290,9 @@ func (h *hydrator) success(n uint32) *success {
 		case "notifications":
 			l := h.array()
 			succ.notifications = parseNotifications(l)
+		case "statuses":
+			l := h.array()
+			succ.statuses = parseGqlStatusObjects(l)
 		case "rt":
 			succ.routingTable = h.routingTable()
 		case "hints":
@@ -653,7 +674,7 @@ func (h *hydrator) path(n uint32) any {
 	}
 	// Array of nodes
 	h.unp.Next()
-	num := h.unp.Int()
+	num := h.unp.Len()
 	nodes := make([]dbtype.Node, num)
 	for i := range nodes {
 		h.unp.Next()
@@ -670,7 +691,7 @@ func (h *hydrator) path(n uint32) any {
 	}
 	// Array of relnodes
 	h.unp.Next()
-	num = h.unp.Int()
+	num = h.unp.Len()
 	rnodes := make([]*relNode, num)
 	for i := range rnodes {
 		h.unp.Next()
@@ -687,7 +708,7 @@ func (h *hydrator) path(n uint32) any {
 	}
 	// Array of indexes
 	h.unp.Next()
-	num = h.unp.Int()
+	num = h.unp.Len()
 	indexes := make([]int, num)
 	for i := range indexes {
 		h.unp.Next()
@@ -878,6 +899,20 @@ func parseNotifications(notificationsx []any) []db.Notification {
 	return notifications
 }
 
+func parseGqlStatusObjects(statuses []any) []db.GqlStatusObject {
+	var gqlStatusObjects []db.GqlStatusObject
+	if statuses != nil {
+		gqlStatusObjects = make([]db.GqlStatusObject, 0, len(statuses))
+		for _, x := range statuses {
+			status, ok := x.(map[string]any)
+			if ok {
+				gqlStatusObjects = append(gqlStatusObjects, parseGqlStatusObject(status))
+			}
+		}
+	}
+	return gqlStatusObjects
+}
+
 func parsePlanOpIdArgsChildren(planx map[string]any) (string, []string, map[string]any, []any) {
 	operator, _ := planx["operatorType"].(string)
 	identifiersx, _ := planx["identifiers"].([]any)
@@ -952,26 +987,89 @@ func parseProfile(profilex map[string]any) *db.ProfiledPlan {
 	return plan
 }
 
+func parseInputPosition(m map[string]any) *db.InputPosition {
+	if m == nil {
+		return nil
+	}
+	pos := &db.InputPosition{}
+	if i, ok := m["column"].(int64); ok {
+		pos.Column = int(i)
+	}
+	if i, ok := m["line"].(int64); ok {
+		pos.Line = int(i)
+	}
+	if i, ok := m["offset"].(int64); ok {
+		pos.Offset = int(i)
+	}
+	return pos
+}
+
 func parseNotification(m map[string]any) db.Notification {
 	n := db.Notification{}
 	n.Code, _ = m["code"].(string)
-	n.Description = m["description"].(string)
+	if description, ok := m["description"].(string); ok {
+		n.Description = description
+	}
 	n.Severity, _ = m["severity"].(string)
 	n.Category, _ = m["category"].(string)
 	n.Title, _ = m["title"].(string)
-	posx, exists := m["position"].(map[string]any)
-	if exists {
-		pos := &db.InputPosition{}
-		i, _ := posx["column"].(int64)
-		pos.Column = int(i)
-		i, _ = posx["line"].(int64)
-		pos.Line = int(i)
-		i, _ = posx["offset"].(int64)
-		pos.Offset = int(i)
-		n.Position = pos
+	if pos, ok := m["position"].(map[string]any); ok {
+		n.Position = parseInputPosition(pos)
+	}
+	return n
+}
+
+func parseGqlStatusObject(m map[string]any) db.GqlStatusObject {
+	g := db.GqlStatusObject{}
+
+	if status, ok := m["gql_status"].(string); ok {
+		g.GqlStatus = status
 	}
 
-	return n
+	if statusDescription, ok := m["status_description"].(string); ok {
+		g.StatusDescription = statusDescription
+	}
+
+	// Backward compatibility support for older Notification API.
+	if code, ok := m["neo4j_code"].(string); ok {
+		//lint:ignore SA1019 Code is supported at least until 6.0
+		g.Code = code
+		g.IsNotification = true
+	}
+
+	// Backward compatibility support for older Notification API.
+	if title, ok := m["title"].(string); ok {
+		//lint:ignore SA1019 Title is supported at least until 6.0
+		g.Title = title
+	}
+
+	// Backward compatibility support for older Notification API.
+	if description, ok := m["description"].(string); ok {
+		//lint:ignore SA1019 Description is supported at least until 6.0
+		g.Description = description
+	}
+
+	// Initialize the default diagnostic record
+	diagnosticRecord := gql.NewDefaultDiagnosticRecord()
+
+	// Merge the diagnostic record from the map m
+	if dr, ok := m["diagnostic_record"].(map[string]any); ok {
+		for key, value := range dr {
+			diagnosticRecord[key] = value
+		}
+		if pos, ok := dr["_position"].(map[string]any); ok {
+			g.Position = parseInputPosition(pos)
+		}
+		if classification, ok := dr["_classification"].(string); ok {
+			g.Classification = classification
+		}
+		if severity, ok := dr["_severity"].(string); ok {
+			g.Severity = severity
+		}
+	}
+
+	g.DiagnosticRecord = diagnosticRecord
+	return g
 }
 
 func (h *hydrator) unknownStructError(t byte) any {

@@ -61,22 +61,26 @@ type TxConfig struct {
 type NotificationConfig struct {
 	MinSev  notifications.NotificationMinimumSeverityLevel
 	DisCats notifications.NotificationDisabledCategories
+	DisClas notifications.NotificationDisabledClassifications
 }
 
-func (n *NotificationConfig) ToMeta(meta map[string]any) {
+func (n *NotificationConfig) ToMeta(meta map[string]any, version db.ProtocolVersion) {
 	if n.MinSev != notifications.DefaultLevel {
 		meta["notifications_minimum_severity"] = string(n.MinSev)
 	}
-	if n.DisCats.DisablesNone() {
-		meta["notifications_disabled_categories"] = make([]string, 0)
+
+	disabledKey := "notifications_disabled_categories"
+	if version.Minor >= 5 {
+		disabledKey = "notifications_disabled_classifications"
+	}
+	if n.DisCats.DisablesNone() || n.DisClas.DisablesNone() {
+		meta[disabledKey] = make([]string, 0)
 	} else {
-		notiDisCatsSlice := n.DisCats.DisabledCategories()
-		if len(notiDisCatsSlice) != 0 {
-			notiDisCatsStrSlice := make([]string, len(notiDisCatsSlice))
-			for i, v := range notiDisCatsSlice {
-				notiDisCatsStrSlice[i] = string(v)
-			}
-			meta["notifications_disabled_categories"] = notiDisCatsSlice
+		if len(n.DisCats.DisabledCategories()) > 0 {
+			meta[disabledKey] = n.DisCats.DisabledCategories()
+		}
+		if len(n.DisClas.DisabledClassifications()) > 0 {
+			meta[disabledKey] = n.DisClas.DisabledClassifications()
 		}
 	}
 }
@@ -120,6 +124,8 @@ type Connection interface {
 	Bookmark() string
 	// ServerName returns the name of the remote server
 	ServerName() string
+	// ConnId returns the connection id as assigned by the server ("" if not available)
+	ConnId() string
 	// ServerVersion returns the server version on pattern Neo4j/1.2.3
 	ServerVersion() string
 	// IsAlive returns true if the connection is fully functional.
@@ -166,6 +172,11 @@ type Connection interface {
 	GetCurrentAuth() (auth.TokenManager, iauth.Token)
 	// Telemetry sends telemetry information about the API usage to the server.
 	Telemetry(api telemetry.API, onSuccess func())
+	// SetPinHomeDatabaseCallback registers a callback to update the session's cached home database.
+	// The callback is triggered on successful BEGIN or RUN responses containing a database name.
+	SetPinHomeDatabaseCallback(callback func(ctx context.Context, database string))
+	// IsSsrEnabled returns true if the connection supports Server-Side Routing.
+	IsSsrEnabled() bool
 }
 
 type RoutingTable struct {

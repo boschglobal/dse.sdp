@@ -21,7 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
+	"io"
 	"reflect"
 	"time"
 
@@ -50,6 +50,11 @@ const (
 // Default fetch size
 const bolt5FetchSize = 1000
 
+const (
+	telemetryEnabledHintName = "telemetry.enabled"
+	ssrEnabledHintName       = "ssr.enabled"
+)
+
 type internalTx5 struct {
 	mode               idb.AccessMode
 	bookmarks          []string
@@ -60,7 +65,7 @@ type internalTx5 struct {
 	notificationConfig idb.NotificationConfig
 }
 
-func (i *internalTx5) toMeta(logger log.Logger, logId string) map[string]any {
+func (i *internalTx5) toMeta(logger log.Logger, logId string, version db.ProtocolVersion) map[string]any {
 	if i == nil {
 		return nil
 	}
@@ -88,38 +93,40 @@ func (i *internalTx5) toMeta(logger log.Logger, logId string) map[string]any {
 	if i.impersonatedUser != "" {
 		meta["imp_user"] = i.impersonatedUser
 	}
-	i.notificationConfig.ToMeta(meta)
+	i.notificationConfig.ToMeta(meta, version)
 	return meta
 }
 
 type bolt5 struct {
-	state            int
-	txId             idb.TxHandle
-	streams          openstreams
-	conn             net.Conn
-	serverName       string
-	queue            messageQueue
-	connId           string
-	logId            string
-	serverVersion    string
-	bookmark         string // Last bookmark
-	birthDate        time.Time
-	log              log.Logger
-	databaseName     string
-	err              error // Last fatal error
-	minor            int
-	lastQid          int64 // Last seen qid
-	idleDate         time.Time
-	auth             map[string]any
-	authManager      auth.TokenManager
-	resetAuth        bool
-	errorListener    ConnectionErrorListener
-	telemetryEnabled bool
+	state                   int
+	txId                    idb.TxHandle
+	streams                 openstreams
+	conn                    io.ReadWriteCloser
+	serverName              string
+	queue                   messageQueue
+	connId                  string
+	logId                   string
+	serverVersion           string
+	bookmark                string // Last bookmark
+	birthDate               time.Time
+	log                     log.Logger
+	databaseName            string
+	err                     error // Last fatal error
+	minor                   int
+	lastQid                 int64 // Last seen qid
+	idleDate                time.Time
+	auth                    map[string]any
+	authManager             auth.TokenManager
+	resetAuth               bool
+	errorListener           ConnectionErrorListener
+	telemetryEnabled        bool
+	ssrEnabled              bool
+	pinHomeDatabaseCallback func(context.Context, string)
 }
 
 func NewBolt5(
 	serverName string,
-	conn net.Conn,
+	conn io.ReadWriteCloser,
 	errorListener ConnectionErrorListener,
 	logger log.Logger,
 	boltLog log.BoltLogger,
@@ -176,6 +183,10 @@ func (b *bolt5) checkStreams() {
 
 func (b *bolt5) ServerName() string {
 	return b.serverName
+}
+
+func (b *bolt5) ConnId() string {
+	return b.connId
 }
 
 func (b *bolt5) ServerVersion() string {
@@ -270,7 +281,7 @@ func (b *bolt5) Connect(
 	if err := checkNotificationFiltering(notificationConfig, b); err != nil {
 		return err
 	}
-	notificationConfig.ToMeta(hello)
+	notificationConfig.ToMeta(hello, b.Version())
 	b.queue.appendHello(hello, b.helloResponseHandler())
 	if b.minor > 0 {
 		b.queue.appendLogon(token.Tokens, b.logonResponseHandler())
@@ -322,7 +333,7 @@ func (b *bolt5) TxBegin(
 		notificationConfig: txConfig.NotificationConfig,
 	}
 
-	b.queue.appendBegin(tx.toMeta(b.log, b.logId), b.beginResponseHandler())
+	b.queue.appendBegin(tx.toMeta(b.log, b.logId, b.Version()), b.beginResponseHandler(ctx))
 	if syncMessages {
 		if b.queue.send(ctx); b.err != nil {
 			return 0, b.err
@@ -561,7 +572,8 @@ func (b *bolt5) run(ctx context.Context, cypher string, params map[string]any, r
 
 	fetchSize := b.normalizeFetchSize(rawFetchSize)
 	stream := &stream{fetchSize: fetchSize}
-	b.queue.appendRun(cypher, params, tx.toMeta(b.log, b.logId), b.runResponseHandler(stream))
+	b.Version()
+	b.queue.appendRun(cypher, params, tx.toMeta(b.log, b.logId, b.Version()), b.runResponseHandler(ctx, stream))
 	b.queue.appendPullN(fetchSize, b.pullResponseHandler(stream))
 	if b.queue.send(ctx); b.err != nil {
 		return nil, b.err
@@ -849,6 +861,14 @@ func (b *bolt5) SetBoltLogger(boltLogger log.BoltLogger) {
 	b.queue.setBoltLogger(boltLogger)
 }
 
+func (b *bolt5) SetPinHomeDatabaseCallback(callback func(context.Context, string)) {
+	b.pinHomeDatabaseCallback = callback
+}
+
+func (b *bolt5) IsSsrEnabled() bool {
+	return b.ssrEnabled
+}
+
 func (b *bolt5) ReAuth(ctx context.Context, auth *idb.ReAuthToken) error {
 	if b.minor == 0 {
 		return b.fallbackReAuth(ctx, auth)
@@ -997,12 +1017,19 @@ func (b *bolt5) routeResponseHandler(table **idb.RoutingTable) responseHandler {
 	})
 }
 
-func (b *bolt5) beginResponseHandler() responseHandler {
-	return b.expectedSuccessHandler(onSuccessNoOp)
+func (b *bolt5) beginResponseHandler(ctx context.Context) responseHandler {
+	return b.expectedSuccessHandler(func(beginSuccess *success) {
+		if b.pinHomeDatabaseCallback != nil && beginSuccess.db != "" {
+			b.pinHomeDatabaseCallback(ctx, beginSuccess.db)
+		}
+	})
 }
 
-func (b *bolt5) runResponseHandler(stream *stream) responseHandler {
+func (b *bolt5) runResponseHandler(ctx context.Context, stream *stream) responseHandler {
 	return b.expectedSuccessHandler(func(runSuccess *success) {
+		if b.pinHomeDatabaseCallback != nil && runSuccess.db != "" {
+			b.pinHomeDatabaseCallback(ctx, runSuccess.db)
+		}
 		stream.attached = true
 		stream.keys = runSuccess.fields
 		stream.qid = runSuccess.qid
@@ -1052,6 +1079,9 @@ func (b *bolt5) discardResponseHandler(stream *stream) responseHandler {
 func (b *bolt5) pullResponseHandler(stream *stream) responseHandler {
 	return responseHandler{
 		onRecord: func(record *db.Record) {
+			if record != nil {
+				stream.hadRecord = true
+			}
 			if stream.discarding {
 				stream.emptyRecords()
 			} else {
@@ -1120,7 +1150,8 @@ func (b *bolt5) onHelloSuccess(helloSuccess *success) {
 	b.logId = connectionLogId
 	b.queue.setLogId(connectionLogId)
 	b.initializeReadTimeoutHint(helloSuccess.configurationHints)
-	b.initializeTelemetryHint(helloSuccess.configurationHints)
+	b.initializeTelemetryEnabledHint(helloSuccess.configurationHints)
+	b.initializeSsrEnabledHint(helloSuccess.configurationHints)
 }
 
 func (b *bolt5) onCommitSuccess(commitSuccess *success) {
@@ -1168,19 +1199,30 @@ func (b *bolt5) initializeReadTimeoutHint(hints map[string]any) {
 	b.queue.in.connReadTimeout = time.Duration(readTimeout) * time.Second
 }
 
-const readTelemetryHintName = "telemetry.enabled"
+func (b *bolt5) initializeTelemetryEnabledHint(hints map[string]any) {
+	telemetryEnabledHint, ok := hints[telemetryEnabledHintName]
+	if !ok {
+		return
+	}
+	telemetryEnabled, ok := telemetryEnabledHint.(bool)
+	if !ok {
+		b.log.Infof(log.Bolt5, b.logId, `invalid %q value: %v, ignoring hint. Only boolean values are accepted`, telemetryEnabledHintName, telemetryEnabledHint)
+		return
+	}
+	b.telemetryEnabled = telemetryEnabled
+}
 
-func (b *bolt5) initializeTelemetryHint(hints map[string]any) {
-	readTelemetryHint, ok := hints[readTelemetryHintName]
+func (b *bolt5) initializeSsrEnabledHint(hints map[string]any) {
+	ssrEnabledHint, ok := hints[ssrEnabledHintName]
 	if !ok {
 		return
 	}
-	readTelemetry, ok := readTelemetryHint.(bool)
+	ssrEnabled, ok := ssrEnabledHint.(bool)
 	if !ok {
-		b.log.Infof(log.Bolt5, b.logId, `invalid %q value: %v, ignoring hint. Only boolean values are accepted`, readTelemetryHintName, readTelemetryHint)
+		b.log.Infof(log.Bolt5, b.logId, `invalid %q value: %v, ignoring hint. Only boolean values are accepted`, ssrEnabledHintName, ssrEnabledHint)
 		return
 	}
-	b.telemetryEnabled = readTelemetry
+	b.ssrEnabled = ssrEnabled
 }
 
 func (b *bolt5) extractSummary(success *success, stream *stream) *db.Summary {
@@ -1190,5 +1232,6 @@ func (b *bolt5) extractSummary(success *success, stream *stream) *db.Summary {
 	summary.Minor = b.minor
 	summary.ServerName = b.serverName
 	summary.TFirst = stream.tfirst
+	summary.StreamSummary = stream.ToSummary()
 	return summary
 }

@@ -23,6 +23,7 @@ package pool
 import (
 	"container/list"
 	"context"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/homedb"
 	"math"
 	"sort"
 	"sync"
@@ -64,6 +65,8 @@ type Pool struct {
 	closed     bool
 	log        log.Logger
 	logId      string
+	cache      *homedb.Cache
+	ssrTracker ssrTracker
 }
 
 type serverPenalty struct {
@@ -71,7 +74,7 @@ type serverPenalty struct {
 	penalty uint32
 }
 
-func New(config *config.Config, connect Connect, logger log.Logger, logId string) *Pool {
+func New(config *config.Config, connect Connect, logger log.Logger, logId string, cache *homedb.Cache) *Pool {
 	// Means infinite life, simplifies checking later on
 
 	p := &Pool{
@@ -83,6 +86,8 @@ func New(config *config.Config, connect Connect, logger log.Logger, logId string
 		queueMut:   sync.Mutex{},
 		logId:      logId,
 		log:        logger,
+		cache:      cache,
+		ssrTracker: ssrTracker{},
 	}
 	p.log.Infof(log.Pool, p.logId, "Created")
 	return p
@@ -103,12 +108,22 @@ func (p *Pool) Close(ctx context.Context) {
 	p.queueMut.Unlock()
 	// Go through each server and close all connections to it
 	p.serversMut.Lock()
-	for n, s := range p.servers {
-		s.closeAll(ctx)
-		delete(p.servers, n)
+	pendingConnections := 0
+	for _, s := range p.servers {
+		s.startClosing(ctx, p.closeConnection)
+		pendingConnections += s.size()
 	}
 	p.serversMut.Unlock()
-	p.log.Infof(log.Pool, p.logId, "Closed")
+	if pendingConnections == 0 {
+		p.log.Infof(log.Pool, p.logId, "Closed")
+	} else {
+		p.log.Warnf(
+			log.Pool,
+			p.logId,
+			"Called close with %d in-flight connections (will be closed when work is done).",
+			pendingConnections,
+		)
+	}
 }
 
 // For testing
@@ -138,7 +153,7 @@ func (p *Pool) CleanUp(ctx context.Context) {
 	defer p.serversMut.Unlock()
 	now := itime.Now()
 	for n, s := range p.servers {
-		s.removeIdleOlderThan(ctx, now, p.config.MaxConnectionLifetime)
+		p.removeIdleOlderThanLocked(ctx, s, now, p.config.MaxConnectionLifetime)
 		if s.size() == 0 && !s.hasFailedConnect(now) {
 			delete(p.servers, n)
 		}
@@ -157,7 +172,7 @@ func (p *Pool) getPenaltiesForServers(ctx context.Context, serverNames []string)
 		penalties[i].name = n
 		if s != nil {
 			// Make sure that we don't get a too old connection
-			s.removeIdleOlderThan(ctx, now, p.config.MaxConnectionLifetime)
+			p.removeIdleOlderThanLocked(ctx, s, now, p.config.MaxConnectionLifetime)
 			penalties[i].penalty = s.calculatePenalty(now)
 		} else {
 			penalties[i].penalty = newConnectionPenalty
@@ -189,8 +204,8 @@ func (p *Pool) Borrow(
 	auth *idb.ReAuthToken,
 ) (idb.Connection, error) {
 	for {
-		if p.closed {
-			return nil, &errorutil.PoolClosed{}
+		if err := p.checkClosed(); err != nil {
+			return nil, err
 		}
 		serverNames := getServerNames()
 		if len(serverNames) == 0 {
@@ -210,6 +225,8 @@ func (p *Pool) Borrow(
 		for _, s := range penalties {
 			conn, err = p.tryBorrow(ctx, s.name, boltLogger, idlenessTimeout, auth)
 			if conn != nil {
+				// Update the cache state after borrowing a connection since ssr support may have changed.
+				p.updateCacheState()
 				return conn, nil
 			}
 
@@ -287,6 +304,10 @@ func (p *Pool) tryBorrow(
 	var unlock = new(sync.Once)
 	defer unlock.Do(p.serversMut.Unlock)
 
+	if err := p.checkClosed(); err != nil {
+		return nil, err
+	}
+
 	srv := p.servers[serverName]
 	for {
 		if srv != nil {
@@ -338,9 +359,17 @@ func (p *Pool) tryBorrow(
 	}
 
 	// Ok, got a connection, register the connection
+	p.ssrTracker.addConnection(c)
 	srv.registerBusy(c)
 	srv.notifySuccessfulConnect()
 	return c, nil
+}
+
+func (p *Pool) checkClosed() error {
+	if p.closed {
+		return &errorutil.PoolClosed{}
+	}
+	return nil
 }
 
 func (p *Pool) unreg(ctx context.Context, serverName string, c idb.Connection, now time.Time) {
@@ -350,10 +379,7 @@ func (p *Pool) unreg(ctx context.Context, serverName string, c idb.Connection, n
 }
 
 func (p *Pool) unregLocked(ctx context.Context, serverName string, c idb.Connection, now time.Time) {
-	defer func() {
-		// Close connection in another thread to avoid potential long blocking operation during close.
-		go c.Close(ctx)
-	}()
+	defer p.closeConnection(ctx, c)
 
 	server := p.servers[serverName]
 	// Check for strange condition of not finding the server.
@@ -375,19 +401,35 @@ func (p *Pool) removeIdleOlderThanOnServer(ctx context.Context, serverName strin
 	if server == nil {
 		return
 	}
-	server.removeIdleOlderThan(ctx, now, maxAge)
+	p.removeIdleOlderThanLocked(ctx, server, now, maxAge)
+}
+
+func (p *Pool) removeIdleOlderThanLocked(ctx context.Context, s *server, now time.Time, maxAge time.Duration) {
+	s.removeIdleOlderThan(ctx, now, maxAge, p.closeConnection)
+}
+
+func (p *Pool) closeConnection(ctx context.Context, c idb.Connection) {
+	p.ssrTracker.removeConnection(c)
+	// Close connection in another thread to avoid potential long blocking operation during close.
+	go c.Close(ctx)
 }
 
 func (p *Pool) Return(ctx context.Context, c idb.Connection) {
 	if p.closed {
 		p.log.Warnf(log.Pool, p.logId, "Trying to return connection to closed pool")
-		return
 	}
 
 	// Get the name of the server that the connection belongs to.
 	serverName := c.ServerName()
 	isAlive := c.IsAlive()
-	p.log.Debugf(log.Pool, p.logId, "Returning connection to %s {alive:%t}", serverName, isAlive)
+	p.log.Debugf(
+		log.Pool,
+		p.logId,
+		"Returning connection %s to %s {alive:%t}",
+		c.ConnId(),
+		serverName,
+		isAlive,
+	)
 
 	// If the connection is dead, remove all other idle connections on the same server that older
 	// or of the same age as the dead connection, otherwise perform normal cleanup of old connections
@@ -415,6 +457,9 @@ func (p *Pool) Return(ctx context.Context, c idb.Connection) {
 
 	// Shouldn't return a too old or dead connection back to the pool
 	if !isAlive || age >= p.config.MaxConnectionLifetime {
+		// Fix for race condition where expired connections could be reused or closed concurrently.
+		// See: https://github.com/neo4j/neo4j-go-driver/issues/574
+		isAlive = false
 		p.unreg(ctx, serverName, c, now)
 		p.log.Infof(log.Pool, p.logId, "Unregistering dead or too old connection to %s", serverName)
 	}
@@ -424,15 +469,18 @@ func (p *Pool) Return(ctx context.Context, c idb.Connection) {
 		p.serversMut.Lock()
 		server := p.servers[serverName]
 		if server != nil { // Strange when server not found
-			server.returnBusy(ctx, c)
+			server.returnBusy(ctx, c, p.closeConnection)
 			if server.closing && server.size() == 0 {
 				delete(p.servers, serverName)
 			}
 		} else {
 			p.log.Warnf(log.Pool, p.logId, "Server %s not found", serverName)
+			p.closeConnection(ctx, c)
 		}
 		p.serversMut.Unlock()
 	}
+	// Update the cache state after returning a connection since ssr support may have changed.
+	p.updateCacheState()
 
 	// Check if there is anyone in the queue waiting for a connection to this server.
 	p.queueMut.Lock()
@@ -496,11 +544,15 @@ func (p *Pool) deactivate(ctx context.Context, serverName string) {
 	defer p.serversMut.Unlock()
 	server := p.servers[serverName]
 	if server != nil {
-		server.startClosing(ctx)
+		server.startClosing(ctx, p.closeConnection)
 	}
 }
 
 func (p *Pool) deactivateWriter(serverName string, db string) {
 	p.log.Debugf(log.Pool, p.logId, "Deactivating writer %s for database %s", serverName, db)
 	p.router.InvalidateWriter(db, serverName)
+}
+
+func (p *Pool) updateCacheState() {
+	p.cache.SetEnabled(p.ssrTracker.ssrEnabled())
 }

@@ -74,9 +74,6 @@ type Config struct {
 	//   })
 	//
 	// Note: This option is not applicable for 'bolt://' or 'neo4j://' schemes where encryption isn't used.
-	//
-	// ClientCertificateProvider is part of the mTLS preview feature
-	// (see README on what it means in terms of support and compatibility guarantees)
 	ClientCertificateProvider auth.ClientCertificateProvider
 	// Logging target the driver will send its log outputs
 	//
@@ -168,15 +165,14 @@ type Config struct {
 	// FetchSize defines how many records to pull from server in each batch.
 	// From Bolt protocol v4 (Neo4j 4+) records can be fetched in batches as
 	// compared to fetching all in previous versions.
+	// If the underlying protocol does not support FetchSize, it is ignored.
 	//
-	// If FetchSize is set to FetchDefault, the driver decides the appropriate
-	// size. If set to a positive value that size is used if the underlying
-	// protocol supports it otherwise it is ignored.
+	// If FetchSize is set to `FetchDefault`, the driver decides the appropriate size.
+	// If set to a positive value that size is used; negative values behaves as `FetchAll` (see below).
 	//
-	// To turn off fetching in batches and always fetch everything, set
-	// FetchSize to FetchAll.
-	// If a single large result is to be retrieved, this is the most performant
-	// setting.
+	// To turn off fetching in batches and always fetch everything, set FetchSize to `FetchAll`.
+	// A limited FetchSize ensures the client is not overflown with records,
+	// and allows to bound memory usage.
 	FetchSize int
 	// NotificationsMinSeverity defines the minimum severity level of notifications the server should send.
 	// By default, the server's settings are used.
@@ -186,6 +182,12 @@ type Config struct {
 	// By default, the server's settings are used.
 	// Disabling categories allows the server to skip analysis for those, which can speed up query execution.
 	NotificationsDisabledCategories notifications.NotificationDisabledCategories
+	// NotificationsDisabledClassifications is identical to NotificationsDisabledCategories.
+	// This alternative is provided for a consistent naming with neo4j.GqlStatusObject Classification.
+	//
+	// NotificationsDisabledClassifications is part of the GQL compliant notifications preview feature
+	// (see README on what it means in terms of support and compatibility guarantees)
+	NotificationsDisabledClassifications notifications.NotificationDisabledClassifications
 	// By default, if the server requests it, the driver will automatically transmit anonymous usage
 	// statistics to the server it is connected to.
 	//
@@ -202,6 +204,11 @@ type Config struct {
 	//
 	// default: true
 	TelemetryDisabled bool
+	// ReadBufferSize defines the size of the buffer used for reading data from the network connection.
+	// A larger buffer size can improve performance by reducing the number of read operations required
+	// for large data transfers. Currently, the default value is 8 KiB, but may change in the future.
+	// Set to 0 or below to disable buffering.
+	ReadBufferSize int
 }
 
 // ServerAddressResolver is a function type that defines the resolver function used by the routing driver to

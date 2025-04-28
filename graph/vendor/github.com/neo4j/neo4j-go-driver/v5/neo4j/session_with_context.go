@@ -20,6 +20,9 @@ package neo4j
 import (
 	"context"
 	"fmt"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j/db"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/homedb"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j/internal/racing"
 	"math"
 	"time"
 
@@ -121,14 +124,16 @@ type SessionConfig struct {
 	//		For older Bolt protocol versions, the behavior is the same as described for the bolt schemes above.
 	DatabaseName string
 	// FetchSize defines how many records to pull from server in each batch.
-	// From Bolt protocol v4 (Neo4j 4+) records can be fetched in batches as compared to fetching
-	// all in previous versions.
+	// From Bolt protocol v4 (Neo4j 4+) records can be fetched in batches as
+	// compared to fetching all in previous versions.
+	// If the underlying protocol does not support FetchSize, it is ignored.
 	//
-	// If FetchSize is set to FetchDefault, the driver decides the appropriate size. If set to a positive value
-	// that size is used if the underlying protocol supports it otherwise it is ignored.
+	// If FetchSize is set to `FetchDefault`, the driver decides the appropriate size.
+	// If set to a positive value that size is used; negative values behaves as `FetchAll` (see below).
 	//
-	// To turn off fetching in batches and always fetch everything, set FetchSize to FetchAll.
-	// If a single large result is to be retrieved this is the most performant setting.
+	// To turn off fetching in batches and always fetch everything, set FetchSize to `FetchAll`.
+	// A limited FetchSize ensures the client is not overflown with records,
+	// and allows to bound memory usage.
 	FetchSize int
 	// Logging target the session will send its Bolt message traces
 	//
@@ -163,6 +168,12 @@ type SessionConfig struct {
 	// Else, this option overrides the driver's settings.
 	// Disabling categories allows the server to skip analysis for those, which can speed up query execution.
 	NotificationsDisabledCategories notifications.NotificationDisabledCategories
+	// NotificationsDisabledClassifications is identical to NotificationsDisabledCategories.
+	// This alternative is provided for a consistent naming with neo4j.GqlStatusObject Classification.
+	//
+	// NotificationsDisabledClassifications is part of the GQL compliant notifications preview feature
+	// (see README on what it means in terms of support and compatibility guarantees)
+	NotificationsDisabledClassifications notifications.NotificationDisabledClassifications
 	// Auth is used to overwrite the authentication information for the session.
 	// This requires the server to support re-authentication on the protocol level.
 	// `nil` will make the driver use the authentication information from the driver configuration.
@@ -191,29 +202,34 @@ type sessionPool interface {
 }
 
 type sessionWithContext struct {
-	driverConfig  *Config
-	defaultMode   idb.AccessMode
-	bookmarks     *sessionBookmarks
-	resolveHomeDb bool
-	pool          sessionPool
-	router        sessionRouter
-	explicitTx    *explicitTransaction
-	autocommitTx  *autocommitTransaction
-	sleep         func(d time.Duration)
-	logId         string
-	log           log.Logger
-	throttleTime  time.Duration
-	fetchSize     int
-	config        SessionConfig
-	auth          *idb.ReAuthToken
-	closed        bool
+	driverConfig            *Config
+	defaultMode             idb.AccessMode
+	bookmarks               *sessionBookmarks
+	resolveHomeDb           bool
+	homeDbGuess             string
+	pool                    sessionPool
+	router                  sessionRouter
+	cache                   *homedb.Cache
+	pinHomeDatabaseCallback func(context.Context, string)
+	explicitTx              *explicitTransaction
+	autocommitTx            *autocommitTransaction
+	sleep                   func(context.Context, time.Duration) error
+	logId                   string
+	log                     log.Logger
+	throttleTime            time.Duration
+	fetchSize               int
+	config                  SessionConfig
+	auth                    *idb.ReAuthToken
+	closed                  bool
 }
 
 func newSessionWithContext(
+	ctx context.Context,
 	config *Config,
 	sessConfig SessionConfig,
 	router sessionRouter,
 	pool sessionPool,
+	cache *homedb.Cache,
 	logger log.Logger,
 	token *idb.ReAuthToken,
 ) *sessionWithContext {
@@ -225,21 +241,39 @@ func newSessionWithContext(
 		fetchSize = sessConfig.FetchSize
 	}
 
-	return &sessionWithContext{
+	key, err := computeCacheKey(ctx, token, cache, sessConfig.ImpersonatedUser)
+	if err != nil {
+		logger.Warnf(log.Session, logId, "Failed to compute cache key: %v", err)
+	}
+
+	homeDbGuess, found := cache.Get(key)
+	if found {
+		logger.Debugf(log.Session, logId, "Home database guess retrieved from cache: '%s'", homeDbGuess)
+	} else {
+		logger.Debugf(log.Session, logId, "No home database guess found in cache for provided user")
+	}
+
+	session := &sessionWithContext{
 		driverConfig:  config,
 		router:        router,
 		pool:          pool,
+		cache:         cache,
 		defaultMode:   idb.AccessMode(sessConfig.AccessMode),
 		bookmarks:     newSessionBookmarks(sessConfig.BookmarkManager, sessConfig.Bookmarks),
 		config:        sessConfig,
 		resolveHomeDb: sessConfig.DatabaseName == "",
-		sleep:         time.Sleep,
+		homeDbGuess:   homeDbGuess,
+		sleep:         racing.Sleep,
 		log:           logger,
 		logId:         logId,
 		throttleTime:  time.Second * 1,
 		fetchSize:     fetchSize,
 		auth:          token,
 	}
+	session.pinHomeDatabaseCallback = func(ctx context.Context, database string) {
+		session.pinHomeDatabase(ctx, database)
+	}
+	return session
 }
 
 func (s *sessionWithContext) lastBookmark() string {
@@ -329,6 +363,7 @@ func (s *sessionWithContext) BeginTransaction(ctx context.Context, configurers .
 			NotificationConfig: idb.NotificationConfig{
 				MinSev:  s.config.NotificationsMinSeverity,
 				DisCats: s.config.NotificationsDisabledCategories,
+				DisClas: s.config.NotificationsDisabledClassifications,
 			},
 		}, true)
 	if err != nil {
@@ -430,7 +465,7 @@ func (s *sessionWithContext) runRetriable(
 		MaxDeadConnections:      s.driverConfig.MaxConnectionPoolSize,
 		DatabaseName:            s.config.DatabaseName,
 	}
-	for state.Continue() {
+	for state.Continue(ctx) {
 		if hasCompleted, result := s.executeTransactionFunction(ctx, mode, config, &state, work, blockingTxBegin, api); hasCompleted {
 			return result, nil
 		}
@@ -482,6 +517,7 @@ func (s *sessionWithContext) executeTransactionFunction(
 			NotificationConfig: idb.NotificationConfig{
 				MinSev:  s.config.NotificationsMinSeverity,
 				DisCats: s.config.NotificationsDisabledCategories,
+				DisClas: s.config.NotificationsDisabledClassifications,
 			},
 		},
 		blockingTxBegin)
@@ -515,11 +551,24 @@ func (s *sessionWithContext) executeTransactionFunction(
 	return true, x
 }
 
-func (s *sessionWithContext) getOrUpdateServers(ctx context.Context, mode idb.AccessMode) ([]string, error) {
+func (s *sessionWithContext) getOrUpdateServers(
+	ctx context.Context,
+	mode idb.AccessMode,
+	isHomeDbGuess bool,
+	onRoutingTableUpdated func(string),
+) ([]string, error) {
+	database := s.config.DatabaseName
+	if isHomeDbGuess {
+		database = s.homeDbGuess
+	}
+	dbSelection := idb.DatabaseSelection{
+		Name:          database,
+		IsHomeDbGuess: isHomeDbGuess,
+	}
 	if mode == idb.ReadMode {
-		return s.router.GetOrUpdateReaders(ctx, s.getBookmarks, s.config.DatabaseName, s.auth, s.config.BoltLogger)
+		return s.router.GetOrUpdateReaders(ctx, s.getBookmarks, dbSelection, s.auth, s.config.BoltLogger, onRoutingTableUpdated)
 	} else {
-		return s.router.GetOrUpdateWriters(ctx, s.getBookmarks, s.config.DatabaseName, s.auth, s.config.BoltLogger)
+		return s.router.GetOrUpdateWriters(ctx, s.getBookmarks, dbSelection, s.auth, s.config.BoltLogger, onRoutingTableUpdated)
 	}
 }
 
@@ -534,47 +583,124 @@ func (s *sessionWithContext) getServers(mode idb.AccessMode) func() []string {
 }
 
 func (s *sessionWithContext) getConnection(ctx context.Context, mode idb.AccessMode, livenessCheckTimeout time.Duration) (idb.Connection, error) {
-	timeout := s.driverConfig.ConnectionAcquisitionTimeout
-	if timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
+	ctx, cancel := s.applyConnectionTimeout(ctx)
+	if cancel != nil {
 		defer cancel()
-		deadline, _ := ctx.Deadline()
-		s.log.Debugf(log.Session, s.logId, "connection acquisition timeout is %s, resolved deadline is: %s", timeout, deadline)
-	} else if deadline, ok := ctx.Deadline(); ok {
-		s.log.Debugf(log.Session, s.logId, "connection acquisition user-provided deadline is: %s", deadline)
 	}
 
-	if err := s.resolveHomeDatabase(ctx); err != nil {
-		return nil, errorutil.WrapError(err)
-	}
-	_, err := s.getOrUpdateServers(ctx, mode)
+	serverList, usedHomeDbGuess, err := s.getServerList(ctx, mode)
 	if err != nil {
 		return nil, errorutil.WrapError(err)
 	}
 
-	conn, err := s.pool.Borrow(
-		ctx,
-		s.getServers(mode),
-		timeout != 0,
-		s.config.BoltLogger,
-		livenessCheckTimeout,
-		s.auth)
+	conn, err := s.borrowConnection(ctx, serverList, livenessCheckTimeout)
 	if err != nil {
 		return nil, errorutil.WrapError(err)
 	}
+
+	// Return the connection if SSR is disabled, and we used the home database guess, then resolve as normal.
+	if !conn.IsSsrEnabled() && usedHomeDbGuess {
+		s.log.Debugf(
+			log.Session,
+			s.logId,
+			"Connection without SSR enabled was acquired using home database guess '%s', "+
+				"falling back to resolving as normal",
+			s.homeDbGuess,
+		)
+		s.pool.Return(ctx, conn)
+
+		serverList, _, err = s.getServerList(ctx, mode)
+		if err != nil {
+			return nil, errorutil.WrapError(err)
+		}
+
+		conn, err = s.borrowConnection(ctx, serverList, livenessCheckTimeout)
+		if err != nil {
+			return nil, errorutil.WrapError(err)
+		}
+	}
+
+	conn.SetPinHomeDatabaseCallback(s.pinHomeDatabaseCallback)
 
 	// Select database on server
 	if s.config.DatabaseName != idb.DefaultDatabase {
-		dbSelector, ok := conn.(idb.DatabaseSelector)
-		if !ok {
+		if err := s.selectDatabase(ctx, conn); err != nil {
 			s.pool.Return(ctx, conn)
-			return nil, &UsageError{Message: "Database does not support multi-database"}
+			return nil, err
 		}
-		dbSelector.SelectDatabase(s.config.DatabaseName)
 	}
 
 	return conn, nil
+}
+
+// applyConnectionTimeout sets a timeout on the context if configured.
+func (s *sessionWithContext) applyConnectionTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	timeout := s.driverConfig.ConnectionAcquisitionTimeout
+	if timeout > 0 {
+		ctx, cancel := context.WithTimeout(ctx, timeout)
+		deadline, _ := ctx.Deadline()
+		s.log.Debugf(log.Session, s.logId, "connection acquisition timeout is %s, resolved deadline is: %s", timeout, deadline)
+		return ctx, cancel
+	}
+	if deadline, ok := ctx.Deadline(); ok {
+		s.log.Debugf(log.Session, s.logId, "connection acquisition user-provided deadline is: %s", deadline)
+	}
+	return ctx, nil
+}
+
+// getServerList resolves the server list based on the session configuration.
+// It returns a list of servers, a boolean indicating whether the home database guess was used, and an error if resolution fails.
+func (s *sessionWithContext) getServerList(ctx context.Context, mode idb.AccessMode) ([]string, bool, error) {
+	if !s.resolveHomeDb {
+		serverList, err := s.getOrUpdateServers(ctx, mode, false, nil)
+		return serverList, false, err
+	}
+
+	// Use cached home database if available
+	if s.homeDbGuess != "" && s.cache.IsEnabled() {
+		s.log.Debugf(log.Session, s.logId, "Using cached home database guess '%s' for server list resolution", s.homeDbGuess)
+		serverList, err := s.getOrUpdateServers(ctx, mode, true, func(database string) {
+			s.pinHomeDatabase(ctx, database)
+		})
+		return serverList, true, err
+	}
+
+	// Resolve home database if cache is unavailable, there's no guess, or a table doesn't exist.
+	s.log.Debugf(log.Session, s.logId, "No valid cached home database guess available, resolving home database")
+	if err := s.resolveHomeDatabase(ctx); err != nil {
+		return nil, false, err
+	}
+	serverList, err := s.getOrUpdateServers(ctx, mode, false, nil)
+	return serverList, false, err
+}
+
+// borrowConnection requests a connection from the pool using the provided `serverList`.
+func (s *sessionWithContext) borrowConnection(
+	ctx context.Context,
+	serverList []string,
+	livenessCheckTimeout time.Duration,
+) (idb.Connection, error) {
+	return s.pool.Borrow(
+		ctx,
+		func() []string { return serverList },
+		s.driverConfig.ConnectionAcquisitionTimeout != 0,
+		s.config.BoltLogger,
+		livenessCheckTimeout,
+		s.auth,
+	)
+}
+
+// selectDatabase ensures the correct database is selected on the connection.
+func (s *sessionWithContext) selectDatabase(ctx context.Context, conn idb.Connection) error {
+	dbSelector, ok := conn.(idb.DatabaseSelector)
+	if !ok {
+		err := &db.FeatureNotSupportedError{
+			Server: conn.ServerName(), Feature: "multi-database", Reason: "requires at least server v4",
+		}
+		return err
+	}
+	dbSelector.SelectDatabase(s.config.DatabaseName)
+	return nil
 }
 
 func (s *sessionWithContext) retrieveBookmarks(ctx context.Context, conn idb.Connection, sentBookmarks Bookmarks) error {
@@ -648,6 +774,7 @@ func (s *sessionWithContext) Run(ctx context.Context,
 			NotificationConfig: idb.NotificationConfig{
 				MinSev:  s.config.NotificationsMinSeverity,
 				DisCats: s.config.NotificationsDisabledCategories,
+				DisClas: s.config.NotificationsDisabledClassifications,
 			},
 		},
 	)
@@ -713,7 +840,7 @@ func (s *sessionWithContext) getServerInfo(ctx context.Context) (ServerInfo, err
 	if err := s.resolveHomeDatabase(ctx); err != nil {
 		return nil, errorutil.WrapError(err)
 	}
-	_, err := s.getOrUpdateServers(ctx, idb.ReadMode)
+	_, err := s.getOrUpdateServers(ctx, idb.ReadMode, false, nil)
 	if err != nil {
 		return nil, errorutil.WrapError(err)
 	}
@@ -736,7 +863,7 @@ func (s *sessionWithContext) getServerInfo(ctx context.Context) (ServerInfo, err
 }
 
 func (s *sessionWithContext) verifyAuthentication(ctx context.Context) error {
-	_, err := s.getOrUpdateServers(ctx, idb.ReadMode)
+	_, err := s.getOrUpdateServers(ctx, idb.ReadMode, false, nil)
 	if err != nil {
 		return errorutil.WrapError(err)
 	}
@@ -772,10 +899,26 @@ func (s *sessionWithContext) resolveHomeDatabase(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	s.log.Debugf(log.Session, s.logId, "Resolved home database, uses db '%s'", defaultDb)
-	s.config.DatabaseName = defaultDb
-	s.resolveHomeDb = false
+	s.pinHomeDatabase(ctx, defaultDb)
 	return nil
+}
+
+func (s *sessionWithContext) pinHomeDatabase(ctx context.Context, database string) {
+	if !s.resolveHomeDb {
+		return
+	}
+
+	if key, err := computeCacheKey(ctx, s.auth, s.cache, s.config.ImpersonatedUser); err == nil {
+		s.cache.Set(key, database)
+		s.log.Debugf(log.Session, s.logId, "Cached home database '%s'", database)
+	} else {
+		s.log.Warnf(log.Session, s.logId, "Failed to compute cache key: %v", err)
+	}
+
+	s.log.Debugf(log.Session, s.logId, "Resolved home database, uses db '%s'", database)
+	s.homeDbGuess = database
+	s.config.DatabaseName = database
+	s.resolveHomeDb = false
 }
 
 func (s *sessionWithContext) getBookmarks(ctx context.Context) (Bookmarks, error) {
@@ -841,4 +984,15 @@ func validateTransactionConfig(config TransactionConfig) error {
 		return &UsageError{Message: err}
 	}
 	return nil
+}
+
+func computeCacheKey(ctx context.Context, token *idb.ReAuthToken, cache *homedb.Cache, impersonatedUser string) (string, error) {
+	if token.FromSession {
+		t, err := token.Manager.GetAuthToken(ctx)
+		if err != nil {
+			return "", err
+		}
+		return cache.ComputeKey(impersonatedUser, &t)
+	}
+	return cache.ComputeKey(impersonatedUser, nil)
 }
