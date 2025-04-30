@@ -25,24 +25,23 @@ $(CLI_TOOLS): $(SRC)
 .PHONY: install
 install: build
 	ln -sf $(BIN_DIR)/$(PACKAGE) ~/.local/bin/dse-$(PACKAGE)
-	ln -sf $(CURDIR)/cmd/$(PACKAGE)/reports ~/.local/share/dse-$(PACKAGE)/reports
+	mkdir -p ~/.local/share/dse-$(PACKAGE)
+	ln -sf $(CURDIR)/cmd/$(PACKAGE)/reports ~/.local/share/dse-$(PACKAGE)/
 
 .PHONY: graph
 graph:
-	docker rm -f memgraph
+ifeq ($(shell docker container list -q -f name=memgraph 2> /dev/null),)
 	docker run -d --rm --name memgraph \
 		-p 3000:3000 \
 		-p 7444:7444 \
 		-p 7687:7687 \
 		-v mg_lib:/var/lib/memgraph \
 		memgraph/memgraph-platform
+endif
 
 .PHONY: test
-test: graph
+test:
 	go test ./...
-
-.PHONY: test_e2e
-test_e2e:
 	go test ./cmd/... -tags test_e2e
 	go test ./internal/... -tags test_e2e
 

@@ -22,6 +22,7 @@ default: build
 .PHONY: build
 build:
 	npm install
+	npx tsc -b
 
 
 .PHONY: install

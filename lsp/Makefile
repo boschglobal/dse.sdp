@@ -31,6 +31,9 @@ install: build
 	fi
 	@exit 0
 
+.PHONY: test
+test:
+
 .PHONY: clean
 clean:
 	rm -rf out client/out server/out

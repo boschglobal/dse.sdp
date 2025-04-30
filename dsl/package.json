@@ -16,7 +16,8 @@
     },
     "dependencies": {
         "chevrotain": "^9.1.0",
-        "esbuild": "^0.25.1"
+        "esbuild": "^0.25.1",
+        "typescript": "^5.8.3"
     },
     "devDependencies": {
         "@types/node": "^22.14.1",
