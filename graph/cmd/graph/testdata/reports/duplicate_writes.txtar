@@ -1,0 +1,260 @@
+# Ensure that graph is empty.
+exec graph drop --all
+
+# import command
+
+exec graph import $WORK/model_fmu1.yaml
+exec graph import $WORK/model_fmu2.yaml
+exec graph import $WORK/FMU1_signalgroup.yaml
+exec graph import $WORK/FMU2_signalgroup.yaml
+exec graph import $WORK/model__input.yaml
+exec graph import $WORK/input_signalgroup.yaml
+exec graph import $WORK/stack_fmu.yaml
+
+exec graph report duplicate_writes.yaml
+
+
+-- duplicate_writes.yaml --
+name: Duplicate Writes Check
+queries:
+  - name: Duplicate Write Signals
+    query: |
+      // Get output signals for each SimbusChannel
+      MATCH (sc:SimbusChannel)<-[:Belongs]-(ch1:Channel)-[:Represents]->(:SignalGroup)-[:Contains]->(s1:Signal)
+      WHERE s1.annotations.fmi_variable_causality = "output"
+      WITH sc AS simbus_channel, collect(DISTINCT s1.name) AS output_signals
+
+      // Get input signals from input model instance with matching selector.channel
+      MATCH (sc:SimbusChannel)<-[:Belongs]-(ch2:Channel)<-[:Alias]-(mi:ModelInst {name: "input"})-[:InstanceOf]->(:Model)
+      MATCH (mi)-[:Has]->(sel:Selector)-[:Selects]->(:Label)<-[:Has]-(:SignalGroup)-[:Contains]->(s2:Signal)
+      WITH simbus_channel, output_signals, collect(DISTINCT s2.name) AS input_signal_list
+
+      // Find intersection using UNWIND and WHERE
+      UNWIND input_signal_list AS individual_input_signal
+      WITH simbus_channel, output_signals, input_signal_list, individual_input_signal
+      WHERE individual_input_signal IN output_signals
+      WITH simbus_channel, output_signals, input_signal_list, collect(individual_input_signal) AS common_signals
+
+      RETURN simbus_channel, common_signals
+
+tags:
+    - signal
+    - write
+
+
+-- model_fmu1.yaml --
+kind: Model
+metadata:
+  name: FMU1
+spec:
+  channels:
+    - alias: signal_channel1
+      selectors:
+        channel: signal_vector1
+        model: FMU1
+
+
+-- model_fmu2.yaml --
+kind: Model
+metadata:
+  name: FMU2
+spec:
+  channels:
+    - alias: signal_channel2
+      selectors:
+        channel: signal_vector2
+        model: FMU2
+
+
+-- FMU1_signalgroup.yaml --
+---
+kind: SignalGroup
+metadata:
+  annotations:
+    patch_file: data/data/HYM_FMU_data/HYM_fmu_mapping.csvy
+    patch_timestamp: "2025-03-12 08:15:20.378520"
+  labels:
+    channel: signal_vector1
+    model: FMU1
+  name: FMU1
+spec:
+  signals:
+    - annotations:
+        fmi_variable_causality: output
+      signal: Signal_1
+    - annotations:
+        fmi_variable_causality: output
+      signal: Signal_2
+    - annotations:
+        fmi_variable_causality: output
+      signal: Signal_3
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU1_Signal_1
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU1_Signal_2
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU1_Signal_3
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU1_Signal_4
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU1_Signal_5
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU1_Signal_6
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU1_Signal_7
+
+
+-- FMU2_signalgroup.yaml --
+---
+kind: SignalGroup
+metadata:
+  annotations:
+    patch_file: data/data/HYM_FMU_data/HYM_fmu_mapping.csvy
+    patch_timestamp: "2025-03-12 08:15:20.378520"
+  labels:
+    channel: signal_vector2
+    model: FMU2
+  name: FMU2
+spec:
+  signals:
+    - annotations:
+        fmi_variable_causality: output
+      signal: Signal_4
+    - annotations:
+        fmi_variable_causality: output
+      signal: Signal_5
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU2_Signal_1
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU2_Signal_2
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU2_Signal_3
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU2_Signal_4
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU2_Signal_5
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU2_Signal_6
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU2_Signal_7
+    - annotations:
+        fmi_variable_causality: output
+      signal: FMU2_Signal_8
+
+
+-- model__input.yaml --
+---
+kind: Model
+metadata:
+  name: Input
+  annotations:
+    reference: https://github.boschdevcloud.com/bios-emthacks/dse.input.git
+    license: BIOSLv4
+spec:
+  runtime:
+    dynlib:
+      - os: windows
+        arch: x64
+        path: models/input/model/bin/input.dll
+      - os: linux
+        arch: amd64
+        path: models/input/model/lib/input.so
+  channels:
+    - alias: input_channel
+      selectors:
+        model: input
+        channel: input_vector
+
+
+-- input_signalgroup.yaml --
+kind: SignalGroup
+metadata:
+  annotations:
+    input_csv_file: models/input/data/csv__input.csv
+  labels:
+    channel: input_vector
+  name: csv__input
+spec:
+  signals:
+    - signal: Signal_1
+    - signal: Signal_2
+    - signal: Signal_3
+    - signal: Signal_4
+    - signal: Signal_5
+    - signal: Signal_6
+    - signal: Signal_7
+    - signal: Signal_8
+    - signal: Signal_9
+    - signal: Signal_10
+
+
+-- stack_fmu.yaml --
+---
+kind: Stack
+metadata:
+  name: stack
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 60
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: Foo
+          expectedModelCount: 1
+        - name: Bar
+          expectedModelCount: 1
+
+    - name: FMU1
+      uid: 42
+      model:
+        name: FMU1
+      channels:
+        - name: Foo
+          alias: signal_channel1
+          selectors:
+            model: FMU1
+            channel: signal_vector1
+    - name: FMU2
+      uid: 41
+      model:
+        name: FMU2
+      channels:
+        - name: Bar
+          alias: signal_channel2
+          selectors:
+            model: FMU2
+            channel: signal_vector2
+
+# INPUT model shall provide constant data for network signals ...
+    - name: input
+      uid: 101010
+      model:
+        name: Input
+      channels:
+        - name: Foo
+          alias: input_channel
+          selectors:
+            channel: input_vector
+        - name: Bar
+          alias: input_channel
+          selectors:
+            channel: input_vector

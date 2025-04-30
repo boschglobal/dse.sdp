@@ -1,59 +1,3 @@
-# Ensure that graph is empty.
-exec graph drop --all
-
-# import command
-exec graph import $WORK/test.yaml
-
-# report command
-exec graph report -tag foo $WORK/report.yaml
-! exec graph report -tag bar $WORK/report.yaml
-! exec graph report -tag foo -tag bar $WORK/report.yaml
-
-
--- report.yaml --
-name: Channel 'expectedModelCount'
-queries:
-  - name: Expected Count
-    evaluate: true
-    query: |
-      MATCH (st:Stack)-[:Has]->(mi:ModelInst)-[:Alias]->(ch:Channel)
-      WITH ch.name AS channelName, COUNT(DISTINCT mi) AS actualCount, st
-      MATCH (st)-[:Has]->(simbus:Simbus)-[:Has]->(sc:SimbusChannel)
-      WHERE sc.name = channelName
-      RETURN channelName,
-            sc.expectedModelCount AS expectedCount, 
-            actualCount, 
-            CASE WHEN sc.expectedModelCount = actualCount THEN "PASS" ELSE "FAIL" END AS result
-  - name: Model to Channel Mapping
-    query: |
-      MATCH (st:Stack)-[:Has]->(mi:ModelInst)-[a:Alias]->(ch:Channel)
-      WITH mi, a, ch
-      RETURN mi.name AS modelInstName, a.name as alias, ch.name AS channelName
-
-tags:
-    - foo
-    - bar
----
-name: Count 'ModelInst' in AST and SIM
-queries:
-  - name: Expected Count
-    evaluate: true
-    query: |
-        MATCH (fl:File)-[:Contains]->(st:Stack)-[:Has]->(mi:ModelInst)
-        WITH fl, COUNT(DISTINCT mi) AS countSim
-        MATCH (fl)-[:Contains]->(sim:Simulation)-[:Has]->(st2:Stack)-[:Has]->(mi2:ModelInst)
-        WITH countSim, COUNT(DISTINCT mi2) AS countAst
-        RETURN
-            countAst AS astModelInstCount,
-            countSim AS simModelInstCount,
-            CASE WHEN countAst = countSim THEN "PASS" ELSE "FAIL" END AS result
-hint: |
-    The number of Model Instances in AST do not match the number of Model Instances in SIM.
-tags:
-    - bar
-
-
--- test.yaml --
 ---
 kind: Stack
 metadata:
@@ -76,7 +20,7 @@ spec:
           expectedModelCount: 2
         - name: Network
           expectedModelCount: 1
-
+ 
     - name: input
       uid: 24
       model:
@@ -94,7 +38,7 @@ spec:
           SIMBUS_LOGLEVEL: 5
         files:
           - model/input/data/signalgroup.yaml
-
+ 
     - name: linear
       uid: 42
       model:
@@ -160,3 +104,8 @@ spec:
               vars:
                 - name: FMU_DIR
                   value: '{{.PATH}}/fmu'
+        - name: input
+          model: model.input
+          channels:
+            - name: physical
+              alias: scalar

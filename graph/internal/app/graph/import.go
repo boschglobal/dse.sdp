@@ -2,6 +2,9 @@ package graph
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"strings"
 	"flag"
 	"log/slog"
 
@@ -95,23 +98,47 @@ func (c *GraphImportCommand) matchNode(ctx context.Context, session neo4j.Sessio
 	}
 }
 
-func (c *GraphImportCommand) importFiles(ctx context.Context, file string) {
-    if file == "" {
-        slog.Info("Usage: import <yaml-file>")
-    }
-    // Initialize the YAML handler.
-    handler := &kind.YamlKindHandler{}
-    data := handler.Detect(file)
+func (c *GraphImportCommand) importFiles(ctx context.Context, path string) {
+	if path == "" {
+		slog.Info("Usage: import <yaml-path-or-file>")
+		return
+	}
 
-    // Connect to the database.
-    driver, err := graph.Driver(c.optDb)
-    if err != nil {
-        slog.Info("Failed to connect to graph database", "error", err)
-    }
-    ctx = context.WithValue(ctx, "driver", driver)
-    defer graph.Close(ctx)
+	// Detect all YAML files in the path recursively.
+	var yamlFiles []string
+	err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && (strings.HasSuffix(p, ".yaml") || strings.HasSuffix(p, ".yml")) {
+			yamlFiles = append(yamlFiles, p)
+		}
+		return nil
+	})
+	if err != nil {
+		slog.Info("Error walking the path", "error", err)
+		return
+	}
 
-    // Import the data into the database.
-	handler.Import(ctx, file, data)
+	if len(yamlFiles) == 0 {
+		slog.Info("No YAML files found in path", "path", path)
+		return
+	}
 
+	// Initialize the YAML handler and graph driver.
+	handler := &kind.YamlKindHandler{}
+	driver, err := graph.Driver(c.optDb)
+	if err != nil {
+		slog.Info("Failed to connect to graph database", "error", err)
+		return
+	}
+	ctx = context.WithValue(ctx, "driver", driver)
+	defer graph.Close(ctx)
+
+	// Import each YAML file
+	for _, yamlFile := range yamlFiles {
+		slog.Info("Importing file", "file", yamlFile)
+		data := handler.Detect(yamlFile)
+		handler.Import(ctx, yamlFile, data)
+	}
 }

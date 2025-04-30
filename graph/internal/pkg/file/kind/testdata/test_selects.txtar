@@ -15,6 +15,32 @@ graphq $WORK/match_instanceOf.cyp 1 '{"mi_name":"fmu_inst", "model_name":"FMIMCL
 
 -- test.yaml --
 ---
+kind: SignalGroup
+metadata:
+  name: VARIABLES
+  labels:
+    model: fmu_inst
+    channel: signal_vector
+---
+kind: SignalGroup
+metadata:
+  name: BINARY_VARIABLES
+  labels:
+    model: fmu_inst
+    channel: network_vector
+---
+kind: Model
+metadata:
+    name: FMIMCL
+spec:
+  channels:
+    - alias: signal_channel
+      selectors:
+        channel: signal_vector
+    - alias: network_channel
+      selectors:
+        channel: network_vector
+---
 kind: Stack
 metadata:
   name: stack
@@ -35,37 +61,11 @@ spec:
           alias: network_channel
           selectors:
             channel: network_vector
----
-kind: Model
-metadata:
-    name: FMIMCL
-spec:
-  channels:
-    - alias: signal_channel
-      selectors:
-        channel: signal_vector
-    - alias: network_channel
-      selectors:
-        channel: network_vector
----
-kind: SignalGroup
-metadata:
-  name: VARIABLES
-  labels:
-    model: fmu_inst
-    channel: signal_vector
----
-kind: SignalGroup
-metadata:
-  name: BINARY_VARIABLES
-  labels:
-    model: fmu_inst
-    channel: network_vector
 
 -- match_selects.cyp --
 MATCH (mi:ModelInst {name: $mi_name})-[:Has]->(sel:Selector {selectorName: $selector_name, selectorValue: $selector_value})
 MATCH (sel)-[:Selects]->(l:Label {label_name: $selector_name, label_value: $selector_value})
-MATCH (l)<-[:Represents]-(sig:SignalGroup {signalgroup_name: $sg_name})
+MATCH (l)<-[:Has]-(sig:SignalGroup {signalgroup_name: $sg_name})
 RETURN mi, sel, l, sig
 
 -- match_instanceOf.cyp --

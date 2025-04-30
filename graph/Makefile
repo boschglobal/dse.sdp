@@ -25,10 +25,11 @@ $(CLI_TOOLS): $(SRC)
 .PHONY: install
 install: build
 	ln -sf $(BIN_DIR)/$(PACKAGE) ~/.local/bin/dse-$(PACKAGE)
+	ln -sf $(CURDIR)/cmd/$(PACKAGE)/reports ~/.local/share/dse-$(PACKAGE)/reports
 
 .PHONY: graph
 graph:
-	-docker kill memgraph
+	docker rm -f memgraph
 	docker run -d --rm --name memgraph \
 		-p 3000:3000 \
 		-p 7444:7444 \
@@ -37,7 +38,7 @@ graph:
 		memgraph/memgraph-platform
 
 .PHONY: test
-test:
+test: graph
 	go test ./...
 
 .PHONY: test_e2e

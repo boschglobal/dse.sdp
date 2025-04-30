@@ -4,7 +4,6 @@ exec graph drop --all
 # import command
 exec graph import $WORK/test_VDA305.yaml
 
-
 -- test_VDA305.yaml --
 ---
 kind: Model

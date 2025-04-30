@@ -81,6 +81,14 @@ func TestHandleFile(t *testing.T) {
 			&kind.SimulationSpec{},
 			assert.Exactly,
 		},
+		{
+			"Kind::ParameterSet",
+			"kind/testdata/yaml/parameterset.yaml",
+			&kind.YamlKindHandler{},
+			"ParameterSet",
+			&kind.ParameterSetSpec{},
+			assert.Exactly,
+		},
 	}
 	for _, test := range tests {
 		t.Log(test.message)

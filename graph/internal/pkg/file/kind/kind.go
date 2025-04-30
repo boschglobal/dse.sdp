@@ -205,6 +205,21 @@ func (h *YamlKindHandler) Import(ctx context.Context, file string, data any) {
 			b.WriteString("RETURN id(n) AS id")
 			kind_id, _ := graph.Query(ctx, session, b.String(), properties)
 			kd.kind_id = kind_id
+		} else if kd.Kind == "ParameterSet" {
+			var b strings.Builder
+			properties := map[string]any{
+				"name":     kd.Metadata.Name,
+				"filename": kd.file,
+				"index":    strconv.FormatInt(int64(docIndex), 10),
+				"props":    kind_props,
+			}
+			b.WriteString("MATCH (f:File {name: $filename}) ")
+			b.WriteString("MERGE (f)-[r:Contains {index: $index}]->(n:Sim:ParameterSet {name: $name}) ")
+			b.WriteString("ON CREATE SET n += $props ")
+			b.WriteString("ON MATCH SET n += $props ")
+			b.WriteString("RETURN id(n) AS id")
+			kind_id, _ := graph.Query(ctx, session, b.String(), properties)
+			kd.kind_id = kind_id
 		} else {
 			match_props := map[string]string{
 				"name": kd.Metadata.Name,
@@ -258,6 +273,8 @@ func SetSpec(kd *KindDoc) error {
 		kd.Spec = newPropagatorspec()
 	case "Simulation":
 		kd.Spec = newSimulationSpec()
+	case "ParameterSet":
+		kd.Spec = newParameterSetSpec()
 	default:
 		return fmt.Errorf("unknown kind: %s", kd.Kind)
 	}

@@ -157,18 +157,5 @@ func (m *ModelSpec) MergeGraph(ctx context.Context, session neo4j.SessionWithCon
         }
     }
 
-    properties := map[string]any{
-        "model_name": kd.Metadata.Name,
-    }
-
-    query := `
-    MATCH (inst:ModelInst)
-    MATCH(m:Model{name:$model_name})
-    with inst, m
-    WHERE inst.model = $model_name
-    MERGE (inst)-[r:InstanceOf]->(m)
-`
-    _, _ = graph.Query(ctx, session, query, properties)
-
     return nil
 }

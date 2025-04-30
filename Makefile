@@ -59,9 +59,18 @@ cleanall: clean
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d cleanall ); done
 	rm -rf build
 
+.PHONY: graph
+graph:
+	docker rm -f memgraph
+	docker run -d --rm --name memgraph \
+		-p 3000:3000 \
+		-p 7444:7444 \
+		-p 7687:7687 \
+		-v mg_lib:/var/lib/memgraph \
+		memgraph/memgraph-platform
 
 .PHONY: test_e2e
-test_e2e: do-test_testscript-e2e
+test_e2e: graph do-test_testscript-e2e
 
 
 do-test_testscript-e2e:

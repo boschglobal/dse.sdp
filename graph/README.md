@@ -46,8 +46,8 @@ Running command graph ...
 ...
 
 # Run the reports using tag filter.
-$ bin/graph import cmd/graph/testdata/reports/yaml/test.yaml
-$ bin/graph report -tag foo -tag bar cmd/graph/testdata/reports/yaml
+$ bin/graph import ../examples/graph/static_validation/data/simulation.yaml
+$ bin/graph report -tag stack static_validation.yaml
 Running command: report
 Options:
   db             : bolt://localhost:7687
@@ -55,8 +55,8 @@ Options:
 2025/01/28 14:47:15 INFO Connecting to graph db=bolt://localhost:7687
 ...
 =================== Summary ===================
-Ran 2 Reports | Passed: 1 | Failed: 1
-Failed Reports: Count 'ModelInst' in AST and SIM
+Ran 2 Reports | Passed: 2 | Failed: 0
+
 ===============================================
 
 # Graph is available at:

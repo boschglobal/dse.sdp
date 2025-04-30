@@ -6,6 +6,7 @@ graphq $WORK/match_newfile.cyp 1 '{"name":"newfile.yaml", "type":"yaml"}'
 
 graphdrop --all
 
+
 # Import the SignalGroup YAML file.
 import $WORK/signalgroup.yaml
 

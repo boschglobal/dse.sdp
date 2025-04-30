@@ -1,0 +1,227 @@
+# Test Fail scenario
+exec graph drop --all
+exec graph import $WORK/expectedModelCount_Mismatch.yaml
+! exec graph report static_validation.yaml
+
+# Test Pass scenario
+exec graph drop --all
+exec graph import $WORK/expectedModelCount_Match.yaml
+exec graph report static_validation.yaml
+
+-- static_validation.yaml --
+name: Channel 'expectedModelCount'
+queries:
+  - name: Expected Count
+    evaluate: true
+    query: |
+      MATCH (st:Stack)-[:Has]->(mi:ModelInst)-[:Alias]->(ch:Channel)
+      WITH ch.name AS channelName, COUNT(DISTINCT mi) AS actualCount, st
+      MATCH (st)-[:Has]->(simbus:Simbus)-[:Has]->(sc:SimbusChannel)
+      WHERE sc.name = channelName
+      RETURN channelName,
+            sc.expectedModelCount AS expectedCount, 
+            actualCount, 
+            CASE WHEN sc.expectedModelCount = actualCount THEN "PASS" ELSE "FAIL" END AS result
+  - name: Model to Channel Mapping
+    query: |
+      MATCH (st:Stack)-[:Has]->(mi:ModelInst)-[a:Alias]->(ch:Channel)
+      WITH mi, a, ch
+      RETURN mi.name AS modelInstName, a.name as alias, ch.name AS channelName
+tags:
+    - stack
+
+---
+name: Count 'ModelInst' in AST and SIM
+queries:
+  - name: Expected Count
+    evaluate: true
+    query: |
+        MATCH (fl:File)-[:Contains]->(st:Stack)-[:Has]->(mi:ModelInst)
+        WITH fl, COUNT(DISTINCT mi) AS countSim
+        MATCH (fl)-[:Contains]->(sim:Simulation)-[:Has]->(st2:Stack)-[:Has]->(mi2:ModelInst)
+        WITH countSim, COUNT(DISTINCT mi2) AS countAst
+        RETURN
+            countAst AS astModelInstCount,
+            countSim AS simModelInstCount,
+            CASE WHEN countAst = countSim THEN "PASS" ELSE "FAIL" END AS result
+hint: |
+    The number of Model Instances in AST do not match the number of Model Instances in SIM.
+tags:
+    - stack
+
+
+-- expectedModelCount_Mismatch.yaml --
+---
+kind: Stack
+metadata:
+  name: openloop
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 5
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 5
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: physical
+          expectedModelCount: 2
+        - name: Network
+          expectedModelCount: 1
+
+    - name: input
+      uid: 24
+      model:
+        name: Csv
+      channels:
+        - name: physical
+          alias: scalar
+          selectors:
+            model: input
+            channel: signal_vector
+
+    - name: linear
+      uid: 42
+      model:
+        name: linear
+      channels:
+        - name: physical
+          alias: signal_channel
+          selectors:
+            model: linear
+            channel: signal_vector
+        - name: Network
+          alias: network_channel
+          selectors:
+            model: linear
+            channel: network_vector
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: Simulation
+metadata:
+  name: project
+  annotations:
+    input: somefile.json
+    generator: parse2ast
+spec:
+  arch: linux-amd64
+  channels:
+    - name: physical
+    - name: network
+      networks:
+        - name: CAN
+          mime_type: application/x
+  stacks:
+    - name: stack_name
+      stacked: true
+      arch: linux-amd64
+      models:
+        - name: linear
+          model: model.linear
+          channels:
+            - name: physical
+              alias: scalar
+          env:
+            - name: SIMBUS_LOGLEVEL
+              value: 4
+          workflows:
+            - name: generate-fmimcl
+              vars:
+                - name: FMU_DIR
+                  value: '{{.PATH}}/fmu'
+
+-- expectedModelCount_Match.yaml --
+---
+kind: Stack
+metadata:
+  name: openloop
+spec:
+  connection:
+    transport:
+      redispubsub:
+        uri: redis://localhost:6379
+        timeout: 5
+  runtime:
+    env:
+      SIMBUS_LOGLEVEL: 5
+  models:
+    - name: simbus
+      model:
+        name: simbus
+      channels:
+        - name: physical
+          expectedModelCount: 2
+        - name: Network
+          expectedModelCount: 1
+
+    - name: input
+      uid: 24
+      model:
+        name: Csv
+      channels:
+        - name: physical
+          alias: scalar
+          selectors:
+            model: input
+            channel: signal_vector
+    - name: linear
+      uid: 42
+      model:
+        name: linear
+      channels:
+        - name: physical
+          alias: signal_channel
+          selectors:
+            model: linear
+            channel: signal_vector
+        - name: Network
+          alias: network_channel
+          selectors:
+            model: linear
+            channel: network_vector
+---
+kind: Model
+metadata:
+  name: simbus
+---
+kind: Simulation
+metadata:
+  name: project
+  annotations:
+    input: somefile.json
+    generator: parse2ast
+spec:
+  arch: linux-amd64
+  channels:
+    - name: physical
+    - name: network
+      networks:
+        - name: CAN
+          mime_type: application/x
+  vars:
+    - name: enable
+      value: true
+  stacks:
+    - name: stack_name
+      stacked: true
+      arch: linux-amd64
+      models:
+        - name: linear
+          model: model.linear
+          channels:
+            - name: physical
+              alias: scalar
+        - name: input
+          model: model.input
+          channels:
+            - name: physical
+              alias: scalar
+

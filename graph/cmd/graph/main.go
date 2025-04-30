@@ -28,6 +28,7 @@ Graph Tools for importing files to database and reporting.
 Usage:
 
   graph <command> [command options,]
+  graph report [--tag=name --db=db_uri] <report file>
 
 `
 

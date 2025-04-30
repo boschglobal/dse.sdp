@@ -1,0 +1,12 @@
+kind: ParameterSet
+metadata:
+  name: softecu_config_parameters
+  labels:
+    container: softecu_config
+    instance: softecu
+spec:
+  parameters:
+    - parameter: interface
+      value: c89_dostep_if
+    - parameter: initialize_data
+      value: 1

@@ -1,0 +1,38 @@
+graphdrop --all
+
+# Import the Network YAML file.
+import $WORK/parameterset.yaml
+
+# Run the FSIL graphq command to match query and optional match count from imported file.
+graphq $WORK/match_queryname.cyp 1 '{"file_name":"parameterset.yaml", "parameterset_name":"softecu_config_parameters"}'
+graphq $WORK/match_queryparameters.cyp 2 '{"parameter1":"interface", "value1":"c89_dostep_if", "parameter2":"initialize_data", "value2":"1"}'
+
+
+# Create ParameterSet Yaml.
+-- parameterset.yaml --
+kind: ParameterSet
+metadata:
+  annotations:
+    opstools_timestamp: "2025-03-12 08:16:16.284661"
+    opstools_version: 0.1.96
+  labels:
+    container: softecu_config
+    instance: softecu
+  name: softecu_config_parameters
+spec:
+  parameters:
+    - parameter: interface
+      value: c89_dostep_if
+    - parameter: initialize_data
+      value: 1
+
+
+-- match_queryname.cyp --
+MATCH (fl:File)-[contains:Contains]->(ps:ParameterSet)
+WHERE fl.name = $file_name AND ps.name = $parameterset_name
+RETURN fl, contains, ps
+
+-- match_queryparameters.cyp --
+MATCH (ps:ParameterSet)-[h:Has]->(p:Parameters)
+WHERE (p.parameter = $parameter1 AND p.value = $value1) OR (p.parameter = $parameter2 AND  p.value = $value2)
+RETURN ps, h, p

@@ -1,0 +1,41 @@
+# Copy reports to local share path.
+exec mkdir -p $WORK/.local/share/dse-graph
+exec cp -r $ENTRYDIR/graph/cmd/graph/reports $WORK/.local/share/dse-graph/
+env HOME=$WORK
+
+env STATIC_VALIDATION=examples/graph/static_validation/data
+env DUPLICATE_WRITES=examples/graph/duplicate_writes
+
+# Static Report.
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$STATIC_VALIDATION/simulation.yaml
+exec dse-graph export export_static_validation.cyp
+exec dse-graph report -tag stack static_validation.yaml
+
+
+# Static Report with Error.
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$STATIC_VALIDATION/simulation_with_error.yaml
+exec dse-graph export export_static_validation.cyp
+! exec dse-graph report -tag stack static_validation.yaml
+
+
+# Duplicate Writes Report.
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/model/linear/data/model.yaml
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/model/linear/data/signalgroup.yaml
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/model/input
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/data
+exec dse-graph export export_duplicate_writes.cyp
+exec dse-graph report -tag signal duplicate_writes.yaml
+
+
+# Duplicate Writes Report with error.
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/model/linear/data/model.yaml
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/model/linear/data/signalgroup_with_error.yaml
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/model/input
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/data
+exec dse-graph export export_duplicate_writes.cyp
+! exec dse-graph report -tag signal duplicate_writes.yaml
+

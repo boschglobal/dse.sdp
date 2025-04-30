@@ -130,9 +130,9 @@ RETURN fl, contains, md, hasruntime, hasdynLib
 -- match_querysiggrp.cyp --
 MATCH (fl:File)-[contains:Contains]->(sg:SignalGroup)
 WHERE sg.signalgroup_name = $name
-MATCH (sg:SignalGroup)-[rep:Represents]->(lb:Label)
+MATCH (sg:SignalGroup)-[has:Has]->(lb:Label)
 WHERE (lb.label_name = $label_name1 AND lb.label_value = $label_value1) OR (lb.label_name = $label_name2 AND lb.label_value = $label_value2)
-RETURN fl, contains, sg, rep, lb
+RETURN fl, contains, sg, has, lb
 
 -- match_querysiggrp_signals.cyp --
 MATCH (fl:File)-[contains:Contains]->(sg:SignalGroup)

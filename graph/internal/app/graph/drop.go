@@ -13,7 +13,7 @@ import (
 
 type GraphDropCommand struct {
 	command.Command
-	optDb string
+	optDb   string
 	optAll  bool
 }
 
@@ -80,7 +80,7 @@ func (c *GraphDropCommand) Run() error {
 	return nil
 }
 
-// Internal implementation
+// Internal implementation.
 func (c *GraphDropCommand) runDrop(ctx context.Context, option string) {
 	graph.Drop(ctx, option)
 }
