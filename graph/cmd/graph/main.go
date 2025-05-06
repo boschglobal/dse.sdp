@@ -20,6 +20,7 @@ var cmds = []command.CommandRunner{
 	graph.NewGraphExportCommand("export"),
 	graph.NewGraphDropCommand("drop"),
 	graph.NewGraphReportCommand("report"),
+	graph.NewGraphPingCommand("ping"),
 }
 
 var usage = `
@@ -29,6 +30,7 @@ Usage:
 
   graph <command> [command options,]
   graph report [--tag=name --db=db_uri] <report file>
+  graph ping [--retry=count --db=db_uri]
 
 `
 

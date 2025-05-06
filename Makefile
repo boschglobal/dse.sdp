@@ -39,7 +39,7 @@ build:
 
 
 .PHONY: test
-test:
+test: graph
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d test ); done
 
 

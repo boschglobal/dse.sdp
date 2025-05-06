@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"flag"
+	"log"
 	"log/slog"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
@@ -71,7 +72,7 @@ func (c *GraphImportCommand) Run() error {
 		return nil
 	}
 	file := args[0]
-	c.importFiles(ctx, file)
+	c.importFiles(ctx, file, session)
 
 	return nil
 }
@@ -98,7 +99,7 @@ func (c *GraphImportCommand) matchNode(ctx context.Context, session neo4j.Sessio
 	}
 }
 
-func (c *GraphImportCommand) importFiles(ctx context.Context, path string) {
+func (c *GraphImportCommand) importFiles(ctx context.Context, path string, session neo4j.SessionWithContext) {
 	if path == "" {
 		slog.Info("Usage: import <yaml-path-or-file>")
 		return
@@ -140,5 +141,129 @@ func (c *GraphImportCommand) importFiles(ctx context.Context, path string) {
 		slog.Info("Importing file", "file", yamlFile)
 		data := handler.Detect(yamlFile)
 		handler.Import(ctx, yamlFile, data)
+	}
+
+	// Create additional relations after all files are imported
+	c.createRelationships(ctx, session)
+
+}
+
+func (c *GraphImportCommand) createRelationships(ctx context.Context, session neo4j.SessionWithContext) {
+	query_InstanceOf := `
+	MATCH (inst:ModelInst), (m:Model)
+	// WHERE inst.model = m.name
+	MERGE (inst)-[:InstanceOf]->(m)`
+	_, _ = graph.Query(ctx, session, query_InstanceOf, nil)
+
+	query_Belongs := `
+	MATCH (sc:SimbusChannel)
+	MATCH (c:Channel)
+	// WHERE sc.name = c.name
+	MERGE (c)-[:Belongs]->(sc)`
+	_, _ = graph.Query(ctx, session, query_Belongs, nil)
+
+	query_Selects := `
+	MATCH (sg:SignalGroup)-[sgHas:Has]->(l:Label)
+	MATCH (mi:ModelInst)-[miHas:Has]->(sl:Selector)
+	WHERE sl.selectorName = l.label_name AND sl.selectorValue = l.label_value
+	WITH sg, sl, l, mi, COUNT(miHas) AS miCount, COUNT(sgHas) AS sgCount
+	// WHERE miCount = sgCount
+	MERGE (sl)-[:Selects]->(l)`
+	_, _ = graph.Query(ctx, session, query_Selects, nil)
+
+	query_SelectorCount := `
+	CALL {
+		MATCH (c:Channel)<-[id:Identifies]-(s:Selector)<-[has:Has]-(m:Model)<-[i:InstanceOf]-(mi:ModelInst{name:$mi_name})
+		RETURN s, c, id
+		UNION
+		MATCH (m:Model)<-[i:InstanceOf]-(mi:ModelInst{name:$mi_name})-[h:Has]->(s:Selector)-[id:Identifies]->(c:Channel)
+		RETURN s, c, id
+	}
+	WITH c as channel, s as selector
+	RETURN channel, count(selector) AS selectorCount
+	`
+
+	query_LabelCount := `
+	CALL {
+		MATCH (c:Channel)<-[id:Identifies]-(s:Selector)<-[has:Has]-(m:Model)<-[i:InstanceOf]-(mi:ModelInst{name:$mi_name})
+		RETURN s, c, id
+		UNION
+		MATCH (m:Model)<-[i:InstanceOf]-(mi:ModelInst{name:$mi_name})-[h:Has]->(s:Selector)-[id:Identifies]->(c:Channel)
+		RETURN s, c, id
+	}
+	WITH c as channel, s as selector
+	MATCH (channel)<-[:Identifies]-(selector)-[selects:Selects]->(l:Label)<-[h:Has]-(sig:SignalGroup)
+	RETURN channel, sig, count(l) AS labelCount
+	`
+
+	// Get all model instance names.
+	result, err := session.Run(ctx, `MATCH (mi:ModelInst) RETURN mi.name AS mi_name`, nil)
+	if err != nil {
+		log.Printf("Failed to get model instance names: %v", err)
+	}
+
+	for result.Next(ctx) {
+		miNameVal, _ := result.Record().Get("mi_name")
+		miName, ok := miNameVal.(string)
+		if !ok {
+			continue
+		}
+
+		mi_properties := map[string]any{"mi_name": miName}
+
+		selectorCounts := make(map[int64]int64)
+		channelNodeIDs := make(map[int64]int64)
+
+		result1, _ := session.Run(ctx, query_SelectorCount, mi_properties)
+		for result1.Next(ctx) {
+			record := result1.Record()
+			if selectorCount, _ := record.Get("selectorCount"); selectorCount != nil {
+				if count, ok := selectorCount.(int64); ok {
+					if channelValue, exists := record.Get("channel"); exists {
+						if channelNode, ok := channelValue.(neo4j.Node); ok {
+							channelID := channelNode.Id
+							selectorCounts[channelID] = count
+							channelNodeIDs[channelID] = channelID
+						}
+					}
+				}
+			}
+		}
+
+		result2, _ := session.Run(ctx, query_LabelCount, mi_properties)
+		for result2.Next(ctx) {
+			record := result2.Record()
+			labelCount, _ := record.Get("labelCount")
+			sgValue, _ := record.Get("sig")
+			channelValue, _ := record.Get("channel")
+
+			if labelCount, ok := labelCount.(int64); ok {
+				if sgNode, ok := sgValue.(neo4j.Node); ok {
+					if chNode, ok := channelValue.(neo4j.Node); ok {
+						channelID, signalGroupID := chNode.Id, sgNode.Id
+						if selectorCount, found := selectorCounts[channelID]; found {
+							if labelCount >= selectorCount {
+								relationshipQuery := `
+								MATCH (c:Channel) WHERE ID(c) = $channelID
+								MATCH (sg:SignalGroup) WHERE ID(sg) = $signalGroupID
+								MERGE (c)-[:Represents]->(sg)`
+								params := map[string]any{
+									"channelID":     channelID,
+									"signalGroupID": signalGroupID,
+								}
+								_, err := session.Run(ctx, relationshipQuery, params)
+								if err != nil {
+									log.Printf("Failed to create relationship: %v", err)
+								} else {
+									log.Printf("Relationship created: Channel(ID: %d) -> Represents -> SignalGroup(ID: %d)", channelID, signalGroupID)
+								}
+							} else {
+								log.Printf("Skipping channel ID %d (labelCount: %d, selectorCount: %d)", channelID, labelCount, selectorCount)
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 }
