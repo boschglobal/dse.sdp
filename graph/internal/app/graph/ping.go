@@ -45,11 +45,15 @@ func (c *GraphPingCommand) Parse(args []string) error {
 }
 
 func (c *GraphPingCommand) Run() error {
-	slog.Info("Connect to graph", "db", c.optDb)
+	slog.Debug("Connect to graph", "db", c.optDb)
 
 	for i := 0; i < c.optRetries; i++ {
+		if i > 0 {
+			time.Sleep(1 * time.Second)
+		}
 		ctx := context.Background()
 
+		// Driver.
 		driver, err := graph.Driver(c.optDb)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ping: failed (%v)\n", err)
@@ -58,20 +62,20 @@ func (c *GraphPingCommand) Run() error {
 		ctx = context.WithValue(ctx, "driver", driver)
 		defer graph.Close(ctx)
 
+		// Session.
 		session, err := graph.Session(ctx)
-		time.Sleep(1 * time.Second)
 		if err != nil {
 			slog.Info("Graph session error", "err", err)
 			return err
 		}
 		defer session.Close(ctx)
 
+		// Database.
 		_, err = session.Run(ctx, "return 1", nil)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ping: failed (%v)\n", err)
 			continue
 		}
-
 		fmt.Println("ping: OK")
 		return nil
 	}

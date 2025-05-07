@@ -6,6 +6,10 @@ env HOME=$WORK
 env STATIC_VALIDATION=examples/graph/static_validation
 env DUPLICATE_WRITES=examples/graph/duplicate_writes
 
+
+exec dse-graph ping
+
+
 # Static Report.
 exec dse-graph drop --all
 exec dse-graph import $ENTRYDIR/$STATIC_VALIDATION/sim_good
