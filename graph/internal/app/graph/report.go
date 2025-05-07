@@ -30,9 +30,10 @@ type GraphReportCommand struct {
 }
 
 type Query struct {
-	Name     string `yaml:"name"`
-	Evaluate bool   `yaml:"evaluate,omitempty"`
-	Query    string `yaml:"query"`
+	Name       string `yaml:"name"`
+	Evaluate   bool   `yaml:"evaluate,omitempty"`
+	ExpectRows bool   `yaml:"expect_rows,omitempty"`
+	Query      string `yaml:"query"`
 }
 
 type Report struct {
@@ -272,10 +273,18 @@ func (c *GraphReportCommand) runReport(ctx context.Context, session neo4j.Sessio
 			continue
 		}
 
-		// Check if result is empty.
-		if len(records) == 0 {
-			slog.Info("Query returned no results")
-			return fmt.Errorf("Report Failed")
+		if q.ExpectRows == true {
+			if len(records) == 0 {
+				slog.Info("Query returned no results")
+				return fmt.Errorf("Report Failed")
+			}
+		} else if q.ExpectRows == false {
+			if len(records) == 0 {
+				slog.Info("Report Passed")
+			} else {
+				printTable(records)
+				return fmt.Errorf("Report Failed")
+			}
 		}
 
 		// Print the table with results.
@@ -310,6 +319,10 @@ func (c *GraphReportCommand) runReport(ctx context.Context, session neo4j.Sessio
 
 // Print results in a simple table.
 func printTable(records []*neo4j.Record) {
+	if len(records) == 0 {
+		return
+	}
+
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 

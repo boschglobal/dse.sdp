@@ -1,6 +1,7 @@
 name: Channel 'expectedModelCount'
 queries:
   - name: Expected Count
+    expect_rows: true
     evaluate: true
     query: |
       MATCH (st:Stack)-[:Has]->(mi:ModelInst)-[:Alias]->(ch:Channel)
@@ -12,6 +13,7 @@ queries:
             actualCount,
             CASE WHEN sc.expectedModelCount = actualCount THEN "PASS" ELSE "FAIL" END AS result
   - name: Model to Channel Mapping
+    expect_rows: true
     query: |
       MATCH (st:Stack)-[:Has]->(mi:ModelInst)-[a:Alias]->(ch:Channel)
       WITH mi, a, ch
@@ -22,6 +24,7 @@ tags:
 name: Count 'ModelInst' in AST and SIM
 queries:
   - name: Expected Count
+    expect_rows: true
     evaluate: true
     query: |
         MATCH (fl:File)-[:Contains]->(st:Stack)-[:Has]->(mi:ModelInst)

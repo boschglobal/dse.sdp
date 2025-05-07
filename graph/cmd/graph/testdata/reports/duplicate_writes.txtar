@@ -2,7 +2,6 @@
 exec graph drop --all
 
 # import command
-
 exec graph import $WORK/model_fmu1.yaml
 exec graph import $WORK/model_fmu2.yaml
 exec graph import $WORK/FMU1_signalgroup.yaml
@@ -11,13 +10,14 @@ exec graph import $WORK/model__input.yaml
 exec graph import $WORK/input_signalgroup.yaml
 exec graph import $WORK/stack_fmu.yaml
 
-exec graph report duplicate_writes.yaml
+! exec graph report duplicate_writes.yaml
 
 
 -- duplicate_writes.yaml --
 name: Duplicate Writes Check
 queries:
   - name: Duplicate Write Signals
+    expect_rows: false
     query: |
       // Get output signals for each SimbusChannel
       MATCH (sc:SimbusChannel)<-[:Belongs]-(ch1:Channel)-[:Represents]->(:SignalGroup)-[:Contains]->(s1:Signal)

@@ -151,14 +151,14 @@ func (c *GraphImportCommand) importFiles(ctx context.Context, path string, sessi
 func (c *GraphImportCommand) createRelationships(ctx context.Context, session neo4j.SessionWithContext) {
 	query_InstanceOf := `
 	MATCH (inst:ModelInst), (m:Model)
-	// WHERE inst.model = m.name
+	WHERE inst.model = m.name
 	MERGE (inst)-[:InstanceOf]->(m)`
 	_, _ = graph.Query(ctx, session, query_InstanceOf, nil)
 
 	query_Belongs := `
 	MATCH (sc:SimbusChannel)
 	MATCH (c:Channel)
-	// WHERE sc.name = c.name
+	WHERE sc.name = c.name
 	MERGE (c)-[:Belongs]->(sc)`
 	_, _ = graph.Query(ctx, session, query_Belongs, nil)
 
@@ -167,7 +167,7 @@ func (c *GraphImportCommand) createRelationships(ctx context.Context, session ne
 	MATCH (mi:ModelInst)-[miHas:Has]->(sl:Selector)
 	WHERE sl.selectorName = l.label_name AND sl.selectorValue = l.label_value
 	WITH sg, sl, l, mi, COUNT(miHas) AS miCount, COUNT(sgHas) AS sgCount
-	// WHERE miCount = sgCount
+	WHERE miCount = sgCount
 	MERGE (sl)-[:Selects]->(l)`
 	_, _ = graph.Query(ctx, session, query_Selects, nil)
 

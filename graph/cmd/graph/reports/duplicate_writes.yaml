@@ -1,6 +1,7 @@
 name: Duplicate Writes Check
 queries:
   - name: Duplicate Write Signals
+    expect_rows: false
     query: |
       // Get output signals for each SimbusChannel.
       MATCH (sc:SimbusChannel)<-[:Belongs]-(ch1:Channel)-[:Represents]->(:SignalGroup)-[:Contains]->(s1:Signal)
