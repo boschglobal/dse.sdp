@@ -16,6 +16,8 @@ Simulation Development Platform for the Dynamic Simulation Environment (DSE) Cor
 L- .devcontainer  Devcontainer used by Codespaces.
   L- Dockerfile   Dockerfile used by Codespaces.
 L- ast            AST tools.
+L- doc            Additional documentation resources.
+  L- html2img     containerised tool to convert html to image.
 L- dsl            DSL parser (usingChevrotain).
 L- lsp            VS Code Language Server.
 L- examples       Examples for learning about the DSE DSP.

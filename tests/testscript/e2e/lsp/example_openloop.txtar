@@ -1,8 +1,9 @@
 env DSE_DIR=$REPODIR/examples/vscode
+
 exec mkdir -p $WORK/input
 exec cp -r $DSE_DIR/input/. $WORK/input
 
-exec node $REPODIR/dsl/out/bin/parse2ast.js $DSE_DIR/openloop.dse openloop.ast.json
+exec dse-parse2ast $DSE_DIR/openloop.dse openloop.ast.json
 
 stdout 'Parameters:'
 stdout '  input_file = .*/openloop\.dse'
@@ -11,7 +12,7 @@ stdout 'Read from file: .*/openloop.dse'
 stdout 'Parsing ...'
 stdout 'Writing to file: openloop.ast.json'
 
-exec $REPODIR/ast/bin/ast convert -input openloop.ast.json -output openloop.yaml
+exec dse-ast convert -input openloop.ast.json -output openloop.yaml
 
 stderr 'Running command: convert'
 stderr '  input          : openloop.ast.json'
@@ -20,7 +21,7 @@ stderr '  output         : openloop.yaml'
 stderr 'Reading file: openloop.ast.json'
 stderr 'Writing file: openloop.yaml'
 
-exec $REPODIR/ast/bin/ast resolve -input openloop.yaml -cache out/cache
+exec dse-ast resolve -input openloop.yaml -cache out/cache
 
 stderr 'Running command: resolve'
 stderr '  cache          : out/cache'
@@ -28,7 +29,7 @@ stderr '  input          : openloop.yaml'
 stderr 'Reading file: openloop.yaml'
 stderr 'Updating file: openloop.yaml'
 
-exec $REPODIR/ast/bin/ast generate -input openloop.yaml -output .
+exec dse-ast generate -input openloop.yaml -output .
 
 stderr 'Running command: generate'
 stderr '  input          : openloop.yaml'

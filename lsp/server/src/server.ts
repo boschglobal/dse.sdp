@@ -25,14 +25,13 @@ import {
 import * as yaml from 'js-yaml';
 
 const isCodespace = process.env.CODESPACES === 'true' || process.env.GITHUB_CODESPACES === 'true';
-const proxyUrl = isCodespace ? process.env.HTTPS_PROXY : "http://localhost:3128";
+const proxyUrl = isCodespace ? process.env.HTTPS_PROXY : "http://localhost:3129";
 const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
 const connection = createConnection(ProposedFeatures.all);
 
-let metadata_data: any;
 let selectedModel: string | undefined = '';
 let selectedWorkflow: string | undefined = '';
 let channels: string[] = [];
@@ -85,6 +84,13 @@ function fillMissingSuggestionData(suggestion_data: any, taskfile_data: any) {
 
 function metadataDataParser(metadata_data: any) {
 	function getWorkflowDetails(workflows: string[]): any[] {
+		const default_workflow_val = {
+			'vars': [],
+			'required_vars': [],
+			'vars_desc': {},
+			'default_values': {},
+			'internal': false // default value. later will be updated based on taskfile 'internal' key value in 'fillMissingSuggestionData' function.
+		}
 		let ret_workflows: any = [];
 		for (let workflow_name of workflows) {
 			let workflow_obj: any = {};
@@ -92,45 +98,44 @@ function metadataDataParser(metadata_data: any) {
 			let required_vars: any = [];
 			let vars_desc: any = {};
 			let default_values: any = {};
-			if (workflow_name in metadata_data['metadata']['tasks']) {
-				for (const var_val in metadata_data['metadata']['tasks'][workflow_name]['vars']) {
-					const var_object = metadata_data['metadata']['tasks'][workflow_name]['vars'][var_val];
-					if (var_object['required'] === true) {
-						required_vars.push(var_val);
-					}
-					else {
-						vars.push(var_val);
-					}
+			if (workflow_name in metadata_data['tasks']) {
+				if ('metadata' in metadata_data['tasks'][workflow_name]) {
+					for (const var_val in metadata_data['tasks'][workflow_name]['metadata']['vars']) {
+						const var_object = metadata_data['tasks'][workflow_name]['metadata']['vars'][var_val];
+						if (var_object['required'] === true) {
+							required_vars.push(var_val);
+						}
+						else {
+							vars.push(var_val);
+						}
 
-					if ('hint' in var_object) {
-						if (var_object['hint'] != null) {
-							vars_desc[var_val] = var_object['hint'];
+						if ('hint' in var_object) {
+							if (var_object['hint'] != null) {
+								vars_desc[var_val] = var_object['hint'];
+							}
+						}
+
+						if ('default' in var_object) {
+							if (var_object['default'] != null) {
+								default_values[var_val] = var_object['default'];
+							}
 						}
 					}
-
-					if ('default' in var_object) {
-						if (var_object['default'] != null) {
-							default_values[var_val] = var_object['default'];
-						}
+					workflow_obj[workflow_name] = {
+						'vars': vars,
+						'required_vars': required_vars,
+						'vars_desc': vars_desc,
+						'default_values': default_values,
+						'internal': false // default value. later will be updated based on taskfile 'internal' key value in 'fillMissingSuggestionData' function.
 					}
+					ret_workflows.push(workflow_obj);
+				} else {
+					workflow_obj[workflow_name] = default_workflow_val
+					ret_workflows.push(workflow_obj);
 				}
-				workflow_obj[workflow_name] = {
-					'vars': vars,
-					'required_vars': required_vars,
-					'vars_desc': vars_desc,
-					'default_values': default_values,
-					'internal': false // default value. later will be updated based on taskfile 'internal' key value in 'fillMissingSuggestionData' function.
-				}
-				ret_workflows.push(workflow_obj);
 			}
 			else {
-				workflow_obj[workflow_name] = {
-					'vars': [],
-					'required_vars': [],
-					'vars_desc': {},
-					'default_values': {},
-					'internal': false // default value. later will be updated based on taskfile 'internal' key value in 'fillMissingSuggestionData' function.
-				}
+				workflow_obj[workflow_name] = default_workflow_val
 				ret_workflows.push(workflow_obj);
 			}
 		}
@@ -215,9 +220,9 @@ function taskFileParser(yamlData: any, model: any) {
 
 function parseTaskfile(yamlData: any, repo: any) {
 	taskfile_data[repo] = {};
-	if (metadata_data != undefined || metadata_data != '') {
+	if ('metadata' in yamlData) {
 		taskFileParser(yamlData, repo);
-		metadataDataParser(metadata_data);
+		metadataDataParser(yamlData);
 	}
 }
 
@@ -384,29 +389,15 @@ connection.languages.diagnostics.on(async (params) => {
 
 function fetchGitData(uses_items: { [key: string]: any }) {
 	for (let repo in uses_items['repos']) {
-		const metadata_git_raw_url: string = gen_git_raw_url(uses_items['repos'][repo], 'Metadata.yml');
 		const taskfile_git_raw_url: string = gen_git_raw_url(uses_items['repos'][repo], 'Taskfile.yml');
-
-		fetchGitHubRawFile(metadata_git_raw_url).then((content: any) => {
+		fetchGitHubRawFile(taskfile_git_raw_url).then((content: any) => {
 			if (content != undefined) {
-				if (content === '404') {
-					return ''; // no metadata file, ie no models to display.
-				} else {
-					metadata_data = yaml.load(content);
-					fetchGitHubRawFile(taskfile_git_raw_url).then((content: any) => {
-						if (content != undefined) {
-							yamlData = yaml.load(content);
-							parseTaskfile(yamlData, repo)
-						}
-					})
-						.catch((error) => {
-							console.log("Error in fetching taskfile, ")
-							console.error(error);
-						});
-				}
+				yamlData = yaml.load(content);
+				parseTaskfile(yamlData, repo)
 			}
-		}).catch((error) => {
-			console.log("Error in fetching metadata file, ")
+		})
+		.catch((error) => {
+			console.log("Error in fetching taskfile, ")
 			console.error(error);
 		});
 	}
@@ -599,7 +590,12 @@ connection.onCompletion(
 					kind: CompletionItemKind.Variable,
 					data: "endtime_keyword"
 				};
-				completionItems.push(completionItem, endtimecompletionItem);
+				const externalCompletionItem: CompletionItem = {
+					label: "external",
+					kind: CompletionItemKind.Keyword,
+					data: "external_keyword"
+				};
+				completionItems.push(completionItem, endtimecompletionItem, externalCompletionItem);
 			}
 			else if (word.startsWith('a')) {
 				completionItems.length = 0;
@@ -740,6 +736,19 @@ connection.onCompletion(
 					completionItems.push(completionItem);
 				});
 			}
+			else if (/external=/.test(word)) {
+				completionItems.length = 0;
+				['true', 'false'].forEach((external: string) => {
+					const completionItem: CompletionItem = {
+						label: external,
+						kind: CompletionItemKind.Value,
+						detail: 'external type',
+						filterText: "external=",
+						data: "external_suggestion"
+					};
+					completionItems.push(completionItem);
+				});
+			}
 			else if (word.endsWith('var')) {
 				completionItems.length = 0;
 				taskfile_vars_suggestions.forEach((task: string) => {
@@ -802,7 +811,7 @@ connection.onCompletionResolve(
 						const value_suggestions = [workflow_obj['default_values'][r_var]];
 						required_vars += "\nvar " + r_var + " ${" + (i + 1) + "|" + value_suggestions.join(',') + "|}";
 					} else {
-						required_vars += "\nvar " + r_var + " ${" + (i + 1) + ":value}";
+						required_vars += "\nvar " + r_var + " ${" + (i + 1) + ":<value>}";
 					}
 				}
 			} else {
@@ -838,7 +847,11 @@ connection.onCompletionResolve(
 			item.detail = workflow_obj['vars_desc'][`${item.label}`];
 			if (workflow_obj['vars'].includes(item.label)) {
 				const value_suggestions = workflow_obj['default_values'][item.label];
-				item.insertText = "var " + item.label + " ${1|" + value_suggestions + "|}";
+				if (value_suggestions === undefined){
+					item.insertText = "var " + item.label + " ${1:<value>}";
+				} else {
+					item.insertText = "var " + item.label + " ${1|" + value_suggestions + "|}";
+				}
 			}
 		}
 		else if (item.data == "stacked_keyword") {
@@ -902,6 +915,13 @@ connection.onCompletionResolve(
 			item.insertText = `token=`;
 			item.command = {
 				title: "token",
+				command: "editor.action.triggerSuggest",
+			}
+		} else if (item.data == "external_keyword") {
+			item.label = `${item.label}`;
+			item.insertText = `external=`;
+			item.command = {
+				title: "external",
 				command: "editor.action.triggerSuggest",
 			}
 		}

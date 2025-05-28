@@ -5,7 +5,7 @@ go 1.23.5
 require (
 	github.boschdevcloud.com/fsil/fsil.go/command v1.0.4
 	github.boschdevcloud.com/fsil/fsil.go/file v1.0.8
-	github.com/boschglobal/dse.schemas/code/go/dse v1.2.21
+	github.com/boschglobal/dse.schemas/code/go/dse v1.2.24
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/goccy/go-yaml v1.15.13
 	github.com/rogpeppe/go-internal v1.13.1

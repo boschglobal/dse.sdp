@@ -51,7 +51,12 @@ class FsilParser extends EmbeddedActionsParser {
             const simulation = $.CONSUME(Simulation);
             const children: Record<string, any> = {};
             children.channels = $.SUBRULE($.channels);
-            children.uses = $.SUBRULE($.uses);
+
+            let uses = [];
+            while ($.LA(1).tokenType === Uses) {
+                uses = $.SUBRULE($.uses);
+            }
+            children.uses = uses
 
             let vars = [];
             while ($.LA(1).tokenType === Var || $.LA(1).tokenType === EnvVar) {

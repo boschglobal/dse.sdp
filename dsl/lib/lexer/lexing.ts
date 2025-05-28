@@ -218,9 +218,16 @@ export const Network = createToken({
     line_breaks: false,
 });
 
+function matchUsesKeyword(text: string) {
+    const usesKeywordPattern = /^uses[ \t]*$/;
+    const execResult = usesKeywordPattern.exec(text) as CustomRegExpExecArray;
+    return execResult
+}
+
 export const Uses = createToken({
     name: "Uses",
-    pattern: /uses\s*/,
+    pattern: matchUsesKeyword,
+    line_breaks: false,
 });
 
 function matchUseItem(text: string) {
@@ -368,12 +375,107 @@ export const Var = createToken({
 });
 
 function matchModel(text: string) {
-    const modelPattern = /^model([ ]+\S+)([ ]+\S+)([ ]+arch\=\S+)?([ ]+uid\=\d+)?\s*$/;
-    const execResult = modelPattern.exec(text) as CustomRegExpExecArray;
-    if (execResult !== null) {
-        const modelName = execResult[1];
-        const modelRepoValue = execResult[2];
-        let modelArch = '';
+    // model model_name repo_name [arch=linux-x86] [uid=41]
+    let modelPattern = /^model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=|external=)(\S+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*$/;
+    let execResult = modelPattern.exec(text) as CustomRegExpExecArray;
+
+    let modelName = '';
+    let modelRepoValue = ''
+    let modelArch = '';
+    let modelUid = '';
+    let modelNameStart : number = 0;
+    let modelNameEnd : number = 0;
+    let modelRepoValueStart : number = 0;
+    let modelRepoValueEnd : number = 0;
+    let modelArchValueStart = null;
+    let modelArchValueEnd = null;
+    let modelUidValueStart = null;
+    let modelUidValueEnd = null;
+    let external = 'false';
+    let externalValueStart = null;
+    let externalValueEnd = null;
+    if (execResult == null) {
+        if (text.includes('external=')){
+            // model model_name external=true [arch=linux-x86] [uid=41]
+            modelPattern = /^model[ ]+(?!arch=|uid=|external=)(\S+)(?!arch=|uid=)([ ]+external=\w+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*$/
+            execResult = modelPattern.exec(text) as CustomRegExpExecArray;
+            if (execResult != null) {
+                modelName = execResult[1];
+                modelRepoValue = '';
+                external = execResult[2];
+                modelArch = '';
+                if (execResult[3] !== undefined) {
+                    modelArch = execResult[3];
+                } else if (parsedStackArch !== '') {
+                    modelArch = parsedStackArch;
+                } else {
+                    modelArch = defaultArch;
+                }
+                modelUid = '';
+                if (execResult[4] !== undefined) {
+                    modelUid = execResult[4];
+                }
+                modelNameStart = execResult.index + 'model'.length + 1;
+                modelNameEnd = modelNameStart + modelName.length;
+                externalValueStart = execResult.index + 'model'.length + 1 + modelName.length + 1;
+                externalValueEnd = externalValueStart + modelArch.length;
+                modelArchValueStart = null;
+                modelArchValueEnd = null;
+                if (modelArch !== '') {
+                    modelArchValueStart = execResult.index + 'model'.length + 1 + modelName.length + modelArch.length + 1;
+                    modelArchValueEnd = modelArchValueStart + modelArch.length;
+                }
+                modelUidValueStart = null;
+                modelUidValueEnd = null;
+                if (modelUid !== '') {
+                    modelUidValueStart = execResult.index + 'model'.length + 1 + modelName.length + modelArch.length + modelArch.length + 1;
+                    modelUidValueEnd = modelUidValueStart + modelUid.length;
+                }
+            } else {
+                // model model_name repo_name external=true [arch=linux-x86] [uid=41]
+                modelPattern = /^model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=)(\S+)([ ]+external=\w+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*$/
+                execResult = modelPattern.exec(text) as CustomRegExpExecArray;
+                if (execResult != null) {
+                    modelName = execResult[1];
+                    modelRepoValue = execResult[2];
+                    external = execResult[3]
+                    modelArch = '';
+                    if (execResult[4] !== undefined) {
+                        modelArch = execResult[4];
+                    } else if (parsedStackArch !== '') {
+                        modelArch = parsedStackArch;
+                    } else {
+                        modelArch = defaultArch;
+                    }
+                    modelUid = '';
+                    if (execResult[5] !== undefined) {
+                        modelUid = execResult[5];
+                    }
+                    modelNameStart = execResult.index + 'model'.length + 1;
+                    modelNameEnd = modelNameStart + modelName.length;
+                    modelRepoValueStart = execResult.index + 'model'.length + 1 + modelName.length + 1;
+                    modelRepoValueEnd = modelRepoValueStart + modelRepoValue.length;
+                    externalValueStart = execResult.index + 'model'.length + 1 + modelName.length + modelRepoValue.length + 1;
+                    externalValueEnd = externalValueStart + external.length
+                    modelArchValueStart = null;
+                    modelArchValueEnd = null;
+                    if (modelArch !== '') {
+                        modelArchValueStart = execResult.index + 'model'.length + 1 + modelName.length + modelRepoValue.length + external.length + 1;
+                        modelArchValueEnd = modelArchValueStart + modelArch.length;
+                    }
+                    modelUidValueStart = null;
+                    modelUidValueEnd = null;
+                    if (modelUid !== '') {
+                        modelUidValueStart = execResult.index + 'model'.length + 1 + modelName.length + modelRepoValue.length + external.length + modelArch.length + 1;
+                        modelUidValueEnd = modelUidValueStart + modelUid.length;
+                    }
+                }
+            }
+        } 
+    } else {
+        modelName = execResult[1];
+        modelRepoValue = execResult[2];
+        modelArch = '';
         if (execResult[3] !== undefined) {
             modelArch = execResult[3];
         } else if (parsedStackArch !== '') {
@@ -381,27 +483,28 @@ function matchModel(text: string) {
         } else {
             modelArch = defaultArch;
         }
-        let modelUid = '';
+        modelUid = '';
         if (execResult[4] !== undefined) {
             modelUid = execResult[4];
         }
-        const modelNameStart = execResult.index + 'model'.length + 1;
-        const modelNameEnd = modelNameStart + modelName.length;
-        const modelRepoValueStart = execResult.index + 'model'.length + 1 + modelName.length + 1;
-        const modelRepoValueEnd = modelRepoValueStart + modelRepoValue.length;
-        let modelArchValueStart = null;
-        let modelArchValueEnd = null;
+        modelNameStart = execResult.index + 'model'.length + 1;
+        modelNameEnd = modelNameStart + modelName.length;
+        modelRepoValueStart = execResult.index + 'model'.length + 1 + modelName.length + 1;
+        modelRepoValueEnd = modelRepoValueStart + modelRepoValue.length;
+        modelArchValueStart = null;
+        modelArchValueEnd = null;
         if (modelArch !== '') {
             modelArchValueStart = execResult.index + 'model'.length + 1 + modelName.length + modelRepoValue.length + 1;
             modelArchValueEnd = modelArchValueStart + modelArch.length;
         }
-        let modelUidValueStart = null;
-        let modelUidValueEnd = null;
+        modelUidValueStart = null;
+        modelUidValueEnd = null;
         if (modelUid !== '') {
             modelUidValueStart = execResult.index + 'model'.length + 1 + modelName.length + modelRepoValue.length + modelArch.length + 1;
             modelUidValueEnd = modelUidValueStart + modelUid.length;
         }
-
+    }
+    if (execResult != null){
         execResult.payload = {
             model_name: {
                 value: modelName.trim(),
@@ -426,6 +529,12 @@ function matchModel(text: string) {
                 token_type: 'model_uid',
                 start_offset: modelUidValueStart,
                 end_offset: modelUidValueEnd
+            },
+            external: {
+                value: external.replace('external=', '').trim(),
+                token_type: 'external',
+                start_offset: externalValueStart,
+                end_offset: externalValueEnd
             }
         }
     }
@@ -498,7 +607,7 @@ export const Workflow = createToken({
 });
 
 function matchStack(text: string) {
-    const stackPattern = /^stack([ ]+\S+)([ ]+stacked\=(?:true|false))?([ ]+sequential\=(?:true|false))?([ ]+arch\=\S+)?\s*$/;
+    const stackPattern = /^stack[ ]+(?!stacked=|sequential=|arch=)(\S+)([ ]+stacked=(?:true|false))?([ ]+sequential=(?:true|false))?([ ]+arch=\S+)?\s*$/;
     const execResult = stackPattern.exec(text) as CustomRegExpExecArray;
     if (execResult !== null) {
         parsedStackArch = ''

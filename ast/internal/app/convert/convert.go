@@ -193,6 +193,15 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 						return nil
 					}
 				}(),
+				External: func() *bool {
+					v := value.Get("object.payload.external.value")
+					if v.Exists() == true && v.Bool() == true {
+						stacked := v.Bool()
+						return &stacked
+					} else {
+						return nil
+					}
+				}(),
 			}
 			// Channels
 			channelList := buildList(value, "children.channels", func(value gjson.Result) ast.ModelChannel {

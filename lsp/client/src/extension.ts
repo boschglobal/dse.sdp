@@ -223,8 +223,9 @@ export function activate(context: vscode.ExtensionContext) {
             mergedYamlFile = isCodespace ? mergedYamlFile : convertToMntPath(mergedYamlFile.replace(/\\/g, "/"));
             terminal?.sendText(`${graphExecPath} import ${mergedYamlFile}`);
             terminal?.sendText(`${graphExecPath} export export.cyp`);
-            const graphReportYamlPath = isCodespace ? path.join(extPath, 'bin', 'graph', 'yaml') : convertToMntPath(path.join(extPath, 'bin', 'graph', 'yaml').replace(/\\/g, "/"));
-            terminal?.sendText(`${graphExecPath} report -tag foo -tag bar ${graphReportYamlPath}`);
+            const graphReportYamlPath = isCodespace ? path.join(extPath, 'bin', 'graph', 'yaml', 'stack static_validation.yaml') : convertToMntPath(path.join(extPath, 'bin', 'graph', 'yaml').replace(/\\/g, "/"));
+            terminal?.sendText(`cp "${graphReportYamlPath}" ./`);
+            terminal?.sendText(`${graphExecPath} report -tag stack static_validation.yaml`);
         } else {
             vscode.window.showWarningMessage(`Please run the DSE build command to Generate the files required for the check command.`);
         }

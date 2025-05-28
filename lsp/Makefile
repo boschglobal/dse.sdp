@@ -14,7 +14,12 @@ build:
 	ln -sf $(SCRIPTS_DIR)/dse-mdf2csv.sh ~/.local/bin/dse-mdf2csv
 	npm install && npm install -g vsce && npm install -g http-server
 	vsce package --out ./out/bin/dse.vsix
-
+	@if [ -f "$$HOME/.bashrc" ]; then \
+		grep -qs 'export PATH="$$HOME/.local/bin:$$PATH"' "$$HOME/.bashrc" || \
+		echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> "$$HOME/.bashrc"; \
+	fi
+	@PATH="$$HOME/.local/bin:$$PATH"
+	
 EXTENSION_NAME := dse.dse-1.0.0
 .PHONY: install
 install: build
@@ -29,6 +34,7 @@ install: build
 	else \
 		echo y | code --install-extension ./out/bin/dse.vsix; \
 	fi
+	pip install matplotlib
 	@exit 0
 
 .PHONY: test

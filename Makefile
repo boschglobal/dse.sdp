@@ -6,7 +6,7 @@ export DSE_MODELC_VERSION ?= 2.1.14
 export DSE_MODELC_URL ?= https://github.com/boschglobal/dse.modelc/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
 
 
-SUBDIRS = ast graph dsl lsp 
+SUBDIRS = ast graph dsl lsp doc
 
 ###############
 ## Docker Images.
@@ -65,6 +65,10 @@ graph:
 
 .PHONY: test_e2e
 test_e2e: graph do-test_testscript-e2e
+
+.PHONY: generate
+generate:
+	$(MAKE) -C doc build
 
 
 do-test_testscript-e2e:

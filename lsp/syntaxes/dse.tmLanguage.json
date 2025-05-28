@@ -13,7 +13,7 @@
         "keywords": {
             "patterns": [{
                 "name": "keyword.control.dse",
-                "match": "(?<![\\w./-])(simulation|model|channel|uses|workflow|as|stack|network|var|arch|file|uid|envar|stepsize|endtime|user|token|stacked|sequential|path)(?![\\w./-])",
+                "match": "(?<![\\w./-])(simulation|model|channel|uses|workflow|as|stack|network|var|arch|file|uid|envar|stepsize|endtime|user|token|stacked|sequential|path|external)(?![\\w./-])",
                 "scope": "keyword.control"
             }]
         }

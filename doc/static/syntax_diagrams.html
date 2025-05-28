@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+  body {
+    background-color: hsl(30, 20%, 95%)
+  }
+</style>
+
+<link rel='stylesheet' href='https://unpkg.com/chevrotain@9.1.0/diagrams/diagrams.css'>
+<script src='https://unpkg.com/chevrotain@9.1.0/diagrams/vendor/railroad-diagrams.js'></script>
+<script src='https://unpkg.com/chevrotain@9.1.0/diagrams/src/diagrams_builder.js'></script>
+<script src='https://unpkg.com/chevrotain@9.1.0/diagrams/src/diagrams_behavior.js'></script>
+<script src='https://unpkg.com/chevrotain@9.1.0/diagrams/src/main.js'></script>
+
+<div id="diagrams" align="center"></div>
+
+<script>
+  window.serializedGrammar = [{
+      "type": "Rule",
+      "name": "DSE",
+      "orgText": "",
+      "definition": [{
+          "type": "NonTerminal",
+          "name": "simulation",
+          "label": "simulation",
+          "idx": 0
+        },
+        {
+          "type": "Option",
+          "idx": 1,
+          "definition": [{
+            "type": "RepetitionMandatory",
+            "definition": [{
+              "type": "NonTerminal",
+              "name": "channel",
+              "idx": 0
+            }]
+          }]
+        },
+        {
+          "type": "NonTerminal",
+          "name": "uses",
+          "idx": 2
+        },
+        {
+          "type": "Option",
+          "idx": 3,
+          "definition": [{
+            "type": "Alternation",
+            "idx": 0,
+            "definition": [{
+                "type": "RepetitionMandatory",
+                "idx": 1,
+                "definition": [{
+                  "type": "NonTerminal",
+                  "name": "var",
+                  "idx": 0
+                }]
+              },
+              {
+                "type": "RepetitionMandatory",
+                "idx": 2,
+                "definition": [{
+                  "type": "NonTerminal",
+                  "name": "envar",
+                  "idx": 0
+                }]
+              }
+            ]
+          }]
+        },
+        {
+          "type": "Alternation",
+          "idx": 4,
+          "definition": [{
+              "type": "RepetitionMandatory",
+              "idx": 1,
+              "definition": [{
+                "type": "NonTerminal",
+                "name": "model",
+                "idx": 0
+              }]
+            },
+            {
+              "type": "RepetitionMandatory",
+              "idx": 2,
+              "definition": [{
+                "type": "NonTerminal",
+                "name": "stack",
+                "idx": 0
+              }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "simulation",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "simulation",
+          "label": "simulation",
+          "idx": 0
+        },
+        {
+          "type": "Option",
+          "idx": 1,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "arch",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 2,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "stepsize",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 3,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "endtime",
+            "idx": 0
+          }]
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "channel",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "channel",
+          "label": "channel",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "channel name",
+          "label": "channel name",
+          "idx": 0
+        },
+        {
+          "type": "RepetitionMandatory",
+          "definition": [
+            {
+              "type": "NonTerminal",
+              "name": "network",
+              "idx": 1
+            }
+          ]
+        },
+        {
+          "type": "Option",
+          "idx": 4,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "alias",
+            "idx": 0
+          }]
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "uses",
+      "orgText": "",
+      "definition": [{
+          "type": "NonTerminal",
+          "name": "NL",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "repo",
+          "label": "repo",
+          "idx": 1
+        },
+        {
+          "type": "NonTerminal",
+          "name": "url",
+          "idx": 2
+        },
+        {
+          "type": "Option",
+          "idx": 3,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "tag",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 4,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "path",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 5,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "user",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 6,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "token",
+            "idx": 0
+          }]
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "var",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "var",
+          "label": "var",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "var_name",
+          "idx": 1
+        },
+        {
+          "type": "Option",
+          "idx": 2,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "var_uses",
+            "label": "var_uses",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "NonTerminal",
+          "name": "value",
+          "idx": 3
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "envar",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "envar",
+          "label": "envar",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "envar_name",
+          "idx": 1
+        },
+        {
+          "type": "NonTerminal",
+          "name": "value",
+          "idx": 2
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "model",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "model",
+          "label": "model",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "model_name",
+          "label": "name",
+          "idx": 1
+        },        
+        {
+          "type": "Option",
+          "idx": 2,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "repo_name",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 3,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "external",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 4,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "arch",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 5,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "uid",
+            "label": "uid",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 6,
+          "definition": [{
+            "type": "RepetitionMandatory",
+            "definition": [{
+                "type": "NonTerminal",
+                "name": "NL",
+                "idx": 0
+              },
+              {
+                "type": "NonTerminal",
+                "name": "channel",
+                "idx": 1
+              }
+            ]
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 7,
+          "definition": [{
+            "type": "RepetitionMandatory",
+            "definition": [{
+                "type": "NonTerminal",
+                "name": "NL",
+                "idx": 0
+              },
+              {
+                "type": "NonTerminal",
+                "name": "file",
+                "idx": 1
+              }
+            ]
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 8,
+          "definition": [{
+            "type": "RepetitionMandatory",
+            "definition": [{
+                "type": "NonTerminal",
+                "name": "NL",
+                "idx": 0
+              },
+              {
+                "type": "NonTerminal",
+                "name": "workflow",
+                "idx": 1
+              }
+            ]
+          }]
+        },
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "stack",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "stack",
+          "label": "stack",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "stack_name",
+          "idx": 1
+        },
+        {
+          "type": "Option",
+          "idx": 2,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "stacked",
+            "label": "stacked",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 3,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "sequential",
+            "label": "sequential",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 4,
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "arch",
+            "label": "arch",
+            "idx": 0
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 5,
+          "definition": [{
+            "type": "RepetitionMandatory",
+            "definition": [{
+              "type": "NonTerminal",
+              "name": "envar",
+              "idx": 0
+            }]
+          }]
+        },
+        {
+          "type": "RepetitionMandatory",
+          "idx": 6,
+          "definition": [{
+              "type": "NonTerminal",
+              "name": "NL",
+              "idx": 0
+            },
+            {
+              "type": "NonTerminal",
+              "name": "model",
+              "idx": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "file",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "File",
+          "label": "file",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "path",
+          "idx": 1
+        },
+        {
+          "type": "Option",
+          "idx": 2,
+          "definition": [{
+              "type": "Terminal",
+              "name": "Uses",
+              "label": "uses",
+              "idx": 0
+            },
+            {
+              "type": "Alternation",
+              "idx": 1,
+              "definition": [{
+                  "type": "NonTerminal",
+                  "name": "localpath",
+                  "idx": 0
+                },
+                {
+                  "type": "NonTerminal",
+                  "name": "uses item",
+                  "idx": 1
+                }
+              ]
+            }
+          ]
+        },
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "workflow",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "workflow",
+          "label": "workflow",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "workflow_name",
+          "label": "workflow_name",
+          "idx": 1
+        },
+        {
+          "type": "Option",
+          "idx": 2,
+          "definition": [{
+            "type": "RepetitionMandatory",
+            "definition": [{
+                "type": "NonTerminal",
+                "name": "NL",
+                "idx": 0
+              },
+              {
+                "type": "NonTerminal",
+                "name": "var",
+                "idx": 1
+              }
+            ]
+          }]
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "network",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "NL",
+        "idx": 0
+        },
+        {
+          "type": "Terminal",
+          "name": "network",
+          "label": "network",
+          "idx": 1
+        },
+        {
+          "type": "NonTerminal",
+          "name": "value_str",
+          "idx": 2
+        },
+        {
+          "type": "NonTerminal",
+          "name": "mimetype",
+          "idx": 3
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "mimetype",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "single quote",
+          "label": "single quote",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "value",
+          "label": "value",
+          "idx": 1
+        },
+        {
+          "type": "Terminal",
+          "name": "single quote",
+          "label": "single quote",
+          "idx": 2
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "bool assignments",
+      "definition": [
+        {
+          "type": "Alternation",
+          "id": 0,
+          "definition": [
+            { "type": "Terminal", "name": "sequential", "label": "sequential", "idx": 0 },
+            { "type": "Terminal", "name": "stacked", "label": "stacked", "idx": 0 },
+            { "type": "Terminal", "name": "external", "label": "external", "idx": 0 }
+          ]
+        },
+        {
+          "type": "Terminal",
+          "name": "Equals",
+          "label": "=",
+          "idx": 1
+        },
+        {
+          "type": "NonTerminal",
+          "name": "value_bool",
+          "idx": 2
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "string assignments",
+      "definition": [
+        {
+          "type": "Alternation",
+          "id": 0,
+          "definition": [
+            { "type": "Terminal", "name": "arch", "label": "arch", "idx": 0 },
+            { "type": "Terminal", "name": "path", "label": "path", "idx": 0 },
+            { "type": "Terminal", "name": "user", "label": "user", "idx": 0 },
+            { "type": "Terminal", "name": "token", "label": "token", "idx": 0 }
+          ]
+        },
+        {
+          "type": "Terminal",
+          "name": "Equals",
+          "label": "=",
+          "idx": 1
+        },
+        {
+          "type": "NonTerminal",
+          "name": "value_str",
+          "idx": 2
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "number assignments",
+      "definition": [
+        {
+          "type": "Alternation",
+          "id": 0,
+          "definition": [
+            { "type": "Terminal", "name": "stepsize", "label": "stepsize", "idx": 0 },
+            { "type": "Terminal", "name": "endtime", "label": "endtime", "idx": 0 },
+            { "type": "Terminal", "name": "uid", "label": "uid", "idx": 0 }
+          ]
+        },
+        {
+          "type": "Terminal",
+          "name": "Equals",
+          "label": "=",
+          "idx": 1
+        },
+        {
+          "type": "NonTerminal",
+          "name": "value_num",
+          "idx": 2
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "channel name",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "alias",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "path",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "localpath",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "uses item",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "model_name",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "repo_name",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "repo",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "var_name",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "envar_name",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "url",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "tag",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "workflow_name",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "stack_name",
+      "orgText": "",
+      "definition": [{
+        "type": "Terminal",
+        "name": "value_str",
+        "label": "value_str",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "var_uses",
+      "orgText": "",
+      "definition": [{
+        "type": "Terminal",
+        "name": "uses",
+        "label": "uses",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "NL",
+      "orgText": "",
+      "definition": [{
+        "type": "Terminal",
+        "name": "new line",
+        "label": "new line",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "value_str",
+      "orgText": "",
+      "definition": [{
+        "type": "Alternation",
+        "idx": 0,
+        "definition": [{
+          "type": "Terminal",
+          "name": "StringLiteral",
+          "label": "StringLiteral",
+          "idx": 0
+        }]
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "value_int",
+      "orgText": "",
+      "definition": [{
+        "type": "Alternation",
+        "idx": 0,
+        "definition": [{
+          "type": "Terminal",
+          "name": "Integer",
+          "label": "Integer",
+          "idx": 0
+        }]
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "value_num",
+      "orgText": "",
+      "definition": [{
+        "type": "Alternation",
+        "idx": 0,
+        "definition": [{
+          "type": "Terminal",
+          "name": "NumberLiteral",
+          "label": "NumberLiteral",
+          "idx": 0
+        }]
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "value_bool",
+      "orgText": "",
+      "definition": [{
+        "type": "Alternation",
+        "idx": 0,
+        "definition": [{
+            "type": "Terminal",
+            "name": "True",
+            "label": "true",
+            "idx": 0
+          },
+          {
+            "type": "Terminal",
+            "name": "False",
+            "label": "false",
+            "idx": 1
+          }
+        ]
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "value",
+      "orgText": "",
+      "definition": [{
+        "type": "Alternation",
+        "idx": 0,
+        "definition": [{
+            "type": "Terminal",
+            "name": "StringLiteral",
+            "label": "StringLiteral",
+            "idx": 0
+          },
+          {
+            "type": "Terminal",
+            "name": "NumberLiteral",
+            "label": "NumberLiteral",
+            "idx": 1
+          }
+        ]
+      }]
+    },
+    
+    
+  ];
+</script>
+
+<script>
+  var diagramsDiv = document.getElementById("diagrams");
+  main.drawDiagramsFromSerializedGrammar(serializedGrammar, diagramsDiv);
+</script>

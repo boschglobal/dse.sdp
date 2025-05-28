@@ -8,10 +8,10 @@ exec parse2ast dsl_fmu.txt ast_fmu.json
 exec ast_stats.sh ast_fmu.json
 
 stdout 'sims = 1'
-stdout 'channels = 7'
+stdout 'channels = 11'
 stdout 'networks = 1'
 stdout 'uses = 2'
-stdout 'models = 3'
+stdout 'models = 5'
 stdout 'stacks = 1'
 stdout 'vars = 5'
 stdout 'envar = 0'
@@ -74,6 +74,22 @@ stdout 'children.stacks.0.children.models.2.children.channels.1.object.image: "c
 stdout 'children.stacks.0.children.models.2.children.workflow.0.object.image: "workflow generate-network" :'
 stdout 'children.stacks.0.children.models.2.children.workflow.0.children.workflow_vars.0.object.image: "var SIGNAL network CAN_1" :'
 
+stdout 'children.stacks.0.children.models.3.type: "Model" :'
+stdout 'children.stacks.0.children.models.3.object.image: "model gateway external=true arch=linux-x86 uid=43" :'
+stdout 'children.stacks.0.children.models.3.object.payload.model_name.value: "gateway" :'
+stdout 'children.stacks.0.children.models.3.object.payload.model_repo_name.value: "" :'
+stdout 'children.stacks.0.children.models.3.object.payload.model_arch.value: "linux-x86" :'
+stdout 'children.stacks.0.children.models.3.object.payload.model_uid.value: "43" :'
+stdout 'children.stacks.0.children.models.3.object.payload.external.value: "true" :'
+
+stdout 'children.stacks.0.children.models.4.object.image: "model gw gateway external=true arch=linux-x86 uid=44" :'
+stdout 'children.stacks.0.children.models.4.object.payload.model_name.value: "gw" :'
+stdout 'children.stacks.0.children.models.4.object.payload.model_repo_name.value: "gateway" :'
+stdout 'children.stacks.0.children.models.4.object.payload.model_arch.value: "linux-x86" :'
+stdout 'children.stacks.0.children.models.4.object.payload.model_uid.value: "44" :'
+stdout 'children.stacks.0.children.models.4.object.payload.external.value: "true" :'
+stdout 'children.stacks.0.children.models.4.children.channels.1.object.payload.channel_name.value: "network" :'
+
 -- dsl_fmu.txt --
 simulation arch=linux-amd64
 channel physical
@@ -102,3 +118,11 @@ channel physical scalar_vector
 channel network_ch network_vector
 workflow generate-network
 var SIGNAL network CAN_1
+
+model gateway external=true arch=linux-x86 uid=43
+channel physical
+channel network
+
+model gw gateway external=true arch=linux-x86 uid=44
+channel physical
+channel network

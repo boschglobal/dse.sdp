@@ -169,6 +169,7 @@ func generateModelRuntime(model ast.Model) *kind.ModelInstanceRuntime {
 		Paths: &[]string{
 			fmt.Sprintf("model/%s/data", model.Name),
 		},
+		External: model.External,
 	}
 	var i386 bool = true
 	if model.Arch != nil && *model.Arch == "linux-i386" {

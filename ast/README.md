@@ -36,11 +36,11 @@ $ go clean -modcache
 $ go mod tidy
 
 # Go get (adjust version as required).
-$ go get -x github.com/boschglobal/dse.schemas/code/go/dse@v1.2.11
+$ go get -x github.com/boschglobal/dse.schemas/code/go/dse@v1.2.24
 $ go get github.boschdevcloud.com/fsil/fsil.go/command
 ```
 
-> Note: Release Tags for modules in DSE Schemas are according to the schema `code/go/dse/v1.2.11`.
+> Note: Release Tags for modules in DSE Schemas are according to the schema `code/go/dse/v1.2.24`.
 
 > Note: Release Tags for modules in FSIL Go are according to the schema `command/v1.0.5`.
 

@@ -134,7 +134,7 @@
         "copy-parser-file": "cp -f ../dsl/lib/parser/parsing.ts ./client/src/grammar/lib/parser/",
         "copy-ast-exec-file": "cp ../ast/bin/ast ./bin/",
         "copy-graph-exec-file": "cp ../graph/bin/graph ./bin/graph/",
-        "copy-graph-report-yaml-file": "cp ../graph/cmd/graph/testdata/reports/yaml/report.yaml ./bin/graph/yaml",
+        "copy-graph-report-yaml-file": "cp ../graph/cmd/graph/reports/static_validation.yaml ./bin/graph/yaml",
         "vscode:prepublish": "npm run create-grammer-folder &&  npm run copy-lexer-file &&  npm run copy-parser-file && npm run compile && npm run copy-ast-exec-file && npm run copy-graph-exec-file && npm run copy-graph-report-yaml-file",
         "compile": "tsc -b",
         "watch": "tsc -b -w",
