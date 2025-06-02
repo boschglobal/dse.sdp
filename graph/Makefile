@@ -7,6 +7,7 @@ PACKAGE          := $(shell basename $(shell pwd))
 SRC           	 := $(shell find . -type f -name '*.go' -print)
 BIN_DIR       	 := $(CURDIR)/bin
 CLI_TOOLS    	 ?= $(BIN_DIR)/$(PACKAGE)
+DOCKER_TOOLS	 = report
 GOFLAGS       	 :=
 GOPRIVATE     	 ?= github.com/boschglobal
 
@@ -30,9 +31,9 @@ install: build
 
 .PHONY: docker
 docker:
-	for d in $(PACKAGE) ;\
+	for d in $(DOCKER_TOOLS) ;\
 	do \
-		docker build -f build/package/Dockerfile \
+		docker build -f build/package/$$d/Dockerfile \
 				--tag dse-$$d:test . ;\
 	done;
 

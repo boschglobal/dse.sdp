@@ -9,6 +9,11 @@ function dse-simer-host() {
 }
 export -f dse-simer-host
 
+function dse-report() {
+    ( if test -d "$1"; then cd "$1" && shift; fi && docker run -t --rm -v $(pwd):/sim $DSE_REPORT_IMAGE "$@"; )
+}
+export -f dse-report
+
 alias dse-env='env | grep ^DSE | sort'
 alias simer=dse-simer
 alias h='history'

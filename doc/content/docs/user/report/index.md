@@ -90,9 +90,8 @@ $ make docker
 # Define a shell function for the report command.
 $ dse-report() {
   docker run -t --rm \
-    -v memgraph:/var/lib/memgraph \
     -v "$(pwd)":/sim \
-    dse-graph:test "$@"
+    dse-report:test "$@"
 }
 
 # Run the reports.

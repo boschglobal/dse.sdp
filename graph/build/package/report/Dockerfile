@@ -81,7 +81,7 @@ EXPOSE 7687
 # ==========================
 # Run docker with --volume parameter to map the simulation folder into /sim.
 WORKDIR /sim
-COPY build/package/entrypoint.sh /entrypoint.sh
+COPY build/package/report/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Switch to the non-root user
