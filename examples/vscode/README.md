@@ -33,6 +33,7 @@ $ cd examples/vscode
 
 # Build the simulation.
 $ make build
+$ make report
 
 # Run the simulation.
 $ make run

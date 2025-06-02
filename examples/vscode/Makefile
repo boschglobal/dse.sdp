@@ -10,10 +10,18 @@ build:
 	dse-ast generate -input openloop.yaml -output .
 	task -y -v
 
+.PHONY: report
+report:
+	docker run -it --rm \
+		-v $$(pwd)/out/sim:/sim \
+		$(DSE_REPORT_IMAGE) /sim
+
 .PHONY: run
 run:
-	dse-simer out/sim
-	post_run.sh
+	docker run -it --rm \
+		-v $$(pwd)/out/sim:/sim \
+		$(DSE_SIMER_IMAGE)
+	./post_run.sh
 
 .PHONY: clean
 clean:

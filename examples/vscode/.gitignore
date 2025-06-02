@@ -2,5 +2,6 @@ Taskfile.yml
 simulation.yaml
 openloop.yaml
 openloop.ast.json
+openloop.json
 out/
 .task/

@@ -13,18 +13,25 @@ Simulation Development Platform for the Dynamic Simulation Environment (DSE) Cor
 ### Project Structure
 
 ```text
-L- .devcontainer  Devcontainer used by Codespaces.
-  L- Dockerfile   Dockerfile used by Codespaces.
-L- ast            AST tools.
-L- doc            Additional documentation resources.
-  L- html2img     containerised tool to convert html to image.
-L- dsl            DSL parser (usingChevrotain).
-L- lsp            VS Code Language Server.
-L- examples       Examples for learning about the DSE DSP.
-  L- openloop     Open Loop simulation, using FMU based Linear Equation model.
-  L- notebook     Notebook base simulation example, running the Open Loop simulation.
-  L- vscode       VS Code Integration: DSE Support, Preview, Commands and Measurement.
-L- licenses       Third Party Licenses.
+.devcontainer/  <-- devcontainer definition
+ast             <-- AST tools
+doc             <-- documentation
+└── html2img/   <-- containerized tool to convert html to image
+dsl             <-- DSL parser (using Chevrotain)
+examples
+└── graph       <-- graph examples (for Report tool)
+└── openloop    <-- Open Loop simulation using FMU based Linear Equation model
+└── notebook    <-- Jupyter base simulation example
+└── vscode      <-- VS Code integration examples
+graph           
+└── build/package
+    └── report/     <-- Report tool
+licenses            <-- Third Party Licenses
+lsp                 <-- VS Code Language Server
+tests
+└── testscript
+    └── e2e/        <-- repo level end-to-end tests
+Makefile            <-- repo level Makefile
 ```
 
 
@@ -47,19 +54,46 @@ Start a Codespace, then type the following commands in the terminal window.
 ```bash
 # Check your environment.
 $ dse-env
+DSE_MODELC_VERSION=2.1.30
+DSE_REPORT_IMAGE=ghcr.io/boschglobal/dse-report:latest
 DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-DSE_MODELC_VERSION=2.1.14
 
 # Setup the examples (will download ModelC examples).
 $ make examples
 $ ls out/examples/modelc/
 benchmark/  binary/  extended/  gateway/  gdb/  minimal/  ncodec/  runtime/  simer/  transform/
 
+# Validate a simulation using the Report tool.
+$ dse-report out/examples/modelc/minimal
+...
+=== Summary ===================================================================
+[PASS] Duplicate Writes Check
+[PASS] ModelInstance Name Check
+[PASS] Model UID Check
+[PASS] Channel 'expectedModelCount'
+[PASS] Count 'ModelInst' in AST and SIM
+Ran 5 Reports | Passed: 5 | Failed: 0
+
 # Run a simulation using Simer.
 $ dse-simer out/examples/modelc/minimal
+...
+2) Run the Simulation ...
+2) Controller exit ...
+
+
+# Build and run a simulation using the DSL.
+$ cd examples/vscode
+$ make build
+...
+$ make report
+...
+$ make run
+...
 ```
 
 > Hint: Find more information about the Simer [command options here](https://boschglobal.github.io/dse.doc/docs/user/simer/#options).
+
+> Hint: Find more information about the Report [command options here](https://boschglobal.github.io/dse.doc/docs/user/report/#options).
 
 
 ### Connect a Remote Gateway Model to a Simulation running in Cloudspace

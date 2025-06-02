@@ -6,7 +6,8 @@
     "extensions": [
         "streetsidesoftware.code-spell-checker",
         "janisdd.vscode-edit-csv",
-        "rafaelarvelo.vsplotter"
+        "rafaelarvelo.vsplotter",
+        "ms-azuretools.vscode-docker"
     ],
     "features": {},
     "runArgs": [
