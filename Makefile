@@ -89,3 +89,19 @@ do-test_testscript-e2e:
 			-e https_proxy=$(https_proxy) \
 			$$t ;\
 	done;
+
+.PHONY: super-linter
+super-linter:
+	docker run --rm --volume $$(pwd):/tmp/lint \
+		--env RUN_LOCAL=true \
+		--env DEFAULT_BRANCH=main \
+		--env IGNORE_GITIGNORED_FILES=true \
+		--env FILTER_REGEX_EXCLUDE="(doc/content/.*|(^|/)vendor/)" \
+		--env VALIDATE_CPP=true \
+		--env VALIDATE_DOCKERFILE=true \
+		--env VALIDATE_GO=true \
+		--env VALIDATE_MARKDOWN=true \
+		--env VALIDATE_TYPESCRIPT_ES=true \
+		--env VALIDATE_TYPESCRIPT_PRETTIER=true \
+		--env VALIDATE_YAML=true \
+		ghcr.io/super-linter/super-linter:slim-v6
