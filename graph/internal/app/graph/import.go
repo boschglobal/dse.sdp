@@ -6,12 +6,13 @@ import (
 	"path/filepath"
 	"strings"
 	"flag"
-	"log"
+	"fmt"
 	"log/slog"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
 	"github.boschdevcloud.com/fsil/fsil.go/command"
+	"github.boschdevcloud.com/fsil/fsil.go/command/log"
 
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/file/kind"
@@ -19,6 +20,7 @@ import (
 
 type GraphImportCommand struct {
 	command.Command
+	logLevel  int
 	optImport string
 	optDb     string
 }
@@ -30,6 +32,7 @@ func NewGraphImportCommand(name string) *GraphImportCommand {
 			FlagSet: flag.NewFlagSet(name, flag.ExitOnError),
 		},
 	}
+	c.FlagSet().IntVar(&c.logLevel, "log", 4, "Loglevel")
 	c.FlagSet().StringVar(&c.optImport, "import", "", "import files to the database")
 	c.FlagSet().StringVar(&c.optDb, "db", "bolt://localhost:7687", "database connection string")
 	return c
@@ -49,6 +52,7 @@ func (c *GraphImportCommand) Parse(args []string) error {
 }
 
 func (c *GraphImportCommand) Run() error {
+	slog.SetDefault(log.NewLogger(c.logLevel))
 	slog.Info("Connect to graph", "db", c.optDb)
 	ctx := context.Background()
 	driver, err := graph.Driver(c.optDb)
@@ -68,7 +72,7 @@ func (c *GraphImportCommand) Run() error {
 
 	args := c.FlagSet().Args() // Get positional arguments
 	if len(args) == 0 {
-		slog.Info("Usage: graph import <yaml-file>")
+		slog.Error("Usage: graph import <yaml-file>")
 		return nil
 	}
 	file := args[0]
@@ -101,7 +105,7 @@ func (c *GraphImportCommand) matchNode(ctx context.Context, session neo4j.Sessio
 
 func (c *GraphImportCommand) importFiles(ctx context.Context, path string, session neo4j.SessionWithContext) {
 	if path == "" {
-		slog.Info("Usage: import <yaml-path-or-file>")
+		slog.Error("Usage: import <yaml-path-or-file>")
 		return
 	}
 
@@ -117,12 +121,12 @@ func (c *GraphImportCommand) importFiles(ctx context.Context, path string, sessi
 		return nil
 	})
 	if err != nil {
-		slog.Info("Error walking the path", "error", err)
+		slog.Error("Error walking the path", "error", err)
 		return
 	}
 
 	if len(yamlFiles) == 0 {
-		slog.Info("No YAML files found in path", "path", path)
+		slog.Error("No YAML files found in path", "path", path)
 		return
 	}
 
@@ -199,7 +203,7 @@ func (c *GraphImportCommand) createRelationships(ctx context.Context, session ne
 	// Get all model instance names.
 	result, err := session.Run(ctx, `MATCH (mi:ModelInst) RETURN mi.name AS mi_name`, nil)
 	if err != nil {
-		log.Printf("Failed to get model instance names: %v", err)
+		slog.Error(fmt.Sprintf("Failed to get model instance names: %v", err))
 	}
 
 	for result.Next(ctx) {
@@ -253,12 +257,12 @@ func (c *GraphImportCommand) createRelationships(ctx context.Context, session ne
 								}
 								_, err := session.Run(ctx, relationshipQuery, params)
 								if err != nil {
-									log.Printf("Failed to create relationship: %v", err)
+									slog.Info(fmt.Sprintf("Failed to create relationship: %v", err))
 								} else {
-									log.Printf("Relationship created: Channel(ID: %d) -> Represents -> SignalGroup(ID: %d)", channelID, signalGroupID)
+									slog.Info(fmt.Sprintf("Relationship created: Channel(ID: %d) -> Represents -> SignalGroup(ID: %d)", channelID, signalGroupID))
 								}
 							} else {
-								log.Printf("Skipping channel ID %d (labelCount: %d, selectorCount: %d)", channelID, labelCount, selectorCount)
+								slog.Info(fmt.Sprintf("Skipping channel ID %d (labelCount: %d, selectorCount: %d)", channelID, labelCount, selectorCount))
 							}
 						}
 					}

@@ -1,16 +1,9 @@
 # Ensure that graph is empty.
 exec graph drop --all
 
-# import command
-exec graph import $WORK/model_fmu1.yaml
-exec graph import $WORK/model_fmu2.yaml
-exec graph import $WORK/FMU1_signalgroup.yaml
-exec graph import $WORK/FMU2_signalgroup.yaml
-exec graph import $WORK/model__input.yaml
-exec graph import $WORK/input_signalgroup.yaml
-exec graph import $WORK/stack_fmu.yaml
+exec sh -c 'mkdir -p "$WORK/imports" && cp "$WORK"/*.yaml "$WORK/imports/"'
 
-! exec graph report duplicate_writes.yaml
+! exec graph report -tag write -reports=duplicate_writes.yaml $WORK/imports
 
 
 -- duplicate_writes.yaml --

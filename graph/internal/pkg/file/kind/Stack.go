@@ -2,6 +2,7 @@ package kind
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
@@ -49,10 +50,10 @@ func (s *StackSpec) MergeGraph(ctx context.Context, session neo4j.SessionWithCon
 			} else if mi.Name != "simbus" {
 				match_props := map[string]string{
 					"name": mi.Name,
+					"uid": strconv.Itoa(mi.Uid),
 				}
 				node_props := map[string]any{
 					"annotations": mi.Annotations,
-					"uid":         mi.Uid,
 					"model":       mi.Model.Name,
 				}
 				model_instance_id, _ := graph.NodeExt(ctx, session, []string{"Sim:ModelInst"}, match_props, node_props)

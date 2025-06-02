@@ -7,14 +7,16 @@ import (
 	"strings"
 
 	"github.boschdevcloud.com/fsil/fsil.go/command"
+	"github.boschdevcloud.com/fsil/fsil.go/command/log"
 
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type GraphDropCommand struct {
 	command.Command
-	optDb   string
-	optAll  bool
+	logLevel int
+	optDb    string
+	optAll   bool
 }
 
 func NewGraphDropCommand(name string) *GraphDropCommand {
@@ -24,6 +26,7 @@ func NewGraphDropCommand(name string) *GraphDropCommand {
 			FlagSet: flag.NewFlagSet(name, flag.ExitOnError),
 		},
 	}
+	c.FlagSet().IntVar(&c.logLevel, "log", 4, "Loglevel")
 	c.FlagSet().BoolVar(&c.optAll, "all", false, "drop nodes based on label from the database (Usage: drop ast, drop sim, drop --all)")
 	c.FlagSet().StringVar(&c.optDb, "db", "bolt://localhost:7687", "database connection string")
 	return c
@@ -43,6 +46,7 @@ func (c *GraphDropCommand) Parse(args []string) error {
 }
 
 func (c *GraphDropCommand) Run() error {
+	slog.SetDefault(log.NewLogger(c.logLevel))
 	slog.Info("Connect to graph", "db", c.optDb)
 	ctx := context.Background()
 	driver, err := graph.Driver(c.optDb)
@@ -69,11 +73,11 @@ func (c *GraphDropCommand) Run() error {
 		if option == "ast" || option == "sim" {
 			c.runDrop(ctx, option)
 		} else {
-			slog.Info("Invalid usage. Use 'graph drop ast', 'graph drop sim', or 'graph drop --all'")
+			slog.Error("Invalid usage. Use 'graph drop ast', 'graph drop sim', or 'graph drop --all'")
 			return nil
 		}
 	} else {
-		slog.Info("Invalid usage. Use 'graph drop ast', 'graph drop sim', or 'graph drop --all'")
+		slog.Error("Invalid usage. Use 'graph drop ast', 'graph drop sim', or 'graph drop --all'")
 		return nil
 	}
 

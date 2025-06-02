@@ -1,12 +1,12 @@
 # Test Fail scenario
 exec graph drop --all
 exec graph import $WORK/expectedModelCount_Mismatch.yaml
-! exec graph report static_validation.yaml
+! exec graph report -tag stack -reports=static_validation.yaml expectedModelCount_Mismatch.yaml
 
 # Test Pass scenario
 exec graph drop --all
 exec graph import $WORK/expectedModelCount_Match.yaml
-exec graph report static_validation.yaml
+exec graph report -tag stack -reports=static_validation.yaml expectedModelCount_Match.yaml
 
 -- static_validation.yaml --
 name: Channel 'expectedModelCount'
@@ -20,8 +20,8 @@ queries:
       MATCH (st)-[:Has]->(simbus:Simbus)-[:Has]->(sc:SimbusChannel)
       WHERE sc.name = channelName
       RETURN channelName,
-            sc.expectedModelCount AS expectedCount, 
-            actualCount, 
+            sc.expectedModelCount AS expectedCount,
+            actualCount,
             CASE WHEN sc.expectedModelCount = actualCount THEN "PASS" ELSE "FAIL" END AS result
   - name: Model to Channel Mapping
     expect_rows: true
@@ -227,4 +227,3 @@ spec:
           channels:
             - name: physical
               alias: scalar
-

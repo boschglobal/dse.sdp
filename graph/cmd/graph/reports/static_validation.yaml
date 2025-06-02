@@ -4,9 +4,9 @@ queries:
     expect_rows: true
     evaluate: true
     query: |
-      MATCH (st:Stack)-[:Has]->(mi:ModelInst)-[:Alias]->(ch:Channel)
-      WITH ch.name AS channelName, COUNT(DISTINCT mi) AS actualCount, st
-      MATCH (st)-[:Has]->(simbus:Simbus)-[:Has]->(sc:SimbusChannel)
+      MATCH (mi:ModelInst)-[:Alias]->(ch:Channel)
+      WITH ch.name AS channelName, COUNT(DISTINCT mi) AS actualCount
+      MATCH (:Stack)-[:Has]->(:Simbus)-[:Has]->(sc:SimbusChannel)
       WHERE sc.name = channelName
       RETURN channelName,
             sc.expectedModelCount AS expectedCount,

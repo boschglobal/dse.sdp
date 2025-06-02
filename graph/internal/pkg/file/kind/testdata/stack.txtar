@@ -5,7 +5,7 @@ import $WORK/stack.yaml
 
 # Run the FSIL graphq command to match query and optional match count from imported file.
 graphq $WORK/match_queryname.cyp 1 '{"file_name":"stack.yaml", "stack_name":"stack"}'
-graphq $WORK/match_querymodels.cyp 1 '{"mi1_name":"stub_inst", "mi1_uid":42}'
+graphq $WORK/match_querymodels.cyp 1 '{"mi1_name":"stub_inst", "mi1_uid":"42"}'
 graphq $WORK/match_querychannel.cyp 1 '{"ch_name":"signal", "alias_name":"signal_channel"}'
 graphq $WORK/match_querychannel.cyp 1 '{"ch_name":"network", "alias_name":"network_channel"}'
 graphq $WORK/match_queryselector.cyp 1 '{"selector_name":"channel", "selector_value":"signal_vector", "identifies_alias":"signal_channel"}'

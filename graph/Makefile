@@ -28,6 +28,14 @@ install: build
 	mkdir -p ~/.local/share/dse-$(PACKAGE)
 	ln -sf $(CURDIR)/cmd/$(PACKAGE)/reports ~/.local/share/dse-$(PACKAGE)/
 
+.PHONY: docker
+docker:
+	for d in $(PACKAGE) ;\
+	do \
+		docker build -f build/package/Dockerfile \
+				--tag dse-$$d:test . ;\
+	done;
+
 .PHONY: graph
 graph:
 ifeq ($(shell docker container list -q -f name=memgraph 2> /dev/null),)

@@ -59,6 +59,10 @@ cleanall: clean
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d cleanall ); done
 	rm -rf build
 
+.PHONY: docker
+docker:
+	$(MAKE) -C graph docker
+
 .PHONY: graph
 graph:
 	$(MAKE) -C graph graph

@@ -5,6 +5,8 @@ env HOME=$WORK
 
 env STATIC_VALIDATION=examples/graph/static_validation
 env DUPLICATE_WRITES=examples/graph/duplicate_writes
+env STACK=examples/graph/stack
+env REPORTS=graph/cmd/graph/reports
 
 
 exec dse-graph ping
@@ -14,26 +16,39 @@ exec dse-graph ping
 exec dse-graph drop --all
 exec dse-graph import $ENTRYDIR/$STATIC_VALIDATION/sim_good
 exec dse-graph export export_static_validation.cyp
-exec dse-graph report -tag stack static_validation.yaml
+exec dse-graph report -tag stack -reports=$ENTRYDIR/$REPORTS/static_validation.yaml $ENTRYDIR/$STATIC_VALIDATION/sim_good
 
 
 # Static Report with Error.
 exec dse-graph drop --all
 exec dse-graph import $ENTRYDIR/$STATIC_VALIDATION/sim_with_error
 exec dse-graph export export_static_validation.cyp
-! exec dse-graph report -tag stack static_validation.yaml
+! exec dse-graph report --reports=$ENTRYDIR/$REPORTS/static_validation.yaml $ENTRYDIR/$STATIC_VALIDATION/sim_with_error
 
 
 # Duplicate Writes Report.
 exec dse-graph drop --all
 exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_good
 exec dse-graph export export_duplicate_writes.cyp
-exec dse-graph report -tag signal duplicate_writes.yaml
+exec dse-graph report -tag signal -reports=$ENTRYDIR/$REPORTS/duplicate_writes.yaml $ENTRYDIR/$DUPLICATE_WRITES/sim_good
 
 
 # Duplicate Writes Report with error.
 exec dse-graph drop --all
 exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_with_error
 exec dse-graph export export_duplicate_writes.cyp
-! exec dse-graph report -tag signal duplicate_writes.yaml
+! exec dse-graph report --reports=$ENTRYDIR/$REPORTS/duplicate_writes.yaml $ENTRYDIR/$DUPLICATE_WRITES/sim_with_error
 
+
+# Stack Report.
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_good
+exec dse-graph export export_duplicate_writes.cyp
+exec dse-graph report -tag signal -reports=$ENTRYDIR/$REPORTS/stack.yaml $ENTRYDIR/$STACK/sim_good
+
+
+# Stack Report with error.
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_with_error
+exec dse-graph export export_duplicate_writes.cyp
+! exec dse-graph report --reports=$ENTRYDIR/$REPORTS/stack.yaml $ENTRYDIR/$STACK/sim_with_error

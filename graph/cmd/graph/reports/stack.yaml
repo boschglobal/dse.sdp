@@ -1,0 +1,27 @@
+name: ModelInstance Name Check
+queries:
+  - name: Unique ModelInstance Name
+    expect_rows: false
+    query: |
+      MATCH (:Stack)-[:Has]->(mi:ModelInst)
+      WHERE mi.name IS NOT NULL
+      WITH mi.name AS name, count(*) AS count
+      WHERE count > 1
+      RETURN name, count
+
+tags:
+    - stack
+---
+name: Model UID Check
+queries:
+  - name: Unique Non-zero Model UID
+    expect_rows: false
+    query: |
+      MATCH (:Stack)-[:Has]->(mi:ModelInst)
+      WHERE mi.uid IS NOT NULL
+      WITH mi.uid AS uid, collect(mi.name) AS names, count(*) AS count
+      WHERE uid = "0" OR count > 1
+      RETURN uid, count, names
+
+tags:
+    - stack
