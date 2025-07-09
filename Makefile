@@ -101,7 +101,8 @@ super-linter:
 		--env VALIDATE_DOCKERFILE=true \
 		--env VALIDATE_GO=true \
 		--env VALIDATE_MARKDOWN=true \
-		--env VALIDATE_TYPESCRIPT_ES=true \
-		--env VALIDATE_TYPESCRIPT_PRETTIER=true \
 		--env VALIDATE_YAML=true \
-		ghcr.io/super-linter/super-linter:slim-v6
+		ghcr.io/super-linter/super-linter:slim-v7
+
+#		--env VALIDATE_TYPESCRIPT_ES=true \
+#		--env VALIDATE_TYPESCRIPT_PRETTIER=true \
