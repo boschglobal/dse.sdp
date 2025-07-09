@@ -119,13 +119,13 @@ tasks:
     run: when_changed
     label: dse:fmu-fetch-extract:{{.URL}}-{{.FMU_ZIPFILE}}-{{.FMU_DIR}}
     vars:
-        # Required variables.
-        URL: '{{.URL}}'
-        FMU_ZIPFILE: '{{.FMU_ZIPFILE}}'
-        FMU_DIR: '{{.FMU_DIR}}'
-        # Intermediate (calculated) variables.
-        DOWNLOAD_FILE: 'downloads/{{base .URL}}'
-        FMU_FILE: 'fmus/{{base .FMU_ZIPFILE}}'
+      # Required variables.
+      URL: '{{.URL}}'
+      FMU_ZIPFILE: '{{.FMU_ZIPFILE}}'
+      FMU_DIR: '{{.FMU_DIR}}'
+      # Intermediate (calculated) variables.
+      DOWNLOAD_FILE: 'downloads/{{base .URL}}'
+      FMU_FILE: 'fmus/{{base .FMU_ZIPFILE}}'
     deps:
       - task: download-file
         vars:
@@ -153,8 +153,8 @@ tasks:
     run: when_changed
     label: dse:unzip-file:{{.ZIPFILE}}-{{.FILEPATH}}
     vars:
-      ZIP : '{{.ZIP}}'
-      ZIPFILE : '{{.ZIPFILE}}'
+      ZIP: '{{.ZIP}}'
+      ZIPFILE: '{{.ZIPFILE}}'
       FILE: '{{.FILE}}'
     cmds:
       - echo "UNZIP FILE {{.ZIP}}/{{.ZIPFILE}} -> {{.FILE}}"
@@ -171,8 +171,8 @@ tasks:
     run: when_changed
     label: dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}
     vars:
-      ZIP : '{{.ZIP}}'
-      ZIPDIR : '{{if .ZIPDIR}}"{{.ZIPDIR}}/*"{{else}}{{end}}'
+      ZIP: '{{.ZIP}}'
+      ZIPDIR: '{{if .ZIPDIR}}"{{.ZIPDIR}}/*"{{else}}{{end}}'
       DIR: '{{.DIR}}'
       JUNKDIR: '{{if .ZIPDIR}}-j{{else}}{{end}}'
     cmds:
@@ -189,9 +189,9 @@ tasks:
     run: when_changed
     label: dse:download-file:{{.URL}}-{{.FILE}}
     vars:
-        URL: '{{.URL}}'
-        FILE: '{{.FILE}}'
-        AUTH: '{{if all .USER .TOKEN}}-u {{.USER}}:{{.TOKEN}}{{else}}{{end}}'
+      URL: '{{.URL}}'
+      FILE: '{{.FILE}}'
+      AUTH: '{{if all .USER .TOKEN}}-u {{.USER}}:{{.TOKEN}}{{else}}{{end}}'
     cmds:
       - echo "CURL {{.URL}} -> {{.FILE}}"
       - mkdir -p $(dirname {{.FILE}})

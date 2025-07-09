@@ -124,4 +124,3 @@ contribution was provided directly to me by some other person who certified
 holder(s) to the [NOTICE](NOTICE) file as part of your contribution.
 
 [DCO]: https://developercertificate.org/
-[NumPyDoc]: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy

@@ -30,29 +30,26 @@
 
 #include <string.h>
 
-#include "brake.h"
+#include "brake/brake.h"
 
 static inline uint8_t pack_left_shift_u8(
     uint8_t value,
     uint16_t shift,
-    uint8_t mask)
-{
+    uint8_t mask) {
     return (uint8_t)((uint8_t)(value << shift) & mask);
 }
 
 static inline uint8_t unpack_right_shift_u8(
     uint8_t value,
     uint16_t shift,
-    uint8_t mask)
-{
+    uint8_t mask) {
     return (uint8_t)((uint8_t)(value & mask) >> shift);
 }
 
 int brake_pedal_status_pack(
     uint8_t *dst_p,
     const struct brake_pedal_status_t *src_p,
-    size_t size)
-{
+    size_t size) {
     uint8_t brake_pedal_pos;
     uint8_t brake_pedal_pos_ac;
 
@@ -73,8 +70,7 @@ int brake_pedal_status_pack(
 int brake_pedal_status_unpack(
     struct brake_pedal_status_t *dst_p,
     const uint8_t *src_p,
-    size_t size)
-{
+    size_t size) {
     uint8_t brake_pedal_pos;
     uint8_t brake_pedal_pos_ac;
 
@@ -90,8 +86,7 @@ int brake_pedal_status_unpack(
     return (0);
 }
 
-int brake_pedal_status_init(struct brake_pedal_status_t *msg_p)
-{
+int brake_pedal_status_init(struct brake_pedal_status_t *msg_p) {
     if (msg_p == NULL) return -1;
 
     memset(msg_p, 0, sizeof(struct brake_pedal_status_t));
@@ -99,41 +94,34 @@ int brake_pedal_status_init(struct brake_pedal_status_t *msg_p)
     return 0;
 }
 
-int8_t brake_pedal_status_brake_pedal_pos_encode(double value)
-{
+int8_t brake_pedal_status_brake_pedal_pos_encode(double value) {
     return (int8_t)(value / 1000.0);
 }
 
-double brake_pedal_status_brake_pedal_pos_decode(int8_t value)
-{
-    return ((double)value * 1000.0);
+double brake_pedal_status_brake_pedal_pos_decode(int8_t value) {
+    return (static_cast<double>(value) * 1000.0);
 }
 
-bool brake_pedal_status_brake_pedal_pos_is_in_range(int8_t value)
-{
+bool brake_pedal_status_brake_pedal_pos_is_in_range(int8_t value) {
     return ((value >= 0) && (value <= 0));
 }
 
-int8_t brake_pedal_status_brake_pedal_pos_ac_encode(double value)
-{
+int8_t brake_pedal_status_brake_pedal_pos_ac_encode(double value) {
     return (int8_t)(value);
 }
 
-double brake_pedal_status_brake_pedal_pos_ac_decode(int8_t value)
-{
-    return ((double)value);
+double brake_pedal_status_brake_pedal_pos_ac_decode(int8_t value) {
+    return (static_cast<double>(value));
 }
 
-bool brake_pedal_status_brake_pedal_pos_ac_is_in_range(int8_t value)
-{
+bool brake_pedal_status_brake_pedal_pos_ac_is_in_range(int8_t value) {
     return (value >= 0);
 }
 
 int brake_brake_status_pack(
     uint8_t *dst_p,
     const struct brake_brake_status_t *src_p,
-    size_t size)
-{
+    size_t size) {
     uint8_t brake_force;
 
     if (size < 1u) {
@@ -151,8 +139,7 @@ int brake_brake_status_pack(
 int brake_brake_status_unpack(
     struct brake_brake_status_t *dst_p,
     const uint8_t *src_p,
-    size_t size)
-{
+    size_t size) {
     uint8_t brake_force;
 
     if (size < 1u) {
@@ -165,8 +152,7 @@ int brake_brake_status_unpack(
     return (0);
 }
 
-int brake_brake_status_init(struct brake_brake_status_t *msg_p)
-{
+int brake_brake_status_init(struct brake_brake_status_t *msg_p) {
     if (msg_p == NULL) return -1;
 
     memset(msg_p, 0, sizeof(struct brake_brake_status_t));
@@ -174,17 +160,14 @@ int brake_brake_status_init(struct brake_brake_status_t *msg_p)
     return 0;
 }
 
-int8_t brake_brake_status_brake_force_encode(double value)
-{
+int8_t brake_brake_status_brake_force_encode(double value) {
     return (int8_t)(value / 1000.0);
 }
 
-double brake_brake_status_brake_force_decode(int8_t value)
-{
-    return ((double)value * 1000.0);
+double brake_brake_status_brake_force_decode(int8_t value) {
+    return (static_cast<double>(value) * 1000.0);
 }
 
-bool brake_brake_status_brake_force_is_in_range(int8_t value)
-{
+bool brake_brake_status_brake_force_is_in_range(int8_t value) {
     return ((value >= 0) && (value <= 0));
 }

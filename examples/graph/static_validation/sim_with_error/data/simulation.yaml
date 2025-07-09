@@ -20,7 +20,7 @@ spec:
           expectedModelCount: 2
         - name: Network
           expectedModelCount: 1
- 
+
     - name: input
       uid: 24
       model:
@@ -38,7 +38,7 @@ spec:
           SIMBUS_LOGLEVEL: 5
         files:
           - model/input/data/signalgroup.yaml
- 
+
     - name: linear
       uid: 42
       model:

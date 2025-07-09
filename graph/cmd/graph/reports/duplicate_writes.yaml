@@ -1,3 +1,4 @@
+---
 name: Duplicate Writes Check
 queries:
   - name: Duplicate Write Signals
@@ -20,11 +21,11 @@ queries:
       UNWIND input_signal_list AS individual_input_signal
       WITH simbus_channel, output_signals, input_signal_list, individual_input_signal
       WHERE individual_input_signal IN output_signals
-      WITH simbus_channel, output_signals, input_signal_list, 
+      WITH simbus_channel, output_signals, input_signal_list,
       collect(individual_input_signal) AS common_signals
 
       RETURN simbus_channel, common_signals
 
 tags:
-    - signal
-    - write
+  - signal
+  - write

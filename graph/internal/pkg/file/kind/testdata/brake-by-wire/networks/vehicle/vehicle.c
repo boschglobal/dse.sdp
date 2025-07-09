@@ -30,29 +30,26 @@
 
 #include <string.h>
 
-#include "vehicle.h"
+#include "vehicle/vehicle.h"
 
 static inline uint8_t pack_left_shift_u8(
     uint8_t value,
     uint16_t shift,
-    uint8_t mask)
-{
+    uint8_t mask) {
     return (uint8_t)((uint8_t)(value << shift) & mask);
 }
 
 static inline uint8_t unpack_right_shift_u8(
     uint8_t value,
     uint16_t shift,
-    uint8_t mask)
-{
+    uint8_t mask) {
     return (uint8_t)((uint8_t)(value & mask) >> shift);
 }
 
 int vehicle_engine_status_pack(
     uint8_t *dst_p,
     const struct vehicle_engine_status_t *src_p,
-    size_t size)
-{
+    size_t size) {
     uint8_t check_engine_clear;
     uint8_t check_engine_set;
 
@@ -73,8 +70,7 @@ int vehicle_engine_status_pack(
 int vehicle_engine_status_unpack(
     struct vehicle_engine_status_t *dst_p,
     const uint8_t *src_p,
-    size_t size)
-{
+    size_t size) {
     uint8_t check_engine_clear;
     uint8_t check_engine_set;
 
@@ -90,8 +86,7 @@ int vehicle_engine_status_unpack(
     return (0);
 }
 
-int vehicle_engine_status_init(struct vehicle_engine_status_t *msg_p)
-{
+int vehicle_engine_status_init(struct vehicle_engine_status_t *msg_p) {
     if (msg_p == NULL) return -1;
 
     memset(msg_p, 0, sizeof(struct vehicle_engine_status_t));
@@ -99,32 +94,26 @@ int vehicle_engine_status_init(struct vehicle_engine_status_t *msg_p)
     return 0;
 }
 
-int8_t vehicle_engine_status_check_engine_set_encode(double value)
-{
+int8_t vehicle_engine_status_check_engine_set_encode(double value) {
     return (int8_t)(value);
 }
 
-double vehicle_engine_status_check_engine_set_decode(int8_t value)
-{
-    return ((double)value);
+double vehicle_engine_status_check_engine_set_decode(int8_t value) {
+    return (static_cast<double>(value));
 }
 
-bool vehicle_engine_status_check_engine_set_is_in_range(int8_t value)
-{
+bool vehicle_engine_status_check_engine_set_is_in_range(int8_t value) {
     return (value >= 0);
 }
 
-int8_t vehicle_engine_status_check_engine_clear_encode(double value)
-{
+int8_t vehicle_engine_status_check_engine_clear_encode(double value) {
     return (int8_t)(value);
 }
 
-double vehicle_engine_status_check_engine_clear_decode(int8_t value)
-{
-    return ((double)value);
+double vehicle_engine_status_check_engine_clear_decode(int8_t value) {
+    return (static_cast<double>(value));
 }
 
-bool vehicle_engine_status_check_engine_clear_is_in_range(int8_t value)
-{
+bool vehicle_engine_status_check_engine_clear_is_in_range(int8_t value) {
     return (value >= 0);
 }

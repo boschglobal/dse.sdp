@@ -1,3 +1,4 @@
+---
 kind: Stack
 metadata:
   name: primary_stack

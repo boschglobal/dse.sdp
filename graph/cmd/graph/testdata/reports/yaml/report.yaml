@@ -1,3 +1,4 @@
+---
 name: Channel 'expectedModelCount'
 queries:
   - name: Expected Count
@@ -8,8 +9,8 @@ queries:
       MATCH (st)-[:Has]->(simbus:Simbus)-[:Has]->(sc:SimbusChannel)
       WHERE sc.name = channelName
       RETURN channelName,
-            sc.expectedModelCount AS expectedCount, 
-            actualCount, 
+            sc.expectedModelCount AS expectedCount,
+            actualCount,
             CASE WHEN sc.expectedModelCount = actualCount THEN "PASS" ELSE "FAIL" END AS result
   - name: Model to Channel Mapping
     query: |
@@ -18,23 +19,23 @@ queries:
       RETURN mi.name AS modelInstName, a.name as alias, ch.name AS channelName
 
 tags:
-    - foo
-    - bar
+  - foo
+  - bar
 ---
 name: Count 'ModelInst' in AST and SIM
 queries:
   - name: Expected Count
     evaluate: true
     query: |
-        MATCH (fl:File)-[:Contains]->(st:Stack)-[:Has]->(mi:ModelInst)
-        WITH fl, COUNT(DISTINCT mi) AS countSim
-        MATCH (fl)-[:Contains]->(sim:Simulation)-[:Has]->(st2:Stack)-[:Has]->(mi2:ModelInst)
-        WITH countSim, COUNT(DISTINCT mi2) AS countAst
-        RETURN
-            countAst AS astModelInstCount,
-            countSim AS simModelInstCount,
-            CASE WHEN countAst = countSim THEN "PASS" ELSE "FAIL" END AS result
+      MATCH (fl:File)-[:Contains]->(st:Stack)-[:Has]->(mi:ModelInst)
+      WITH fl, COUNT(DISTINCT mi) AS countSim
+      MATCH (fl)-[:Contains]->(sim:Simulation)-[:Has]->(st2:Stack)-[:Has]->(mi2:ModelInst)
+      WITH countSim, COUNT(DISTINCT mi2) AS countAst
+      RETURN
+          countAst AS astModelInstCount,
+          countSim AS simModelInstCount,
+          CASE WHEN countAst = countSim THEN "PASS" ELSE "FAIL" END AS result
 hint: |
-    The number of Model Instances in AST do not match the number of Model Instances in SIM.
+  The number of Model Instances in AST do not match the number of Model Instances in SIM.
 tags:
-    - bar
+  - bar

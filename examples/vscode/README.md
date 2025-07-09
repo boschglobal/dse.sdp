@@ -63,8 +63,8 @@ L- input
 (Generated files)
 L- simulation.yaml     Generated simulation (contains stacks).
 L- Taskfile.yaml       Generated taskfile (constructs the simulation).
-L- out     
-  L- cache       	     Cached metadata.
+L- out
+  L- cache             Cached metadata.
   L- downloads         Downloaded content (models, tools ...).
   L- sim               Generated simulation (with Simer layout).
     L- measurement.mf4 Measurement file (from the linear model).

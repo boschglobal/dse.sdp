@@ -17,9 +17,9 @@ $ npm -v
 
 # For running typeScript files
 $ npm install -g tsx
-``` 
+```
 
-## Build 
+## Build
 ```bash
 # Get the repo.
 $ git clone https://github.boschdevcloud.com/fsil/dse.sdp.git

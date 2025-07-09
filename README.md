@@ -23,7 +23,7 @@ examples
 └── openloop    <-- Open Loop simulation using FMU based Linear Equation model
 └── notebook    <-- Jupyter base simulation example
 └── vscode      <-- VS Code integration examples
-graph           
+graph
 └── build/package
     └── report/     <-- Report tool
 licenses            <-- Third Party Licenses
@@ -101,22 +101,22 @@ $ make run
 A Cloudspace can forward ports to allow remote connections to services running in that Cloudspace.
 In particular these scenarios exist:
 
-1. Cloudspace running in a Web Browser: ports are forwarded via HTTP endpoints (i.e. URLs). This is not suitable for Simer based simuations as there is no support for HTTP endpoints (at this time).
-2. Cloudspace running in VS Code: ports are forwarded to local host. Local applications can connect to these ports and acces services running in the Cloudspace. This **is** suitable for Simer based simulations.
+1. Cloudspace running in a Web Browser: ports are forwarded via HTTP endpoints (i.e. URLs). This is not suitable for Simer based simulations as there is no support for HTTP endpoints (at this time).
+2. Cloudspace running in VS Code: ports are forwarded to local host. Local applications can connect to these ports and access services running in the Cloudspace. This **is** suitable for Simer based simulations.
 
 #### Connect VS Code to a Cloudspace
 
 > Hint: Start the Codespace in a Web Browser first, then connect to the running Codespace from VS Code.
 
 1. Start VS Code, refresh the Remote Explorer, select Github Codespaces (from the dropdown).
-2. Add a Codespace for the repo; https://github.com/boschglobal/dse.sdp ; you will need to authenticate the connection to GitHub and the Repo.
+2. Add a Codespace for the repo; [boschglobal/dse.sdp](https://github.com/boschglobal/dse.sdp) ; you will need to authenticate the connection to GitHub and the Repo.
 3. Connect to the Codespace.
 4. Open a Terminal.
 
 
 #### Run the ModelC Gateway Example Simulation
 
-__Local WSL__
+**Local WSL**
 ```bash
 # Build a local version of the ModelC library for Windows (or download).
 $ git clone https://github.com/boschglobal/dse.modelc
@@ -124,7 +124,7 @@ $ cd dse.modelc
 $ PACKAGE_ARCH=windows-x64 make
 ```
 
-__Cloudspace Terminal__
+**Cloudspace Terminal**
 ```bash
 # Check your environment.
 $ dse-env
@@ -140,8 +140,8 @@ $ dse-simer-host out/examples/modelc/gateway/ -stack local
 
 > Note: The port mapping (under PORTS tab) may be different if the local port was already in use. Note the forwarded address.
 
-__Local Powershell__
-```
+**Local Powershell**
+```powershell
 # Locate the Gateway example, adjust the gateway.yaml file for the mapped port if necesary.
 PS> cd working\dse.modelc\dse\modelc\build\_out\examples\gateway
 
@@ -264,7 +264,7 @@ After that, the container will build ... and eventually you will have the Codesp
 
 ### Proxy Setup when running _inside_ a DevContainer
 
-https://docs.docker.com/engine/cli/proxy/
+[proxy setup](https://docs.docker.com/engine/cli/proxy/)
 
 ~/git/working/dse.sdp$ cat ~/.docker/config.json
 

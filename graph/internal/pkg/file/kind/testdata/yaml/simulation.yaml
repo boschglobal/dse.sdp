@@ -27,13 +27,11 @@ spec:
         stacked: true
         arch: linux-amd64
         models:
-          - name: linear                            # :AST:Model <-Represents[name==name]- :KIND:ModelInstance --> :KIND:Model
-            model: model.linear                     # :AST:Model -[model==name]-> :AST:Uses
-            channels:         # :AST:ModelChannel -Connects-> :AST:SimulationChannel (a post query, based on name==name)
-              - name: physical                      # :AST:SimulationChannel <-[name=name]- :KIND:Channel
-                alias: scalar                       # :AST:Model --> :AST:ModelChannel -[name=name]-> :AST:SimulationChannel
-                                                    # example emergent relationship
-                                                    #   :AST:ModelChannel --------> :KIND:Model -[Alias.name == alias] -> :Kind:Channel
+          - name: linear
+            model: model.linear
+            channels:
+              - name: physical
+                alias: scalar
             env:
               - name: SIMBUS_LOGLEVEL
                 value: 4

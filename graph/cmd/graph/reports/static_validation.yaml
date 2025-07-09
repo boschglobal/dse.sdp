@@ -1,3 +1,4 @@
+---
 name: Channel 'expectedModelCount'
 queries:
   - name: Expected Count
@@ -19,7 +20,7 @@ queries:
       WITH mi, a, ch
       RETURN mi.name AS modelInstName, a.name as alias, ch.name AS channelName
 tags:
-    - stack
+  - stack
 ---
 name: Count 'ModelInst' in AST and SIM
 queries:
@@ -27,15 +28,15 @@ queries:
     expect_rows: true
     evaluate: true
     query: |
-        MATCH (fl:File)-[:Contains]->(st:Stack)-[:Has]->(mi:ModelInst)
-        WITH fl, COUNT(DISTINCT mi) AS countSim
-        MATCH (fl)-[:Contains]->(sim:Simulation)-[:Has]->(st2:Stack)-[:Has]->(mi2:ModelInst)
-        WITH countSim, COUNT(DISTINCT mi2) AS countAst
-        RETURN
-            countAst AS astModelInstCount,
-            countSim AS simModelInstCount,
-            CASE WHEN countAst = countSim THEN "PASS" ELSE "FAIL" END AS result
+      MATCH (fl:File)-[:Contains]->(st:Stack)-[:Has]->(mi:ModelInst)
+      WITH fl, COUNT(DISTINCT mi) AS countSim
+      MATCH (fl)-[:Contains]->(sim:Simulation)-[:Has]->(st2:Stack)-[:Has]->(mi2:ModelInst)
+      WITH countSim, COUNT(DISTINCT mi2) AS countAst
+      RETURN
+          countAst AS astModelInstCount,
+          countSim AS simModelInstCount,
+          CASE WHEN countAst = countSim THEN "PASS" ELSE "FAIL" END AS result
 hint: |
-    The number of Model Instances in AST do not match the number of Model Instances in SIM.
+  The number of Model Instances in AST do not match the number of Model Instances in SIM.
 tags:
-    - stack
+  - stack
