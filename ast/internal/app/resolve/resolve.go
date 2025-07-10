@@ -12,14 +12,15 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
-	"regexp"
+	"slices"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
 	"github.boschdevcloud.com/fsil/fsil.go/command"
-	"github.boschdevcloud.com/fsil/fsil.go/command/log"
 )
 
 type ResolveCommand struct {
@@ -63,11 +64,21 @@ func (c *ResolveCommand) Parse(args []string) error {
 }
 
 func (c *ResolveCommand) Run() error {
-	slog.SetDefault(log.NewLogger(c.logLevel))
+	//slog.SetDefault(log.NewLogger(c.logLevel))
+	c.yamlMetadata = make(map[string]interface{})
 
-	fmt.Fprintf(flag.CommandLine.Output(), "Reading file: %s\n", c.inputFile)
-	c.loadYamlAST(c.inputFile)
-	fmt.Fprintf(flag.CommandLine.Output(), "Updating file: %s\n", c.inputFile)
+	slog.Info("Reading AST file", "file", c.inputFile)
+	if err := c.loadYamlAST(); err != nil {
+		return err
+	}
+	slog.Info("Load metadata files")
+	if err := c.loadMetadata(); err != nil {
+		return err
+	}
+	slog.Info("Updating AST file", "file", c.inputFile)
+	if err := c.updateMetadata(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -96,7 +107,7 @@ func FileExists(path string) bool {
 func createCacheDir(path string) {
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
-		fmt.Println("Error creating directories:", err)
+		slog.Error("Unable to create cache dir", "path", path, "err", err)
 		return
 	}
 }
@@ -119,134 +130,172 @@ func appendFileName(path, filename string) string {
 	return filepath.Join(path, filename)
 }
 
-func (c *ResolveCommand) loadYamlAST(file string) error {
-	usesMap := make(map[string]interface{})
-
-	data, err := os.ReadFile(file)
+func (c *ResolveCommand) loadYamlAST() error {
+	data, err := os.ReadFile(c.inputFile)
 	if err != nil {
-		fmt.Println("Error reading YAML file:", err)
 		return fmt.Errorf("Error reading YAML AST file: %v", err)
 	}
-
 	if err := yaml.Unmarshal(data, &c.yamlAst); err != nil {
-		fmt.Println("Error parsing YAML:", err)
 		return fmt.Errorf("Error parsing YAML file: %v", err)
 	}
+	return nil
+}
 
-	//used for E2E tests, eg: bin/ast resolve -input ast.yml -uses dse.fmi -file md_dse.fmi.yml
+func getYamlPath(root interface{}, keys ...string) interface{} {
+	node := root
+	var exists bool
+	for _, key := range keys {
+		if node, exists = node.(map[string]interface{})[key]; !exists {
+			return nil
+		}
+	}
+	return node
+}
+
+func (c *ResolveCommand) loadMetadata() error {
 	if c.repoName != "" && c.metadataFile != "" {
+		// Supports E2E tests.
+		// eg: bin/ast resolve -input ast.yml -uses dse.fmi -file md_dse.fmi.yml
 		data, err := os.ReadFile(c.metadataFile)
 		if err != nil {
-			fmt.Println("Error reading Metadata YAML file:", err)
 			return fmt.Errorf("Error reading Metadata YAML AST file: %v", err)
 		}
-
-		if err := yaml.Unmarshal(data, &c.yamlMetadata); err != nil {
-			fmt.Println("Error parsing Metadata YAML:", err)
+		var yamlData = map[string]interface{}{}
+		if err := yaml.Unmarshal(data, &yamlData); err != nil {
 			return fmt.Errorf("Error parsing Metadata YAML file: %v", err)
 		}
-		usesMap[c.repoName] = c.yamlMetadata
-		updateModelMd(usesMap, c, file)
-		updateUsesMd(usesMap, c, file)
-	} else {
-		if spec, ok := c.yamlAst["spec"].(map[string]interface{}); ok {
-			if uses, ok := spec["uses"].([]interface{}); ok {
-				for _, use := range uses {
-					if useMap, ok := use.(map[string]interface{}); ok {
-						var rawUrl = genGitRawURL(useMap)
-						if rawUrl != "" {
-							var sha = calculateSha256(rawUrl)
-							var cacheFilepath = appendFileName(c.cacheDir, sha)
-							var yamlData = make(map[string]interface{})
-							if c.cacheDir != "" {
-								if !dirExists(c.cacheDir) {
-									createCacheDir(c.cacheDir)
-								}
-								if FileExists(cacheFilepath) {
-									data, err := os.ReadFile(cacheFilepath)
-									if err != nil {
-										fmt.Println("Error reading chache file:", err)
-										return fmt.Errorf("Error reading chache file: %v", err)
-									}
-									if err := yaml.Unmarshal(data, &yamlData); err != nil {
-										fmt.Println("Error parsing chache YAML:", err)
-										return fmt.Errorf("Error parsing cache YAML file: %v", err)
-									}
-								} else {
-									yamlData = fetchMetadata(rawUrl)
-									saveCacheFile(cacheFilepath, yamlData)
-								}
-							} else {
-								yamlData = fetchMetadata(rawUrl)
-							}
-							usesMap[useMap["name"].(string)] = yamlData
-						}
-					}
-				}
-			}
+		c.yamlMetadata[c.repoName] = yamlData
+		return nil
+	}
+
+	uses := getYamlPath(c.yamlAst, "spec", "uses")
+	if uses == nil {
+		slog.Error("Path spec/users not found in AST file")
+		return nil
+	}
+	for _, _use := range uses.([]interface{}) {
+		use := _use.(map[string]interface{})
+		// Fetch metadata.
+		slog.Debug("Fetch metadata for uses", "name", use["name"].(string))
+		var rawUrl = genGitRawURL(use)
+		if len(rawUrl) == 0 {
+			continue
 		}
-		updateModelMd(usesMap, c, file)
-		updateUsesMd(usesMap, c, file)
+		slog.Info("Metadata download", "url", rawUrl)
+
+		// Search the cache.
+		var yamlData = map[string]interface{}{}
+		if c.cacheDir != "" {
+			var cacheFilepath = appendFileName(c.cacheDir, calculateSha256(rawUrl))
+			if !dirExists(c.cacheDir) {
+				createCacheDir(c.cacheDir)
+			}
+			if FileExists(cacheFilepath) {
+				slog.Info("Load from cache", "path", cacheFilepath)
+				data, err := os.ReadFile(cacheFilepath)
+				if err != nil {
+					return fmt.Errorf("Error reading cache file: %v", err)
+				}
+				if err := yaml.Unmarshal(data, &yamlData); err != nil {
+					return fmt.Errorf("Error parsing cache YAML file: %v", err)
+				}
+			} else {
+				yamlData = fetchMetadata(rawUrl)
+				saveCacheFile(cacheFilepath, yamlData)
+			}
+		} else {
+			yamlData = fetchMetadata(rawUrl)
+		}
+
+		// Update the lookup.
+		slog.Info("Update metadata for repo", "name", use["name"].(string))
+		c.yamlMetadata[use["name"].(string)] = yamlData
+	}
+	return nil
+}
+
+func (c *ResolveCommand) updateMetadata() error {
+	c.updateAstUsesMetadata()
+	c.updateAstModelMetadata()
+	err := updateFile(c.yamlAst, c.inputFile)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func genGitRawURL(useMap map[string]interface{}) string {
-	pattern := `https:\/\/github\.com\/(\w+)\/(\w+(?:\.\w+))(\/.*)?`
-	re := regexp.MustCompile(pattern)
-
-	gitLink, ok := useMap["url"].(string)
+	useUrl, ok := useMap["url"].(string)
 	if !ok {
-		fmt.Println("Invalid repo link")
+		slog.Error("Invalid or missing URL in uses map")
 		return ""
 	}
+	version, _ := useMap["version"].(string)
 
-	matchResult := re.FindStringSubmatch(gitLink)
-	owner, repoName, path := "", "", ""
-
-	if len(matchResult) > 0 {
-		owner = matchResult[1]
-		repoName = matchResult[2]
-		if len(matchResult) > 3 {
-			path = matchResult[3]
+	// Encode the URL, especially for https://{{.GHE_TOKEN}}@github ....
+	u, _ := func() (*url.URL, error) {
+		_u := useUrl
+		_u = strings.ReplaceAll(_u, `{`, `%7B`)
+		_u = strings.ReplaceAll(_u, `}`, `%7D`)
+		return url.Parse(_u)
+	}()
+	if strings.HasPrefix(u.Host, "github.") == false {
+		slog.Error("Unsupported metadata url", "url", useUrl)
+		return ""
+	}
+	pathParts := strings.Split(u.Path, string(os.PathSeparator))
+	if len(pathParts) > 3 {
+		// Not a repo path, more likely an asset link (for download).
+		return ""
+	}
+	useUrl = func() string {
+		var finalUrl *url.URL
+		switch u.Host {
+		case "github.com":
+			u.Host = "raw.githubusercontent.com"
+			finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/refs/tags/%s/Taskfile.yml", pathParts[1], pathParts[2], version))
+		case "github.boschdevcloud.com":
+			u.Host = "raw.github.boschdevcloud.com"
+			finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/%s/Taskfile.yml", pathParts[1], pathParts[2], version))
+		default:
+			slog.Error("Unsupported URL hostname")
 		}
-	}
+		return func() string {
+			// Remove encoding.
+			_u := finalUrl.String()
+			_u = strings.ReplaceAll(_u, `%7B`, `{`)
+			_u = strings.ReplaceAll(_u, `%7D`, `}`)
+			return _u
+		}()
+	}()
 
-	var rawURL string
-	if path != "" {
-		return ""
-	} else {
-		version, _ := useMap["version"].(string)
-		rawURL = fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/%s", owner, repoName, version, "Metadata.yml")
-	}
-
-	return rawURL
+	return useUrl
 }
 
 func fetchMetadata(url string) map[string]interface{} {
 	var yamlData = map[string]interface{}{}
+
+	url = strings.ReplaceAll(url, `{{.GHE_TOKEN}}`, os.Getenv("GHE_TOKEN"))
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Error fetching the URL:", err)
+		slog.Error("Error fetching the URL", "err", err)
 		return yamlData
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
+		slog.Error("Bad return code", "code", resp.StatusCode)
 		return yamlData
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading the YAML file:", err)
+		slog.Error("Error reading the YAML file", "err", err)
 		return yamlData
 	}
-
 	if err := yaml.Unmarshal(data, &yamlData); err != nil {
-		fmt.Println("Error parsing YAML:", err)
+		slog.Error("Error parsing YAML", "err", err)
 		return yamlData
 	}
-
 	return yamlData
 }
 
@@ -265,132 +314,110 @@ func updateFile(data interface{}, filePath string) error {
 	return nil
 }
 
-func filterMetadataYaml(data map[string]interface{}, searchModelVal string) map[string]interface{} {
-	metadata, ok := data["metadata"].(map[string]interface{})
-	if !ok {
-		return nil
+func (c *ResolveCommand) updateAstUsesMetadata() {
+	// AST : spec/uses/use[name=repo]/metadata <= repo metadata from Taskfile.
+	uses := getYamlPath(c.yamlAst, "spec", "uses")
+	if uses == nil {
+		slog.Error("Path spec/users not found in AST file")
+		return
 	}
-
-	models, ok := metadata["models"].(map[string]interface{})
-	if !ok {
-		return nil
-	}
-
-	var selectedModel map[string]interface{}
-	var relatedWorkflows []interface{}
-	// find the model node with the searchModelVal
-	for key, model := range models {
-		modelMap, ok := model.(map[string]interface{})
-		if !ok {
+	for _, _use := range uses.([]interface{}) {
+		use := _use.(map[string]interface{})
+		slog.Info("Uses item", "name", use["name"].(string))
+		// Locate the metadata.
+		metadata := getYamlPath(c.yamlMetadata, use["name"].(string), "metadata")
+		if metadata == nil {
+			slog.Info("Repo does not have associated metadata", "name", use["name"].(string))
 			continue
 		}
-		if key == searchModelVal {
-			selectedModel = modelMap
-			relatedWorkflows, _ = modelMap["workflows"].([]interface{})
-			metadata["models"] = map[string]interface{}{key: modelMap}
-			break
+		// Update (merge) to the underlying map/slice.
+		slog.Info("Merge metadata to spec/uses[]", "name", use["name"].(string))
+		if _, ok := use["metadata"]; !ok {
+			use["metadata"] = map[string]interface{}{}
 		}
-	}
-
-	if selectedModel == nil {
-		return nil // No matching model found
-	}
-
-	tasks, ok := metadata["tasks"].(map[string]interface{})
-	if !ok {
-		return data
-	}
-
-	filteredTasks := make(map[string]interface{})
-
-	// Keep only the tasks that are associated with related workflows
-	for _, workflow := range relatedWorkflows {
-		if task, exists := tasks[workflow.(string)]; exists {
-			if taskMap, ok := task.(map[string]interface{}); ok {
-				_, exists := taskMap["generates"]
-				if exists {
-					delete(taskMap, "vars")
-					filteredTasks[workflow.(string)] = taskMap
-				} else {
-					delete(filteredTasks, workflow.(string))
-				}
+		mergeKeys := []string{"container", "package", "models"}
+		for k, v := range metadata.(map[string]interface{}) {
+			if slices.Contains(mergeKeys, k) {
+				use["metadata"].(map[string]interface{})[k] = v
 			}
 		}
-	}
-	metadata["tasks"] = filteredTasks
-	return data
-}
-
-func updateUsesMd(usesMap map[string]interface{}, c *ResolveCommand, file string) {
-	if spec, exists := c.yamlAst["spec"].(map[string]interface{}); exists {
-		if uses, exists := spec["uses"].([]interface{}); exists {
-			for i, item := range uses {
-				if useMap, ok := item.(map[string]interface{}); ok {
-					if name, nameExists := useMap["name"].(string); nameExists {
-						value, exists := usesMap[name]
-						if exists {
-							if valueMap, ok := value.(map[string]interface{}); ok {
-								if containerMap, ok := valueMap["metadata"].(map[string]interface{}); ok {
-									if container, ok := containerMap["container"].(map[string]interface{}); ok {
-										if value, exists := container["repository"]; exists {
-											if _, ok := useMap["metadata"].(map[string]interface{}); !ok {
-												useMap["metadata"] = make(map[string]interface{})
-												useMap["metadata"].(map[string]interface{})["container"] = map[string]interface{}{
-													"repository": value,
-												}
-												uses[i] = useMap
-											}
-										}
-									}
-								}
-							}
-						} else {
-							useMap["metadata"] = make(map[string]interface{})
-							uses[i] = useMap
-						}
-					}
-				}
-			}
-		}
-	}
-
-	err := updateFile(c.yamlAst, file)
-	if err != nil {
-		fmt.Println("Error:", err)
 	}
 }
 
-func updateModelMd(usesMap map[string]interface{}, c *ResolveCommand, file string) {
-	if spec, ok := c.yamlAst["spec"].(map[string]interface{}); ok { //looping through the input yaml
-		if stacks, ok := spec["stacks"].([]interface{}); ok {
-			for _, stack := range stacks {
-				if stackMap, ok := stack.(map[string]interface{}); ok {
-					if models, ok := stackMap["models"].([]interface{}); ok {
-						for _, model := range models {
-							if modelMap, ok := model.(map[string]interface{}); ok {
-								if model_name_to_search, ok := modelMap["model"].(string); ok {
-									for key, usesItem := range usesMap { //looping through the cached uses items to find if 'model_name_to_search' is present in uses items model displayname
-										if modelObj, ok := usesItem.(map[string]interface{}); ok {
-											filteredMD := filterMetadataYaml(modelObj, model_name_to_search)
-											if filteredMD != nil {
-												metadata := filteredMD["metadata"].(map[string]interface{})
-												//delete(metadata, "container")
-												modelMap["metadata"] = metadata
-												modelMap["uses"] = key
-											}
-										}
-									}
-								}
+func (c *ResolveCommand) updateAstModelMetadata() {
+	// AST : spec/uses/use[*]/metadata/models[name]/model <= model metadata from Taskfile.
+	stacks := getYamlPath(c.yamlAst, "spec", "stacks")
+	if stacks == nil {
+		slog.Error("Path spec/stacks not found in AST file")
+		return
+	}
+	for _, _stack := range stacks.([]interface{}) {
+		stack := _stack.(map[string]interface{})
+		models := getYamlPath(stack, "models")
+		for _, _model := range models.([]interface{}) {
+			model := _model.(map[string]interface{})
+			if _, ok := model["metadata"]; !ok {
+				model["metadata"] = map[string]interface{}{}
+			}
+			slog.Info("Updating model metadata", "model", model["model"].(string), "name", model["name"].(string))
+
+			// Locate the related Repo Metadata (for this model).
+			repos := getYamlPath(c.yamlMetadata)
+			if repos == nil {
+				slog.Info("Repos metadata not present")
+				continue
+			}
+			for repoName, _repo := range repos.(map[string]interface{}) {
+				repo := _repo.(map[string]interface{})
+				models := getYamlPath(repo, "metadata", "models")
+				if models == nil {
+					slog.Debug("Repo does not have metadata", "repoName", repoName)
+					continue
+				}
+				for modelName, _ := range models.(map[string]interface{}) {
+					if modelName == model["model"].(string) {
+						slog.Info("Repo metadata located", "repo", repoName, "model", modelName)
+
+						// Merge in the repo metadata.
+						repoMetadata := getYamlPath(repo, "metadata").(map[string]interface{})
+						// [repo]/metadata/package => [model]/metadata/package
+						if v := getYamlPath(repoMetadata, "package"); v != nil {
+							model["metadata"].(map[string]interface{})["package"] = v
+						}
+						// [repo]/metadata/container => [model]/metadata/container
+						if v := getYamlPath(repoMetadata, "container"); v != nil {
+							model["metadata"].(map[string]interface{})["container"] = v
+
+						}
+						// [repo]/metadata/models/[model] => [model]/metadata/models/[model]
+						if v := getYamlPath(repoMetadata, "models", model["model"].(string)); v != nil {
+							model["metadata"].(map[string]interface{})["models"] = map[string]interface{}{}
+							model["metadata"].(map[string]interface{})["models"].(map[string]interface{})[model["model"].(string)] = v
+						}
+
+						// Locate and merge in the workflow metadata.
+						model["metadata"].(map[string]interface{})["tasks"] = map[string]interface{}{}
+						tasks := getYamlPath(repo, "tasks")
+						if tasks == nil {
+							slog.Debug("Repo does not have tasks", "repoName", repoName)
+							continue
+						}
+						for taskName, _task := range tasks.(map[string]interface{}) {
+							task := _task.(map[string]interface{})
+							if v := getYamlPath(task, "metadata", "generates"); v != nil {
+								slog.Info("Task metadata located", "repo", repoName, "taskName", taskName)
+								g := map[string]interface{}{}
+								g["generates"] = v
+								model["metadata"].(map[string]interface{})["tasks"].(map[string]interface{})[taskName] = g
 							}
 						}
+
+						slog.Info("Updating model uses", "model", model["model"].(string), "name", model["name"].(string))
+						model["uses"] = repoName
 					}
 				}
+
 			}
 		}
-	}
-
-	err := updateFile(c.yamlAst, file)
-	if err != nil {
-		fmt.Println("Error:", err)
 	}
 }

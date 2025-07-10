@@ -71,4 +71,7 @@ lint:
 
 .PHONY: clean
 clean:
-	@rm -rf '$(BIN_DIR)'
+	@rm -rf $(BIN_DIR)
+
+.PHONY: cleanall
+cleanall:

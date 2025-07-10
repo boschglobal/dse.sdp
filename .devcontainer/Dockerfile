@@ -29,7 +29,9 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*;
 
+RUN npm install -g vsce
 RUN npm install -g typescript
+RUN npm install -g http-server
 RUN pip install asammdf[gui]
 
 COPY .devcontainer/.bash_aliases /home/codespace/.bash_aliases

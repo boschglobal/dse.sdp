@@ -40,6 +40,7 @@ func buildBaseTasks() map[string]Task {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("ZIP", "{{.ZIP}}")
 				om.Set("ZIPDIR", "$(basename {{.ZIP}} {{ext .ZIP}})/{{.ZIPDIR}}")
+				om.Set("ZIPDIR", "$(basename {{.ZIP}} {{ext .ZIP}}){{if .ZIPDIR}}/{{.ZIPDIR}}{{end}}")
 				om.Set("DIR", "{{.DIR}}")
 				return &om
 			}(),
@@ -124,6 +125,37 @@ func buildBaseTasks() map[string]Task {
 			Generates: &[]string{"{{.FILE}}"},
 			Status:    &[]string{"test -f {{.FILE}}"},
 		},
+		"download-file-github-asset": {
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Run:   util.StringPtr("when_changed"),
+			Label: util.StringPtr("dse:download-file-github-asset:{{.URL}}-{{.FILE}}"),
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("URL", "{{.URL}}")
+				om.Set("FILE", "{{.FILE}}")
+				om.Set("TOKEN", "{{.TOKEN}}")
+				om.Set("ASSET_NAME", "{{.ASSET_NAME}}")
+				om.Set("TAG", "{{.TAG}}")
+				om.Set("API_URL", "{{.API_URL}}")
+				return &om
+			}(),
+			Cmds: &[]Cmd{
+				{Cmd: "echo \"CURL {{.URL}} -> {{.FILE}}\""},
+				{Cmd: "mkdir -p $(dirname {{.FILE}})"},
+				{Cmd: "REL_JSON=$(curl \\\n" +
+					"  -H \"Accept: application/vnd.github+json\" \\\n" +
+					"  -H \"Authorization: Bearer {{.TOKEN}}\" \\\n" +
+					"  {{.API_URL}}/releases/tags/{{.TAG}}); \\\n" +
+					"ASSET_URL=$(echo $REL_JSON | jq -r '.assets[] | select(.name | contains(\"{{.ASSET_NAME}}\")) | .url'); \\\n" +
+					"curl \\\n" +
+					"  -H \"Accept: application/octet-stream\" \\\n" +
+					"  -H \"Authorization: Bearer {{.TOKEN}}\" \\\n" +
+					"  -fL $ASSET_URL \\\n" +
+					"  -o {{.FILE}}\n"},
+			},
+			Generates: &[]string{"{{.FILE}}"},
+			Status:    &[]string{"test -f {{.FILE}}"},
+		},
 		"clean": {
 			Cmds: &[]Cmd{
 				{Cmd: "find ./out -mindepth 1 -maxdepth 1 ! -name downloads -exec rm -rf {} +"},
@@ -149,12 +181,10 @@ func buildSimulationTasks() map[string]Task {
 		"build": {
 			Dir:   util.StringPtr("{{.OUTDIR}}"),
 			Label: util.StringPtr("build"),
-			Deps: &[]Dep{
-				{Task: "build-models"},
-			},
 			Cmds: &[]Cmd{
 				{Cmd: "mkdir -p {{.SIMDIR}}/data"},
 				{Cmd: "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
+				{Task: "build-models"},
 			},
 			Sources:   &[]string{"{{.ENTRYDIR}}/simulation.yaml"},
 			Generates: &[]string{"{{.SIMDIR}}/data/simulation.yaml"},

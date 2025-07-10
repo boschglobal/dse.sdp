@@ -1,0 +1,34 @@
+simulation arch=linux-amd64
+channel signal
+channel network
+
+uses
+fsil.runnable https://{{.GHE_TOKEN}}@github.boschdevcloud.com/fsil/fsil.runnable v1.0.9 user={{.AR_USER}} token={{.AR_TOKEN}}
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.32
+example https://github.boschdevcloud.com/fsil/fsil.runnable/releases/download/v1.0.9/example.zip token={{.GHE_PAT}}
+
+
+model runnable fsil.runnable
+channel signal signal_channel
+channel network network_channel
+
+workflow unpack-runnable-target
+    var ROOT_DIR {{.OUTDIR}}
+    var ZIP uses example
+    var DIR {{.SIMDIR}}/{{.PATH}}
+
+workflow generate-runnable
+    var INPUT_FILE {{.PATH}}/data/target.h
+    var TARGET_LIB {{.PATH}}/lib/target.so
+    var FUNCTION_LIB {{.PATH}}/lib/function.so
+    var CYCLE_TIME {"frame_in":10}
+    var SIGNAL target
+    var NETWORK_SIGNAL can_bus
+    var MIME_TYPE "application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1;node_id=2;interface_id=3"
+    var FRAME_ID {"frame_in":"0x1f0u","frame_out":"0x1f1u"}
+    var MEASUREMENT measurement.txt
+    var OUT_DIR {{.PATH}}/data
+
+workflow generate-fmimodelc
+    var FMU_NAME runnable
+    var SIGNAL_GROUPS signal

@@ -7,6 +7,7 @@ package generate
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -28,15 +29,51 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 		if uses.Version == nil {
 			continue
 		}
+		if uses.Path != nil {
+			continue
+		}
 		vars := map[string]string{
 			"SIM":          "{{.SIMDIR}}",
 			"ENTRYWORKDIR": "{{.PWD}}/{{.OUTDIR}}",
 			"IMAGE_TAG":    cleanTag(*uses.Version),
 		}
+		if uses.User != nil {
+			vars["DOCKER_USER"] = *uses.User
+		}
+		if uses.Token != nil {
+			vars["DOCKER_TOKEN"] = *uses.Token
+		}
+
+		u, _ := func() (*url.URL, error) {
+			_u := uses.Url
+			_u = strings.ReplaceAll(_u, `{`, `%7B`)
+			_u = strings.ReplaceAll(_u, `}`, `%7D`)
+			return url.Parse(_u)
+		}()
+		if strings.HasPrefix(u.Host, "github.") == false {
+			continue
+		}
+
 		includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
 			Taskfile: func() string {
-				u, _ := url.Parse(uses.Url)
-				return fmt.Sprintf("https://raw.githubusercontent.com%s/refs/tags/%s/Taskfile.yml", u.Path, *uses.Version)
+				var finalUrl *url.URL
+				pathParts := strings.Split(u.Path, string(os.PathSeparator))
+				switch u.Host {
+				case "github.com":
+					u.Host = "raw.githubusercontent.com"
+					finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/refs/tags/%s/Taskfile.yml", pathParts[1], pathParts[2], *uses.Version))
+				case "github.boschdevcloud.com":
+					u.Host = "raw.github.boschdevcloud.com"
+					finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/%s/Taskfile.yml", pathParts[1], pathParts[2], *uses.Version))
+				default:
+					panic("unsupported includes URL")
+				}
+				return func() string {
+					_u := finalUrl.String()
+					_u = strings.ReplaceAll(_u, `%7B`, `{`)
+					_u = strings.ReplaceAll(_u, `%7D`, `}`)
+					return _u
+				}()
 			}(),
 			Dir:  "{{.OUTDIR}}/{{.SIMDIR}}",
 			Vars: &vars,
@@ -127,19 +164,42 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 	return modelTask
 }
 
-func parseUrl(task *Task, uses *ast.Uses) string {
+func parseUrl(task *Task, uses *ast.Uses, modelName string) string {
 	u, _ := url.Parse(uses.Url)
-	downloadFile := fmt.Sprintf("downloads/%s", filepath.Base(u.Path))
+	downloadFile := fmt.Sprintf("downloads/models/{{.MODEL}}/%s", filepath.Base(u.Path))
+
 	if u.IsAbs() == true {
-		*task.Deps = append(*task.Deps, Dep{
-			Task: "download-file",
-			Vars: func() *OMap {
-				om := OMap{orderedmap.NewOrderedMap[string, string]()}
-				om.Set("URL", uses.Url)
-				om.Set("FILE", downloadFile)
-				return &om
-			}(),
-		})
+		if strings.HasPrefix(u.Host, "github.") {
+			*task.Deps = append(*task.Deps, Dep{
+				Task: "download-file-github-asset",
+				Vars: func() *OMap {
+					om := OMap{orderedmap.NewOrderedMap[string, string]()}
+					om.Set("URL", uses.Url)
+					om.Set("FILE", downloadFile)
+					if uses.Token != nil {
+						om.Set("TOKEN", *uses.Token)
+					}
+					pathParts := strings.Split(u.Path, string(os.PathSeparator))
+					om.Set("ASSET_NAME", pathParts[len(pathParts)-1])
+					om.Set("TAG", pathParts[len(pathParts)-2])
+					om.Set("API_URL", func() string {
+						url, _ := u.Parse(fmt.Sprintf("/api/v3/repos/%s/%s", pathParts[1], pathParts[2]))
+						return url.String()
+					}())
+					return &om
+				}(),
+			})
+		} else {
+			*task.Deps = append(*task.Deps, Dep{
+				Task: "download-file",
+				Vars: func() *OMap {
+					om := OMap{orderedmap.NewOrderedMap[string, string]()}
+					om.Set("URL", uses.Url)
+					om.Set("FILE", downloadFile)
+					return &om
+				}(),
+			})
+		}
 	} else {
 		if filepath.IsAbs(uses.Url) {
 			*task.Cmds = append(*task.Cmds, Cmd{
@@ -157,7 +217,6 @@ func parseUrl(task *Task, uses *ast.Uses) string {
 
 func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 	var modelUses ast.Uses
-
 	if len(model.Uses) > 0 {
 		for _, uses := range *simSpec.Uses {
 			if uses.Name == model.Uses {
@@ -166,9 +225,10 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 			}
 		}
 		if modelUses.Name == "" {
-			return Task{}, fmt.Errorf("model uses not found in simulation AST (name=%s)", model.Uses)
+			return Task{}, fmt.Errorf("Model uses not found in simulation AST (name=%s)", model.Uses)
 		}
 	}
+	usesDownloadFilePaths := map[string]string{}
 
 	md := map[string]interface{}{}
 	if model.Metadata != nil {
@@ -199,7 +259,8 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					if fileUses == nil {
 						continue
 					}
-					downloadFile := parseUrl(task, fileUses)
+					downloadFile := parseUrl(task, fileUses, model.Name)
+					usesDownloadFilePaths[fileUses.Name] = downloadFile
 					*task.Cmds = append(*task.Cmds, Cmd{
 						Cmd: fmt.Sprintf("cp %s %s", downloadFile, filePath),
 					})
@@ -222,40 +283,44 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 
 	// Parse: modelc package/model files
 	func(task *Task, model ast.Model) {
-		modelPath := ""
-		func() {
+		isModel := func() bool {
 			defer func() {
 				if r := recover(); r != nil {
 				}
 			}()
-			modelPath = md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string)
-		}()
-		if len(modelPath) != 0 {
-			*task.Cmds = append(*task.Cmds, Cmd{
-				Task: "unzip-dir",
-				Vars: &map[string]string{
-					"ZIP":    "downloads/{{base .PACKAGE_URL}}",
-					"ZIPDIR": fmt.Sprintf("{{.PACKAGE_PATH}}"),
-					"DIR":    fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}"),
-				},
-			})
-			*task.Cmds = append(*task.Cmds, Cmd{
-				Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | " +
-					"xargs -r -0 yq -i " +
-					"'with(.spec.runtime.dynlib[]; " +
-					".path |= sub(\".*/(.*$)\", \"{{.PATH}}/lib/${1}\"))'"),
-			})
-			*task.Cmds = append(*task.Cmds, Cmd{
-				Cmd: fmt.Sprintf("rm -rf {{.SIMDIR}}/{{.PATH}}/examples"),
-			})
-			*task.Cmds = append(*task.Cmds, Cmd{
-				Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f"),
-			})
-			*task.Cmds = append(*task.Cmds, Cmd{
-				Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yml -print0  | xargs -r -0 rm -f"),
-			})
-			*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/**"))
+			if v := md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"]; v != nil {
+				return true
+			} else {
+				return false
+			}
 		}
+		if isModel() == false {
+			return
+		}
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Task: "unzip-dir",
+			Vars: &map[string]string{
+				"ZIP":    "downloads/{{base .PACKAGE_URL}}",
+				"ZIPDIR": fmt.Sprintf("{{.PACKAGE_PATH}}"),
+				"DIR":    fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}"),
+			},
+		})
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | " +
+				"xargs -r -0 yq -i " +
+				"'with(.spec.runtime.dynlib[]; " +
+				".path |= sub(\".*/(.*$)\", \"{{.PATH}}/lib/${1}\"))'"),
+		})
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Cmd: fmt.Sprintf("rm -rf {{.SIMDIR}}/{{.PATH}}/examples"),
+		})
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f"),
+		})
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yml -print0  | xargs -r -0 rm -f"),
+		})
+		*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/**"))
 	}(&modelTask, model)
 
 	// Parse: workflow uses items
@@ -280,7 +345,8 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 						continue
 					}
 					// Download the Uses file.
-					downloadFile := parseUrl(task, varUses)
+					downloadFile := parseUrl(task, varUses, model.Name)
+					usesDownloadFilePaths[varUses.Name] = downloadFile
 
 					// Extract the Uses path.
 					if varUses.Path == nil {
@@ -308,22 +374,46 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 			return
 		}
 		for _, workflow := range *model.Workflows {
-			var workflowUses ast.Uses = modelUses
+			var workflowUses *ast.Uses = nil
+			// Search for the requested/specified 'uses'.
 			if workflow.Uses != nil {
 				for _, uses := range *simSpec.Uses {
 					if uses.Name == *workflow.Uses {
-						workflowUses = uses
+						workflowUses = &uses
 						break
 					}
 				}
 			}
+			// Otherwise search the 'uses' space for the workflow.
+			// TODO should we only rely on explicit 'uses'?
+			if workflowUses == nil {
+				for _, uses := range *simSpec.Uses {
+					if uses.Metadata == nil {
+						continue
+					}
+					md = *uses.Metadata
+					models := md["models"].(map[string]interface{})
+					for _, model := range models {
+						for _, w := range model.(map[string]interface{})["workflows"].([]interface{}) {
+							if w.(string) == workflow.Name {
+								workflowUses = &uses
+							}
+						}
+					}
+				}
+			}
+			// And lastly use the modelUses.
+			if workflowUses == nil {
+				workflowUses = &modelUses
+			}
+
 			vars := map[string]string{}
 			if workflow.Vars == nil {
 				continue
 			}
 			for _, v := range *workflow.Vars {
 				if v.Reference != nil && *v.Reference == "uses" {
-					vars[v.Name] = fmt.Sprintf("{{.PATH}}/%s", v.Value)
+					vars[v.Name] = usesDownloadFilePaths[v.Value]
 				} else {
 					vars[v.Name] = v.Value
 				}

@@ -24,6 +24,7 @@ examples
 └── notebook    <-- Jupyter base simulation example
 └── vscode      <-- VS Code integration examples
 graph
+graph
 └── build/package
     └── report/     <-- Report tool
 licenses            <-- Third Party Licenses
@@ -208,6 +209,33 @@ $ dse-ast convert -input single_fmu.json -output ast.yaml
 
 
 ## Build
+
+### WSL Linux (local development)
+
+```bash
+# Install NVM, and node, if necessary.
+$ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+$ nvm ls-remote
+$ nvm install v22.15.0
+
+# Install prerequisites.
+$ sudo npm install -g vsce
+$ sudo npm install -g http-server
+$ sudo npm install -g typescript
+
+# Clone the repo.
+$ git clone https://github.boschdevcloud.com/fsil/dse.sdp.git
+$ cd dse.sdp
+
+# Setup the SDP.
+$ make
+$ make build install
+
+# Set your path to include ~/.local/bin if necessary. Permanent alterations
+# can be made to your '~/.bashrc' or '~/.profile' file.
+$ export PATH="$HOME/.local/bin:$PATH"
+```
+
 
 ## Developer Notes
 

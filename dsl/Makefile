@@ -27,7 +27,7 @@ build:
 
 .PHONY: install
 install: build
-	npm install -g --force
+	export NPM_CONFIG_PREFIX=~/.local; npm install; npm link
 
 
 .PHONY: test
@@ -49,7 +49,7 @@ do-test_testscript:
 
 .PHONY: clean
 clean:
-	rm package-lock.json
+	rm -f package-lock.json
 	rm -rf node_modules
 
 

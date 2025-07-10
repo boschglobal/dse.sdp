@@ -28,3 +28,8 @@ build:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d build ); done
 	$(MAKE) generate
 
+.PHONY: clean
+clean:
+
+.PHONY: cleanall
+cleanall:

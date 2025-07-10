@@ -12,14 +12,9 @@ build:
 	mkdir -p bin/graph/yaml
 	chmod +x $(SCRIPTS_DIR)/dse-mdf2csv.sh
 	ln -sf $(SCRIPTS_DIR)/dse-mdf2csv.sh ~/.local/bin/dse-mdf2csv
-	npm install && npm install -g vsce && npm install -g http-server
+	npm install
 	vsce package --out ./out/bin/dse.vsix
-	@if [ -f "$$HOME/.bashrc" ]; then \
-		grep -qs 'export PATH="$$HOME/.local/bin:$$PATH"' "$$HOME/.bashrc" || \
-		echo 'export PATH="$$HOME/.local/bin:$$PATH"' >> "$$HOME/.bashrc"; \
-	fi
-	@PATH="$$HOME/.local/bin:$$PATH"
-	
+
 EXTENSION_NAME := dse.dse-1.0.0
 .PHONY: install
 install: build
@@ -44,7 +39,11 @@ test:
 clean:
 	rm -rf out client/out server/out
 	rm -rf package-lock.json
-	rm -rf node_modules
+	rm -rf client/package-lock.json
+	rm -rf server/package-lock.json
 
 .PHONY: cleanall
 cleanall: clean
+	rm -rf node_modules
+	rm -rf client/node_modules
+	rm -rf server/node_modules
