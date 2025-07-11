@@ -55,7 +55,11 @@ $ make task
 $ make report
 
 # Run the simulation using Simer (note: does not run the packaged FMU)
-$ make run
+$ make simer
+$ make simer-modelc-runtime
+
+# Run the simulation using FMPy
+# TODO update with python script.
 
 # Delete the simulation and generated files
 $ make clean

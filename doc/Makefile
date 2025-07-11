@@ -5,7 +5,7 @@
 SUBDIRS := html2img
 PWD := $(shell pwd)
 STATIC_DIR := static
-OUTPUT_IMG := content/docs/user/sdp/tools/dsl/syntax_diagrams.png
+OUTPUT_IMG := content/docs/user/tools/dsl/syntax_diagrams.png
 export DOCKER_IMAGE := html2img
 export DOCKER_BUILDER_CMD := docker run --rm -v $(PWD):/work $(DOCKER_IMAGE) $(STATIC_DIR)/syntax_diagrams.html $(OUTPUT_IMG)
 

@@ -25,12 +25,27 @@ report:
 		-v $$(pwd)/out/sim:/sim \
 		$(DSE_REPORT_IMAGE) /sim
 
-.PHONY: run
-run:
+.PHONY: simer
+simer:
 	docker run -it --rm \
 		-v $$(pwd)/out/sim:/sim \
-		$(DSE_SIMER_IMAGE)
-	./post_run.sh
+		$(DSE_SIMER_IMAGE) \
+			-redis="" \
+			-simbus="" \
+			-transport="loopback" \
+			-uri="loopback" \
+        	-env SIMBUS_LOGLEVEL=2 \
+        	-logger 1
+
+.PHONY: simer-modelc-runtime
+simer-modelc-runtime:
+	docker run -it --rm \
+		-v $$(pwd)/out/sim:/sim \
+		--entrypoint="" \
+		$(DSE_SIMER_IMAGE) \
+			bin/importer \
+			lib/libruntime.so \
+			sim data/simulation.yaml runnable
 
 .PHONY: clean
 clean:

@@ -407,7 +407,7 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 				workflowUses = &modelUses
 			}
 
-			vars := map[string]string{}
+			vars := map[string]string{"MODEL": "{{.MODEL}}"}
 			if workflow.Vars == nil {
 				continue
 			}
