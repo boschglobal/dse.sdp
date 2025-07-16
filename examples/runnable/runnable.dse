@@ -3,9 +3,9 @@ channel signal
 channel network
 
 uses
-fsil.runnable https://{{.GHE_TOKEN}}@github.boschdevcloud.com/fsil/fsil.runnable v1.1.0 user={{.AR_USER}} token={{.AR_TOKEN}}
-dse.fmi https://github.com/boschglobal/dse.fmi v1.1.33
-example https://github.boschdevcloud.com/fsil/fsil.runnable/releases/download/v1.1.0/example.zip token={{.GHE_PAT}}
+fsil.runnable https://{{.GHE_TOKEN}}@github.boschdevcloud.com/fsil/fsil.runnable v1.1.2 user={{.AR_USER}} token={{.AR_TOKEN}}
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.34
+example https://github.boschdevcloud.com/fsil/fsil.runnable/releases/download/v1.1.2/example.zip token={{.GHE_PAT}}
 
 
 model runnable fsil.runnable
