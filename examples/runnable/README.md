@@ -14,12 +14,12 @@ This example requires the following authentication tokens to be set in the
 operating environment:
 
 * For downloading artefacts and container images from BDC Artifactory:
-    * AR_USER (abc1abt@bosch.com)
-    * AR_TOKEN (xxxx)
+  * AR_USER (`abc1abt@bosch.com`)
+  * AR_TOKEN (xxxx)
 * Accessing BDC (i.e. FSIL) github repositories:
-    * GHE_USER (abc1abt)
-    * GHE_TOKEN (zzzzz)
-    * GHE_PAT (ghp_yyyyy)
+  * GHE_USER (abc1abt)
+  * GHE_TOKEN (zzzzz)
+  * GHE_PAT (ghp_yyyyy)
 
 
 ### VS Code with Devcontainer (WSL Backend)
