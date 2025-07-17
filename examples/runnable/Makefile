@@ -4,6 +4,8 @@
 
 export TASK_X_REMOTE_TASKFILES=1
 export DSE_REPORT_IMAGE=ghcr.io/boschglobal/dse-report:latest
+export DSE_BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
+
 
 default: build
 .PHONY: build
@@ -12,6 +14,13 @@ build:
 	dse-ast convert -input runnable.json -output runnable.yaml
 	dse-ast resolve -input runnable.yaml
 	dse-ast generate -input runnable.yaml -output .
+
+# FIXME Metadata retrieval not working. Networking issue. Need more debug logging.
+.PHONY: build-docker
+build-docker:
+	docker run -it --rm \
+		-v $$(pwd):/workdir \
+		$(DSE_BUILDER_IMAGE) runnable.dse
 
 .PHONY: task
 task:

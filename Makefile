@@ -62,6 +62,7 @@ cleanall: clean
 .PHONY: docker
 docker:
 	$(MAKE) -C graph docker
+	docker build -f .devcontainer/Dockerfile-builder --tag dse-builder:test . ;\
 
 .PHONY: graph
 graph:

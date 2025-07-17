@@ -1,0 +1,90 @@
+# Copyright 2025 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+
+
+# Go Builder
+# ==========
+FROM golang:1.23.5-bullseye AS golang-builder
+COPY ast /src/ast
+RUN go install github.com/go-task/task/v3/cmd/task@latest
+RUN set -eux; \
+    mkdir -p /root/.local/bin; \
+    cd /src \
+        && make -C ast build install
+
+
+# Node Builder
+# ============
+FROM node:22-bullseye AS node-builder
+COPY dsl /src/dsl
+COPY lsp /src/lsp
+RUN set -eux; \
+    mkdir -p /root/.local/bin; \
+    cd /src \
+        && npm install -g typescript \
+        && make -C dsl build install \
+        && make -C lsp build install
+
+
+
+# Builder Image
+# =============
+FROM debian:bullseye-slim
+LABEL maintainer="timothy.rule@de.bosch.com";
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN set -eux; \
+	apt-get -y update; \
+	apt-get -y upgrade; \
+    apt-get -y install --no-install-recommends \
+        bash \
+        build-essential \
+        ca-certificates \
+        curl \
+        git \
+        jq \
+        less \
+        make \
+        rsync \
+        tar \
+        unzip \
+        vim \
+        wget \
+    && \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*;
+
+RUN wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq \
+    && chmod +x /usr/bin/yq
+
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get update \
+    && apt-get -y install \
+        nodejs
+
+
+# Install Builder Binaries
+# ========================
+COPY --from=golang-builder /go/bin/task /usr/local/bin/task
+COPY --from=golang-builder /src/ast/bin/ast /usr/local/bin/dse-ast
+COPY --from=node-builder /src/lsp/out /usr/local/bin/dse-lsp
+COPY --from=node-builder /src/dsl/out /opt/dse-dsl/out
+COPY --from=node-builder /src/dsl/node_modules /opt/dse-dsl/node_modules
+COPY --from=node-builder /src/dsl/package.json /opt/dse-dsl/
+
+
+# DSL Launch Wrapper
+# ==================
+RUN echo '#!/bin/sh\nexec node /opt/dse-dsl/out/bin/parse2ast.js "$@"' > /usr/local/bin/dse-parse2ast \
+    && chmod +x /usr/local/bin/dse-parse2ast
+
+
+# Setup the entry conditions
+# ==========================
+# Run docker with --volume parameter to map the current folder into /workdir.
+WORKDIR /workdir
+COPY .devcontainer/builder-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

@@ -13,7 +13,6 @@ build:
 	chmod +x $(SCRIPTS_DIR)/dse-mdf2csv.sh
 	ln -sf $(SCRIPTS_DIR)/dse-mdf2csv.sh ~/.local/bin/dse-mdf2csv
 	npm install
-	vsce package --out ./out/bin/dse.vsix
 
 EXTENSION_NAME := dse.dse-1.0.0
 .PHONY: install
@@ -26,9 +25,13 @@ install: build
 		mkdir -p /home/codespace/.vscode-remote/extensions/$(EXTENSION_NAME);	\
 		mv /home/codespace/.vscode-remote/extensions/temp/extension/* /home/codespace/.vscode-remote/extensions/$(EXTENSION_NAME)/;	\
 		rm -rf /home/codespace/.vscode-remote/extensions/temp;	\
-	else \
-		echo y | code --install-extension ./out/bin/dse.vsix; \
 	fi
+
+.PHONY: install-extension
+install-extension:
+	npm install -g @vscode/vsce
+	vsce package --out ./out/bin/dse.vsix
+	@echo y | code --install-extension ./out/bin/dse.vsix
 	pip install matplotlib
 	@exit 0
 
