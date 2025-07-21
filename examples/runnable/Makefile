@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 export TASK_X_REMOTE_TASKFILES=1
-export DSE_REPORT_IMAGE=ghcr.io/boschglobal/dse-report:latest
 export DSE_BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
+export DSE_REPORT_IMAGE=ghcr.io/boschglobal/dse-report:latest
+export DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
 
 
 default: build
