@@ -1,5 +1,7 @@
 # Dynamic Simulation Environment - Simulation Development Platform
 
+[![Containers](https://github.com/boschglobal/dse.sdp/actions/workflows/containers.yaml/badge.svg)](https://github.com/boschglobal/dse.sdp/actions/workflows/containers.yaml)
+[![Super Linter](https://github.com/boschglobal/dse.sdp/actions/workflows/super-linter.yaml/badge.svg)](https://github.com/boschglobal/dse.sdp/actions/workflows/super-linter.yaml)
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/boschglobal/dse.sdp?quickstart=1)
 
 
