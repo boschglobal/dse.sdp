@@ -3,12 +3,6 @@ name: CI
 
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
-  push:
-    branches: [main, devel]
-    tags:
-      - 'v*.*.*'
-  pull_request:
-    branches: [main, devel]
 
 permissions:
   contents: read
@@ -29,39 +23,3 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-report
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-
-      - name: Version
-        if: startsWith(github.ref, 'refs/tags/')
-        id: package
-        run: |
-          echo "PACKAGE_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
-
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          context: graph/
-          file: ./graph/build/package/report/Dockerfile
-          build-args: |
-             PACKAGE_VERSION=${{ env.PACKAGE_VERSION }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
