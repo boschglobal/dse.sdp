@@ -21,30 +21,19 @@ operating environment:
   * GHE_TOKEN (zzzzz)
   * GHE_PAT (ghp_yyyyy)
 
+### Codespace / Devcontainer
 
-### VS Code with Devcontainer (WSL Backend)
+```bash
+TODO
+```
 
 
 ### WSL Linux
 
 ```bash
-# Install NVM, and node, if necessary.
-$ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-$ nvm ls-remote
-$ nvm install v22.15.0
-
-# Install prerequisites.
-$ sudo npm install -g vsce
-$ sudo npm install -g http-server
-$ sudo npm install -g typescript
-
 # Clone the repo.
 $ git clone https://github.boschdevcloud.com/fsil/dse.sdp.git
 $ cd dse.sdp
-
-# Setup the SDP.
-$ make
-$ make build install
 
 # Build and run the example simulation.
 $ cd examples/runnable
