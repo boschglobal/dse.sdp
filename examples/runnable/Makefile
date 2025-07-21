@@ -10,17 +10,17 @@ export DSE_BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
 default: build
 .PHONY: build
 build:
+	docker run -it --rm \
+		-e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
+		-v $$(pwd):/workdir \
+		$(DSE_BUILDER_IMAGE) runnable.dse
+
+.PHONY: build-dev
+build-dev:
 	dse-parse2ast runnable.dse runnable.json
 	dse-ast convert -input runnable.json -output runnable.yaml
 	dse-ast resolve -input runnable.yaml
 	dse-ast generate -input runnable.yaml -output .
-
-# FIXME Metadata retrieval not working. Networking issue. Need more debug logging.
-.PHONY: build-docker
-build-docker:
-	docker run -it --rm \
-		-v $$(pwd):/workdir \
-		$(DSE_BUILDER_IMAGE) runnable.dse
 
 .PHONY: task
 task:
@@ -44,7 +44,8 @@ simer:
 			-transport="loopback" \
 			-uri="loopback" \
         	-env SIMBUS_LOGLEVEL=2 \
-        	-logger 1
+			-endtime 0.100 \
+        	-logger 4
 
 .PHONY: simer-modelc-runtime
 simer-modelc-runtime:

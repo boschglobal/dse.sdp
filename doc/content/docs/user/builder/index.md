@@ -136,25 +136,24 @@ _models_ and _workflows_.
 ## Special Variables
 
 DSE Lang uses a templating mechanism to introduce special variables to a DSE
-Script. Those variables are used to influence how a simulation is constructed.
+Script (in the form: `{{ .SPECIAL_VAR }}`). Those variables are used to influence how a simulation is constructed.
 Additionally, the templating mechanism can be used to introduce environment
 variables to a DSE Script (useful for authentication).
 
 
-{{.<var>ENV_VAR</var>}} :
-Expands to the named <var>ENV_VAR</var>.
+ENV_VAR
+: Expands to the named <var>ENV_VAR</var>.
 
-
-{{.MODEL}}
+MODEL
 : When used within the context of a _model_ expands to the models name (i.e. <var>MODEL_INST_NAME</var>).
 
-{{.OUTDIR}}
+OUTDIR
 : The output directory of the SDP toolchains (typically <code>out</code>). Contains the simulation folder.
 
-{{.PATH}}
+PATH
 : When used within the context of a _model_ expands to the models path within the simulation filesystem (set to <var>SIMDIR</var>/<var>MODEL_INST_NAME</var>).
 
-{{.SIMDIR}}
+SIMDIR
 : The simulation folder (typically <code>sim</code>).
 
 
@@ -180,17 +179,48 @@ $ docker pull ghcr.io/boschglobal/dse-builder:1.0
 
 #### Shell Function
 
-> TODO: This section needs to be updated.
+> Info: The following shell function passes credentials to the Build Container
+> which are used to fetch artifacts and repository metadata. Adjust as necessary
+> for your environment (the `-e` parameters of the `docker` command).
 
 ```bash
 # Define a shell function (or add to .profile file).
 $ export BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
-$ builder() { ( if test -f "$1"; then cd $dirname("$1") && shift; fi && docker run -it --rm -v $(pwd):/workdir $BUILDER_IMAGE "$@"; ) }
+$ builder() { ( if test -f "$1"; then cd $(dirname "$1"); fi && docker run -it --rm -e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT -v $(pwd):/workdir $BUILDER_IMAGE "$@"; ) }
 
 # Build the simulation.
-$ builder examples/runnable/runnable.dse
+$ cd examples/runnable
+$ builder runnable.dse
+
+# And then use Task to complete the simulation (according to the build plan).
+export TASK_X_REMOTE_TASKFILES=1
+$ task -y -v
+ls -R out/sim
 ```
 
 ### Authentication
 
-> TODO: This section needs to be updated.
+Any `uses` items in your DSE Script which require authentication credentials
+need to be defined in your environment and passed to the builder container. For
+example the following DSE Script uses a private GitHub repository and
+Artifactory instance:
+
+```hs
+simulation arch=linux-amd64
+channel signal
+
+uses
+fsil.runnable https://{{.GHE_TOKEN}}@github.boschdevcloud.com/fsil/fsil.runnable v1.1.2 user={{.AR_USER}} token={{.AR_TOKEN}}
+```
+
+and needs the following authentication setup:
+
+```bash
+# Define authentication tokens.
+export AR_USER=foo
+export AR_TOKEN=foo_token
+export GHE_TOKEN=goo_token
+
+# Specify the shell function.
+$ builder() { ( if test -f "$1"; then cd $(dirname "$1"); fi && docker run -it --rm -e AR_USER -e AR_TOKEN -e GHE_TOKEN -v $(pwd):/workdir $BUILDER_IMAGE "$@"; ) }
+```
