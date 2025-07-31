@@ -8,7 +8,7 @@
 # ==========
 FROM golang:1.23.5-bullseye AS golang-builder
 COPY ast /src/ast
-RUN go install github.com/boschglobal/task/v3/cmd/task@latest
+RUN go install github.com/go-task/task/v3/cmd/task@latest
 RUN set -eux; \
     mkdir -p /root/.local/bin; \
     cd /src \
