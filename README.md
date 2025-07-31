@@ -123,7 +123,7 @@ In particular these scenarios exist:
 **Local WSL**
 ```bash
 # Build a local version of the ModelC library for Windows (or download).
-$ git clone https://github.com/boschglobal/dse.modelc
+$ git clone https://github.com/boschglobal/dse.modelc 
 $ cd dse.modelc
 $ PACKAGE_ARCH=windows-x64 make
 ```

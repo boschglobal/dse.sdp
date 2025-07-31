@@ -2,7 +2,11 @@
     "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
     "name": "dse",
     "scopeName": "source.dse",
-    "patterns": [{
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
             "include": "#keywords"
         },
         {
@@ -10,12 +14,22 @@
         }
     ],
     "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.number-sign.dse",
+                    "match": "\\s*#.*"
+                }
+            ]
+        },
         "keywords": {
-            "patterns": [{
-                "name": "keyword.control.dse",
-                "match": "(?<![\\w./-])(simulation|model|channel|uses|workflow|as|stack|network|var|arch|file|uid|envar|stepsize|endtime|user|token|stacked|sequential|path|external)(?![\\w./-])",
-                "scope": "keyword.control"
-            }]
+            "patterns": [
+                {
+                    "name": "keyword.control.dse",
+                    "match": "(?<![\\w./-])(simulation|model|channel|uses|workflow|as|stack|network|var|arch|file|uid|envar|stepsize|endtime|user|token|stacked|sequential|path|external)(?![\\w./-])",
+                    "scope": "keyword.control"
+                }
+            ]
         }
     }
 }

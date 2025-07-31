@@ -52,52 +52,56 @@ let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
 
 function fillMissingSuggestionData(suggestion_data: any, taskfile_data: any) {
-  for (const repo in taskfile_data) {
-    for (const model in suggestion_data) {
-      if (model.includes(repo)) {
-        const suggestion_workflow_obj = suggestion_data[model]["workflows"];
-        const suggestion_workflows = suggestion_workflow_obj.map(
-          (workflow: {}) => Object.keys(workflow)[0],
-        );
-        for (const workflow of suggestion_workflow_obj) {
-          const workflow_name = Object.keys(workflow)[0];
-          const taskfile_workflow_obj = taskfile_data[repo]["workflows"];
-          const taskfile_workflows = taskfile_workflow_obj.map(
+  try {
+    for (const repo in taskfile_data) {
+      for (const model in suggestion_data) {
+        if (model.includes(repo)) {
+          const suggestion_workflow_obj = suggestion_data[model]["workflows"];
+          const suggestion_workflows = suggestion_workflow_obj.map(
             (workflow: {}) => Object.keys(workflow)[0],
           );
-          if (taskfile_workflows.includes(workflow_name)) {
-            // To check missing key values of suggestion workflow.
-            const task_workflow_idx = taskfile_workflows.indexOf(workflow_name);
-            const suggestion_workflow_idx =
-              suggestion_workflows.indexOf(workflow_name);
+          for (const workflow of suggestion_workflow_obj) {
+            const workflow_name = Object.keys(workflow)[0];
+            const taskfile_workflow_obj = taskfile_data[repo]["workflows"];
+            const taskfile_workflows = taskfile_workflow_obj.map(
+              (workflow: {}) => Object.keys(workflow)[0],
+            );
+            if (taskfile_workflows.includes(workflow_name)) {
+              // To check missing key values of suggestion workflow.
+              const task_workflow_idx = taskfile_workflows.indexOf(workflow_name);
+              const suggestion_workflow_idx =
+                suggestion_workflows.indexOf(workflow_name);
 
-            const workflow_keys_from_taskfile = Object.keys(
-              taskfile_workflow_obj[task_workflow_idx][workflow_name],
-            );
-            const workflow_keys_from_suggestion = Object.keys(
-              suggestion_workflow_obj[suggestion_workflow_idx][workflow_name],
-            );
-            const missing_keys_in_suggestion: string[] =
-              workflow_keys_from_taskfile.filter(
-                (value) => !workflow_keys_from_suggestion.includes(value),
+              const workflow_keys_from_taskfile = Object.keys(
+                taskfile_workflow_obj[task_workflow_idx][workflow_name],
               );
-            for (const missing_key of missing_keys_in_suggestion) {
-              // Adding missing key values of each taskfile workflow to suggestion workflow.
-              suggestion_data[model]["workflows"][suggestion_workflow_idx][
-                workflow_name
-              ][missing_key] =
-                taskfile_workflow_obj[task_workflow_idx][workflow_name][
+              const workflow_keys_from_suggestion = Object.keys(
+                suggestion_workflow_obj[suggestion_workflow_idx][workflow_name],
+              );
+              const missing_keys_in_suggestion: string[] =
+                workflow_keys_from_taskfile.filter(
+                  (value) => !workflow_keys_from_suggestion.includes(value),
+                );
+              for (const missing_key of missing_keys_in_suggestion) {
+                // Adding missing key values of each taskfile workflow to suggestion workflow.
+                suggestion_data[model]["workflows"][suggestion_workflow_idx][
+                  workflow_name
+                ][missing_key] =
+                  taskfile_workflow_obj[task_workflow_idx][workflow_name][
                   missing_key
-                ];
+                  ];
+              }
+              // To check for missing taskfile vars.
+              // const taskfile_vars:string[] = taskfile_workflow_obj[task_workflow_idx][workflow_name]['vars'];
+              // const suggestion_vars:string[] = suggestion_workflow_obj[suggestion_workflow_idx][workflow_name]['vars'];
+              // const missing_vars_in_suggestion : string[] = taskfile_vars.filter(value => !suggestion_vars.includes(value));
             }
-            // To check for missing taskfile vars.
-            // const taskfile_vars:string[] = taskfile_workflow_obj[task_workflow_idx][workflow_name]['vars'];
-            // const suggestion_vars:string[] = suggestion_workflow_obj[suggestion_workflow_idx][workflow_name]['vars'];
-            // const missing_vars_in_suggestion : string[] = taskfile_vars.filter(value => !suggestion_vars.includes(value));
           }
         }
       }
     }
+  } catch (error) {
+    console.log(error);
   }
 }
 
@@ -124,7 +128,7 @@ function metadataDataParser(metadata_data: any) {
           ]["vars"]) {
             const var_object =
               metadata_data["tasks"][workflow_name]["metadata"]["vars"][
-                var_val
+              var_val
               ];
             if (var_object["required"] === true) {
               required_vars.push(var_val);
@@ -219,32 +223,75 @@ function taskFileParser(yamlData: any, model: any) {
     let internal = false;
     let required: any[] = [];
     if ("vars" in yamlData.tasks[task]) {
-      let vars = Object.keys(yamlData.tasks[task]["vars"]);
+      let vars = Object.keys(yamlData.tasks[task]?.["vars"] || {})
+      if (vars && vars.length > 0) {
 
-      if ("internal" in yamlData.tasks[task]) {
-        internal = yamlData.tasks[task]["internal"];
+        if ("internal" in yamlData.tasks[task]) {
+          internal = yamlData.tasks[task]["internal"];
+        }
+
+        if ("requires" in yamlData.tasks[task]) {
+          required = yamlData.tasks[task]["requires"]["vars"];
+        }
+
+        vars = vars.filter((value) => !required.includes(value)); // removing required vars from vars list
+        item = {
+          vars: vars,
+          internal: internal,
+          required_vars: required,
+        };
+        taskfile_data[model]["workflows"].push({ [task]: item });
       }
-
-      if ("requires" in yamlData.tasks[task]) {
-        required = yamlData.tasks[task]["requires"]["vars"];
-      }
-
-      vars = vars.filter((value) => !required.includes(value)); // removing required vars from vars list
-      item = {
-        vars: vars,
-        internal: internal,
-        required_vars: required,
-      };
-      taskfile_data[model]["workflows"].push({ [task]: item });
     }
   }
 }
 
-function parseTaskfile(yamlData: any, repo: any) {
+function setDiagnostics(repoUrlAndVersion: { [key: string]: any }, textDocument: TextDocument, diagnostics: Diagnostic[], seen: Set<string>, err_type: string) {
+  const text = textDocument.getText();
+  const url = repoUrlAndVersion['link'];
+  let escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "\\s+v\\d\.*";
+  const regex = new RegExp(escapedUrl, 'g');
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const startOffset = match.index;
+    const endOffset = startOffset + match[0].length;
+    const startPos = textDocument.positionAt(startOffset);
+    const endPos = textDocument.positionAt(endOffset);
+    const key = `${startPos.line}:${startPos.character}-${endPos.line}:${endPos.character}`;
+    if (!seen.has(key)) {
+      let message = "";
+      let severity;
+      if (err_type === "metadata") {
+        message = `Repo does not have associated metadata.\nRepo: ${url}\nVersion: ${repoUrlAndVersion['version']}`;
+        severity = DiagnosticSeverity.Error;
+      } else if (err_type === "404") {
+        message = `404 Not Found: The repository or Taskfile could not be located.\nPlease check if the URL is correct:\n${url}`;
+        severity = DiagnosticSeverity.Error;
+      } else {
+        message = `Please check if the URL is correct:\n${url}`;
+        severity = DiagnosticSeverity.Error;
+      }
+      seen.add(key);
+      diagnostics.push({
+        severity: severity,
+        range: {
+          start: startPos,
+          end: endPos,
+        },
+        message,
+        source: "dse.dse",
+      });
+    }
+  }
+}
+
+function parseTaskfile(yamlData: any, repo: any, repoUrlAndVersion: { [key: string]: any }, textDocument: TextDocument, diagnostics: Diagnostic[], seen: Set<string>) {
   taskfile_data[repo] = {};
   if ("metadata" in yamlData) {
     taskFileParser(yamlData, repo);
     metadataDataParser(yamlData);
+  } else {
+    setDiagnostics(repoUrlAndVersion, textDocument, diagnostics, seen, "metadata");
   }
 }
 
@@ -275,24 +322,18 @@ function gen_git_raw_url(repo: { [key: string]: any }, file: string): string {
   return raw_url;
 }
 
-async function fetchGitHubRawFile(url: string) {
+async function fetchGitHubRawFile(url: string): Promise<{ statusCode: number; data: string }> {
   return new Promise((resolve, reject) => {
     https
       .get(url, { agent }, (res) => {
-        if (res.statusCode === 404) {
-          res.on("end", () => {
-            resolve("404");
-          });
-          return;
-        }
-
         let data = "";
+
         res.on("data", (chunk) => {
           data += chunk;
         });
 
         res.on("end", () => {
-          resolve(data);
+          resolve({ statusCode: res.statusCode || 0, data });
         });
 
         res.on("error", (error) => {
@@ -304,6 +345,7 @@ async function fetchGitHubRawFile(url: string) {
       });
   });
 }
+
 
 connection.onInitialize((params: InitializeParams) => {
   const capabilities = params.capabilities;
@@ -413,22 +455,39 @@ connection.languages.diagnostics.on(async (params) => {
   }
 });
 
-function fetchGitData(uses_items: { [key: string]: any }) {
-  for (let repo in uses_items["repos"]) {
+function fetchGitData(uses_items: { [key: string]: any }, textDocument: TextDocument) {
+  const diagnostics: Diagnostic[] = [];
+  const seen = new Set<string>();
+  let remaining = Object.keys(uses_items["repos"] || {}).length;
+  for (let repo in uses_items["repos"] || {}) {
     const taskfile_git_raw_url: string = gen_git_raw_url(
       uses_items["repos"][repo],
       "Taskfile.yml",
     );
     fetchGitHubRawFile(taskfile_git_raw_url)
-      .then((content: any) => {
-        if (content != undefined) {
-          yamlData = yaml.load(content);
-          parseTaskfile(yamlData, repo);
+      .then(({ statusCode, data }) => {
+        if (statusCode === 200) {
+          const parsed = yaml.load(data);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            const yamlData = parsed as { [key: string]: any };
+            parseTaskfile(yamlData, repo, uses_items["repos"][repo], textDocument, diagnostics, seen);
+          }
+        } else if (statusCode === 404) {
+          setDiagnostics(uses_items["repos"][repo], textDocument, diagnostics, seen, "404");
         }
       })
       .catch((error) => {
-        console.log("Error in fetching taskfile, ");
-        console.error(error);
+        console.log("Error in fetching taskfile ", taskfile_git_raw_url);
+        console.log(error);
+      })
+      .finally(() => {
+        remaining--;
+        if (remaining === 0) {
+          connection.sendDiagnostics({
+            uri: textDocument.uri,
+            diagnostics,
+          });
+        }
       });
   }
 }
@@ -439,25 +498,61 @@ documents.onDidChangeContent((change) => {
   getSelectedModelName(change.document);
 });
 
+function stripInlineComment(line: string): string {
+  const commentStart = line.indexOf("#");
+  if (commentStart !== -1) {
+    return line.substring(0, commentStart).trimEnd();
+  }
+  return line;
+}
+
 async function getSelectedModelName(textDocument: TextDocument) {
   try {
     channels = [];
     const text = textDocument.getText();
     let modelMatch: RegExpExecArray | null;
     let matches: string[] = [];
-    const modelPattern = /\b^model\s*\w+\s+(\S+)\s+.*\b/gm;
-    while ((modelMatch = modelPattern.exec(text)) !== null) {
-      matches.push(modelMatch[1]);
+    let modelPattern = /\b[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=)(\S+)([ ]+arch=\S+)?([ ]+uid=\d+)?([ ]+external=\S+)?\s*(?:\#.*)?\b/gm;
+    const models = Array.from(text.matchAll(modelPattern));
+    console.log("model count in dse : ", models.length, "\n");
+    for (const match of models) {
+      const modelMatchLine = match[0];
+      if (modelMatchLine.includes("external=")) {
+        console.log("external key found...")
+        modelPattern = /\b^[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)(?!arch=|uid=)([ ]+external=\w+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*(?:\#.*)?\b/gm;
+        modelMatch = modelPattern.exec(stripInlineComment(modelMatchLine));
+        if (modelMatch != null) {
+          matches.push(modelMatch[1]);
+        } else {
+          modelPattern = /\b^[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=)(\S+)([ ]+external=\w+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*(?:\#.*)?\b/gm;
+          modelMatch = modelPattern.exec(stripInlineComment(modelMatchLine));
+          if (modelMatch != null) {
+            matches.push(modelMatch[2]);
+          }
+        }
+      } else {
+        modelPattern = /\b[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=|external=)(\S+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*(?:\#.*)?\b/gm;
+        modelMatch = modelPattern.exec(stripInlineComment(modelMatchLine));
+        if (modelMatch != null) {
+          matches.push(modelMatch[2]);
+        }
+      }
     }
-    selectedModel = matches[matches.length - 1];
-    console.log("selectedModel is : ", selectedModel);
-    if (selectedModel !== undefined && selectedModel !== "") {
-      workflowNames = suggestion_data[selectedModel]["workflows"].map(
-        (workflow: {}) => Object.keys(workflow)[0],
-      );
+    if (matches && matches.length > 0) {
+      selectedModel = matches[matches.length - 1];
+      if (selectedModel !== undefined && selectedModel !== "") {
+        if (selectedModel in suggestion_data) {
+          workflowNames = suggestion_data[selectedModel]["workflows"].map(
+            (workflow: {}) => Object.keys(workflow)[0],
+          );
+        } else {
+          workflowNames = [];
+        }
+      }
+      console.log("current selectedModel is : ", selectedModel);
     }
   } catch {
-    return [];
+    console.log("exception in function getSelectedModelName")
   }
 }
 
@@ -466,7 +561,7 @@ async function getUsesItems(textDocument: TextDocument) {
   const text = textDocument.getText();
   const uses_pattern = /\b(uses)\b/g;
   const uses_item_pattern =
-    /\b^(\S+)([ ]+(?:(?:https\:\/\/\S+)|(?:\S+\.\S+)|(?:\S+\/\S+)))([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?(?:[ ]+(user\=\S+))?(?:[ ]+(token\=\S+))?\b/;
+    /^[ \t]*(\S+)([ ]+(?:(?:https\:\/\/\S+)|(?:\S+\.\S+)|(?:\S+\/\S+)))([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?(?:[ ]+(user\=\S+))?(?:[ ]+(token\=\S+))?\s*(?:\#.*)?$/;
   let usesMatch: RegExpExecArray | null;
   let usesFlag = false;
 
@@ -508,7 +603,7 @@ async function getUsesItems(textDocument: TextDocument) {
       usesFlag = false;
     }
   }
-  fetchGitData(uses_items);
+  fetchGitData(uses_items, textDocument);
 }
 
 async function validateTextDocument(
@@ -530,30 +625,36 @@ connection.onCompletion(
     const completionItems: CompletionItem[] = [];
     const document = documents.get(textDocumentPosition.textDocument.uri);
     if (document) {
-      const line = textDocumentPosition.position.line;
-      const character = textDocumentPosition.position.character;
-      const lines = document.getText().split("\n");
-      const currentLine = lines[line];
-      // Extracting the word
-      const left =
-        currentLine.slice(0, character).match(/[a-zA-Z_\=]+$/)?.[0] ?? "";
-      const right =
-        currentLine.slice(character).match(/^[a-zA-Z_\=]+/)?.[0] ?? "";
-      const word = left + right;
+      try {
+        const line = textDocumentPosition.position.line;
+        const character = textDocumentPosition.position.character;
+        const lines = document.getText().split("\n");
+        const currentLine = lines[line];
+        // Extracting the word
+        const left =
+          currentLine.slice(0, character).match(/[a-zA-Z_\=]+$/)?.[0] ?? "";
+        const right =
+          currentLine.slice(character).match(/^[a-zA-Z_\=]+/)?.[0] ?? "";
+        const word = left + right;
 
-      if (selectedModel !== undefined && selectedModel !== "") {
-        architectures = [];
-        channels = [];
-        if (selectedModel in suggestion_data) {
-          architectures = suggestion_data[`${selectedModel}`]["platforms"];
-          channels = suggestion_data[`${selectedModel}`]["channels"];
+        if (selectedModel !== undefined && selectedModel !== "") {
+          architectures = [];
+          channels = [];
+          if (suggestion_data && suggestion_data.length > 0) {
+            if (selectedModel in suggestion_data) {
+              architectures = suggestion_data[`${selectedModel}`]["platforms"];
+              channels = suggestion_data[`${selectedModel}`]["channels"];
+            }
+          }
+        } else {
+          architectures = [];
+          channels = [];
         }
-      }
-      if (word.startsWith("s")) {
-        completionItems.length = 0;
-        const insertText =
-          Object.keys(suggestion_data).length > 0
-            ? "stack ${1:stack_name} stacked=${2|" +
+        if (word.startsWith("s")) {
+          completionItems.length = 0;
+          const insertText =
+            suggestion_data && Object.keys(suggestion_data).length > 0
+              ? "stack ${1:stack_name} stacked=${2|" +
               ["true", "false"].join(",") +
               "|} sequential=${3|" +
               ["true", "false"].join(",") +
@@ -562,256 +663,275 @@ connection.onCompletion(
               "|}\nmodel ${5:model_name} ${6|" +
               Object.keys(suggestion_data).join(",") +
               "|}"
-            : "";
-        const simulationCompletionItem: CompletionItem = {
-          label: "simulation",
-          kind: CompletionItemKind.Keyword,
-          data: "simulation_keyword",
-        };
-        const stackCompletionItem: CompletionItem = {
-          label: "stack",
-          kind: CompletionItemKind.Snippet,
-          insertText: insertText,
-          documentation: "Inserts a stack snippet",
-          insertTextFormat: InsertTextFormat.Snippet,
-        };
-        const stepsizeCompletionItem: CompletionItem = {
-          label: "stepsize",
-          kind: CompletionItemKind.Keyword,
-          data: "stepsize_keyword",
-        };
-        const stackedCompletionItem: CompletionItem = {
-          label: "stacked",
-          kind: CompletionItemKind.Keyword,
-          data: "stacked_keyword",
-        };
-        const sequentialCompletionItem: CompletionItem = {
-          label: "sequential",
-          kind: CompletionItemKind.Keyword,
-          data: "sequential_keyword",
-        };
-        completionItems.push(
-          simulationCompletionItem,
-          stackCompletionItem,
-          stepsizeCompletionItem,
-          stackedCompletionItem,
-          sequentialCompletionItem,
-        );
-      } else if (word.startsWith("c")) {
-        completionItems.length = 0;
-        const completionItem: CompletionItem = {
-          label: "channel",
-          kind: CompletionItemKind.Keyword,
-          data: "channel_keyword",
-        };
-        completionItems.push(completionItem);
-      } else if (word.startsWith("w")) {
-        completionItems.length = 0;
-        const completionItem: CompletionItem = {
-          label: "workflow",
-          kind: CompletionItemKind.Keyword,
-          data: "workflow_keyword",
-        };
-        completionItems.push(completionItem);
-      } else if (word.startsWith("m")) {
-        completionItems.length = 0;
-        const insertText =
-          Object.keys(suggestion_data).length > 0
-            ? "model ${1:model_name} ${2|" +
+              : "";
+          const simulationCompletionItem: CompletionItem = {
+            label: "simulation",
+            kind: CompletionItemKind.Keyword,
+            data: "simulation_keyword",
+          };
+          const stackCompletionItem: CompletionItem = {
+            label: "stack",
+            kind: CompletionItemKind.Snippet,
+            insertText: insertText,
+            documentation: "Inserts a stack snippet",
+            insertTextFormat: InsertTextFormat.Snippet,
+          };
+          const stepsizeCompletionItem: CompletionItem = {
+            label: "stepsize",
+            kind: CompletionItemKind.Keyword,
+            data: "stepsize_keyword",
+          };
+          const stackedCompletionItem: CompletionItem = {
+            label: "stacked",
+            kind: CompletionItemKind.Keyword,
+            data: "stacked_keyword",
+          };
+          const sequentialCompletionItem: CompletionItem = {
+            label: "sequential",
+            kind: CompletionItemKind.Keyword,
+            data: "sequential_keyword",
+          };
+          completionItems.push(
+            simulationCompletionItem,
+            stackCompletionItem,
+            stepsizeCompletionItem,
+            stackedCompletionItem,
+            sequentialCompletionItem,
+          );
+        } else if (word.startsWith("c")) {
+          completionItems.length = 0;
+          const completionItem: CompletionItem = {
+            label: "channel",
+            kind: CompletionItemKind.Keyword,
+            data: "channel_keyword",
+          };
+          completionItems.push(completionItem);
+        } else if (word.startsWith("w")) {
+          completionItems.length = 0;
+          const completionItem: CompletionItem = {
+            label: "workflow",
+            kind: CompletionItemKind.Keyword,
+            data: "workflow_keyword",
+          };
+          completionItems.push(completionItem);
+        } else if (word.startsWith("m")) {
+          completionItems.length = 0;
+          const insertText =
+            suggestion_data && Object.keys(suggestion_data).length > 0
+              ? "model ${1:model_name} ${2|" +
               Object.keys(suggestion_data).join(",") +
               "|}"
-            : "";
-        const modelCompletionItem: CompletionItem = {
-          label: "model",
-          kind: CompletionItemKind.Snippet,
-          insertText: insertText,
-          documentation: "Inserts a model snippet",
-          data: "model_suggestion",
-          insertTextFormat: InsertTextFormat.Snippet,
-        };
-        completionItems.push(modelCompletionItem);
-      } else if (word.startsWith("e")) {
-        completionItems.length = 0;
-        const completionItem: CompletionItem = {
-          label: "envar ",
-          kind: CompletionItemKind.Keyword,
-          data: "envar_keyword",
-        };
-        const endtimecompletionItem: CompletionItem = {
-          label: "endtime",
-          kind: CompletionItemKind.Variable,
-          data: "endtime_keyword",
-        };
-        const externalCompletionItem: CompletionItem = {
-          label: "external",
-          kind: CompletionItemKind.Keyword,
-          data: "external_keyword",
-        };
-        completionItems.push(
-          completionItem,
-          endtimecompletionItem,
-          externalCompletionItem,
-        );
-      } else if (word.startsWith("a")) {
-        completionItems.length = 0;
-        const asCompletionItem: CompletionItem = {
-          label: "as ",
-          kind: CompletionItemKind.Keyword,
-          data: "as_keyword",
-        };
-        const archCompletionItem: CompletionItem = {
-          label: "arch",
-          kind: CompletionItemKind.Keyword,
-          data: "arch_keyword",
-        };
-        completionItems.push(asCompletionItem, archCompletionItem);
-      } else if (word.startsWith("u")) {
-        completionItems.length = 0;
-        const completionItem: CompletionItem = {
-          label: "uses",
-          kind: CompletionItemKind.Keyword,
-          data: "uses_keyword",
-        };
-        const userCompletionItem: CompletionItem = {
-          label: "user",
-          kind: CompletionItemKind.Keyword,
-          data: "user_keyword",
-        };
-        const uidCompletionItem: CompletionItem = {
-          label: "uid",
-          kind: CompletionItemKind.Keyword,
-          data: "uid_keyword",
-        };
-        completionItems.push(
-          completionItem,
-          userCompletionItem,
-          uidCompletionItem,
-        );
-      } else if (word.startsWith("t")) {
-        completionItems.length = 0;
-        const tokenCompletionItem: CompletionItem = {
-          label: "token",
-          kind: CompletionItemKind.Keyword,
-          data: "token_keyword",
-        };
-        completionItems.push(tokenCompletionItem);
-      } else if (word.startsWith("n")) {
-        completionItems.length = 0;
-        const completionItem: CompletionItem = {
-          label: "network ",
-          kind: CompletionItemKind.Keyword,
-          data: "network_keyword",
-        };
-        completionItems.push(completionItem);
-      } else if (word.startsWith("v")) {
-        completionItems.length = 0;
-        const completionItem: CompletionItem = {
-          label: "var",
-          kind: CompletionItemKind.Keyword,
-          data: "var_keyword",
-        };
-        completionItems.push(completionItem);
-      }
+              : "";
+          const modelCompletionItem: CompletionItem = {
+            label: "model",
+            kind: CompletionItemKind.Snippet,
+            insertText: insertText,
+            documentation: "Inserts a model snippet",
+            data: "model_suggestion",
+            insertTextFormat: InsertTextFormat.Snippet,
+          };
+          completionItems.push(modelCompletionItem);
+        } else if (word.startsWith("e")) {
+          completionItems.length = 0;
+          const completionItem: CompletionItem = {
+            label: "envar ",
+            kind: CompletionItemKind.Keyword,
+            data: "envar_keyword",
+          };
+          const endtimecompletionItem: CompletionItem = {
+            label: "endtime",
+            kind: CompletionItemKind.Variable,
+            data: "endtime_keyword",
+          };
+          const externalCompletionItem: CompletionItem = {
+            label: "external",
+            kind: CompletionItemKind.Keyword,
+            data: "external_keyword",
+          };
+          completionItems.push(
+            completionItem,
+            endtimecompletionItem,
+            externalCompletionItem,
+          );
+        } else if (word.startsWith("a")) {
+          completionItems.length = 0;
+          const asCompletionItem: CompletionItem = {
+            label: "as ",
+            kind: CompletionItemKind.Keyword,
+            data: "as_keyword",
+          };
+          const archCompletionItem: CompletionItem = {
+            label: "arch",
+            kind: CompletionItemKind.Keyword,
+            data: "arch_keyword",
+          };
+          completionItems.push(asCompletionItem, archCompletionItem);
+        } else if (word.startsWith("u")) {
+          completionItems.length = 0;
+          const completionItem: CompletionItem = {
+            label: "uses",
+            kind: CompletionItemKind.Keyword,
+            data: "uses_keyword",
+          };
+          const userCompletionItem: CompletionItem = {
+            label: "user",
+            kind: CompletionItemKind.Keyword,
+            data: "user_keyword",
+          };
+          const uidCompletionItem: CompletionItem = {
+            label: "uid",
+            kind: CompletionItemKind.Keyword,
+            data: "uid_keyword",
+          };
+          completionItems.push(
+            completionItem,
+            userCompletionItem,
+            uidCompletionItem,
+          );
+        } else if (word.startsWith("p")) {
+          completionItems.length = 0;
+          const pathCompletionItem: CompletionItem = {
+            label: "path",
+            kind: CompletionItemKind.Keyword,
+            data: "path_keyword",
+          };
+          completionItems.push(pathCompletionItem);
+        } else if (word.startsWith("t")) {
+          completionItems.length = 0;
+          const tokenCompletionItem: CompletionItem = {
+            label: "token",
+            kind: CompletionItemKind.Keyword,
+            data: "token_keyword",
+          };
+          completionItems.push(tokenCompletionItem);
+        } else if (word.startsWith("n")) {
+          completionItems.length = 0;
+          const completionItem: CompletionItem = {
+            label: "network ",
+            kind: CompletionItemKind.Keyword,
+            data: "network_keyword",
+          };
+          completionItems.push(completionItem);
+        } else if (word.startsWith("v")) {
+          completionItems.length = 0;
+          const completionItem: CompletionItem = {
+            label: "var",
+            kind: CompletionItemKind.Keyword,
+            data: "var_keyword",
+          };
+          completionItems.push(completionItem);
+        }
 
-      if (word.endsWith("channel")) {
-        completionItems.length = 0;
-        channels.forEach((channel: string) => {
-          const completionItem: CompletionItem = {
-            label: channel,
-            kind: CompletionItemKind.Value,
-            detail: "channel name",
-            filterText: "channel",
-            data: "channel_suggestion",
-          };
-          completionItems.push(completionItem);
-        });
-      } else if (word.endsWith("workflow")) {
-        completionItems.length = 0;
-        workflowNames.forEach((workflow: string) => {
-          const completionItem: CompletionItem = {
-            label: workflow,
-            kind: CompletionItemKind.Value,
-            detail: "workflow name",
-            filterText: "workflow",
-            data: "workflow_suggestion",
-          };
-          completionItems.push(completionItem);
-        });
-      } else if (word.endsWith("uses")) {
-        completionItems.length = 0;
-        Object.keys(uses_items["files"]).forEach((file: string) => {
-          const completionItem: CompletionItem = {
-            label: file,
-            kind: CompletionItemKind.Value,
-            detail: "file name",
-            filterText: "uses",
-            data: "uses_suggestion",
-          };
-          completionItems.push(completionItem);
-        });
-      } else if (/arch=/.test(word)) {
-        completionItems.length = 0;
-        architectures.forEach((arch: string) => {
-          const completionItem: CompletionItem = {
-            label: arch,
-            kind: CompletionItemKind.Value,
-            detail: "architecture name",
-            filterText: "arch=",
-            data: "architecture_suggestion",
-          };
-          completionItems.push(completionItem);
-        });
-      } else if (/stacked=/.test(word)) {
-        completionItems.length = 0;
-        ["true", "false"].forEach((stacked: string) => {
-          const completionItem: CompletionItem = {
-            label: stacked,
-            kind: CompletionItemKind.Value,
-            detail: "stack type",
-            filterText: "stacked=",
-            data: "stacked_suggestion",
-          };
-          completionItems.push(completionItem);
-        });
-      } else if (/sequential=/.test(word)) {
-        completionItems.length = 0;
-        ["true", "false"].forEach((sequential: string) => {
-          const completionItem: CompletionItem = {
-            label: sequential,
-            kind: CompletionItemKind.Value,
-            detail: "sequential type",
-            filterText: "sequential=",
-            data: "sequential_suggestion",
-          };
-          completionItems.push(completionItem);
-        });
-      } else if (/external=/.test(word)) {
-        completionItems.length = 0;
-        ["true", "false"].forEach((external: string) => {
-          const completionItem: CompletionItem = {
-            label: external,
-            kind: CompletionItemKind.Value,
-            detail: "external type",
-            filterText: "external=",
-            data: "external_suggestion",
-          };
-          completionItems.push(completionItem);
-        });
-      } else if (word.endsWith("var")) {
-        completionItems.length = 0;
-        taskfile_vars_suggestions.forEach((task: string) => {
-          const completionItem: CompletionItem = {
-            label: task,
-            kind: CompletionItemKind.Value,
-            detail: "var name",
-            filterText: "var",
-            data: "var_suggestion",
-          };
-          completionItems.push(completionItem);
-        });
+        if (word.endsWith("channel")) {
+          completionItems.length = 0;
+          if (channels && channels.length > 0) {
+            channels.forEach((channel: string) => {
+              const completionItem: CompletionItem = {
+                label: channel,
+                kind: CompletionItemKind.Value,
+                detail: "channel name",
+                filterText: "channel",
+                data: "channel_suggestion",
+              };
+              completionItems.push(completionItem);
+            });
+          }
+        } else if (word.endsWith("workflow")) {
+          completionItems.length = 0;
+          if (workflowNames && workflowNames.length > 0) {
+            workflowNames.forEach((workflow: string) => {
+              const completionItem: CompletionItem = {
+                label: workflow,
+                kind: CompletionItemKind.Value,
+                detail: "workflow name",
+                filterText: "workflow",
+                data: "workflow_suggestion",
+              };
+              completionItems.push(completionItem);
+            });
+          }
+        } else if (word.endsWith("uses")) {
+          completionItems.length = 0;
+          Object.keys(uses_items["files"] || {}).forEach((file: string) => {
+            const completionItem: CompletionItem = {
+              label: file,
+              kind: CompletionItemKind.Value,
+              detail: "file name",
+              filterText: "uses",
+              data: "uses_suggestion",
+            };
+            completionItems.push(completionItem);
+          });
+        } else if (/arch=/.test(word)) {
+          completionItems.length = 0;
+          if (architectures && architectures.length > 0) {
+            architectures.forEach((arch: string) => {
+              const completionItem: CompletionItem = {
+                label: arch,
+                kind: CompletionItemKind.Value,
+                detail: "architecture name",
+                filterText: "arch=",
+                data: "architecture_suggestion",
+              };
+              completionItems.push(completionItem);
+            });
+          }
+        } else if (/stacked=/.test(word)) {
+          completionItems.length = 0;
+          ["true", "false"].forEach((stacked: string) => {
+            const completionItem: CompletionItem = {
+              label: stacked,
+              kind: CompletionItemKind.Value,
+              detail: "stack type",
+              filterText: "stacked=",
+              data: "stacked_suggestion",
+            };
+            completionItems.push(completionItem);
+          });
+        } else if (/sequential=/.test(word)) {
+          completionItems.length = 0;
+          ["true", "false"].forEach((sequential: string) => {
+            const completionItem: CompletionItem = {
+              label: sequential,
+              kind: CompletionItemKind.Value,
+              detail: "sequential type",
+              filterText: "sequential=",
+              data: "sequential_suggestion",
+            };
+            completionItems.push(completionItem);
+          });
+        } else if (/external=/.test(word)) {
+          completionItems.length = 0;
+          ["true", "false"].forEach((external: string) => {
+            const completionItem: CompletionItem = {
+              label: external,
+              kind: CompletionItemKind.Value,
+              detail: "external type",
+              filterText: "external=",
+              data: "external_suggestion",
+            };
+            completionItems.push(completionItem);
+          });
+        } else if (word.endsWith("var")) {
+          completionItems.length = 0;
+          if (taskfile_vars_suggestions && taskfile_vars_suggestions.length > 0) {
+            taskfile_vars_suggestions.forEach((task: string) => {
+              const completionItem: CompletionItem = {
+                label: task,
+                kind: CompletionItemKind.Value,
+                detail: "var name",
+                filterText: "var",
+                data: "var_suggestion",
+              };
+              completionItems.push(completionItem);
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error in onCompletion:", err);
+        return [];
       }
     }
-
     return completionItems;
   },
 );
@@ -842,39 +962,46 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
     selectedWorkflow = item.label;
     console.log("selected workflow is : ", selectedWorkflow);
     let index = workflowNames.indexOf(selectedWorkflow);
-    const workflow_obj =
-      suggestion_data[`${selectedModel}`]["workflows"][index][
-        `${selectedWorkflow}`
-      ];
-    if (workflow_obj["internal"] === false) {
-      taskfile_vars_suggestions = workflow_obj["vars"];
-      const requiredVars = workflow_obj["required_vars"];
-      taskfile_vars_suggestions = taskfile_vars_suggestions.filter(
-        (item) => !requiredVars.includes(item),
-      );
+    if (index !== -1) {
+      const workflow_obj =
+        suggestion_data && Object.keys(suggestion_data).length > 0
+          ? suggestion_data[`${selectedModel}`]["workflows"][index][
+          `${selectedWorkflow}`
+          ]
+          : {};
 
-      for (let i = 0; i < requiredVars.length; i++) {
-        const r_var = requiredVars[i];
+      if ("internal" in workflow_obj) {
+        if (workflow_obj["internal"] === false) {
+          taskfile_vars_suggestions = workflow_obj["vars"];
+          const requiredVars = workflow_obj["required_vars"];
+          taskfile_vars_suggestions = taskfile_vars_suggestions.filter(
+            (item) => !requiredVars.includes(item),
+          );
 
-        if (r_var in workflow_obj["default_values"]) {
-          const value_suggestions = [workflow_obj["default_values"][r_var]];
-          required_vars +=
-            "\nvar " +
-            r_var +
-            " ${" +
-            (i + 1) +
-            "|" +
-            value_suggestions.join(",") +
-            "|}";
+          for (let i = 0; i < requiredVars.length; i++) {
+            const r_var = requiredVars[i];
+
+            if (r_var in workflow_obj["default_values"]) {
+              const value_suggestions = [workflow_obj["default_values"][r_var]];
+              required_vars +=
+                "\nvar " +
+                r_var +
+                " ${" +
+                (i + 1) +
+                "|" +
+                value_suggestions.join(",") +
+                "|}";
+            } else {
+              required_vars += "\nvar " + r_var + " ${" + (i + 1) + ":<value>}";
+            }
+          }
         } else {
-          required_vars += "\nvar " + r_var + " ${" + (i + 1) + ":<value>}";
+          taskfile_vars_suggestions = [];
         }
+        item.insertTextFormat = InsertTextFormat.Snippet;
+        item.insertText = `workflow ${selectedWorkflow}${required_vars}`;
       }
-    } else {
-      taskfile_vars_suggestions = [];
     }
-    item.insertTextFormat = InsertTextFormat.Snippet;
-    item.insertText = `workflow ${selectedWorkflow}${required_vars}`;
   } else if (item.data == "uses_keyword") {
     item.label = `${item.label}`;
     item.insertText = `uses`;
@@ -896,9 +1023,12 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
     item.label = `${item.label.trim()}`;
     item.insertTextFormat = InsertTextFormat.Snippet;
     const workflow_obj =
-      suggestion_data[`${selectedModel}`]["workflows"][
+      suggestion_data && Object.keys(suggestion_data).length > 0
+        ? suggestion_data[`${selectedModel}`]["workflows"][
         workflowNames.indexOf(selectedWorkflow)
-      ][`${selectedWorkflow}`];
+        ][`${selectedWorkflow}`]
+        : "";
+
     item.detail = workflow_obj["vars_desc"][`${item.label}`];
     if (workflow_obj["vars"].includes(item.label)) {
       const value_suggestions = workflow_obj["default_values"][item.label];
@@ -956,6 +1086,13 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
     item.insertText = `user=`;
     item.command = {
       title: "user",
+      command: "editor.action.triggerSuggest",
+    };
+  } else if (item.data == "path_keyword") {
+    item.label = `${item.label}`;
+    item.insertText = `path=`;
+    item.command = {
+      title: "path",
       command: "editor.action.triggerSuggest",
     };
   } else if (item.data == "token_keyword") {

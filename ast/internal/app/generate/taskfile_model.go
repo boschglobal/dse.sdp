@@ -169,7 +169,8 @@ func parseUrl(task *Task, uses *ast.Uses, modelName string) string {
 	downloadFile := fmt.Sprintf("downloads/models/{{.MODEL}}/%s", filepath.Base(u.Path))
 
 	if u.IsAbs() == true {
-		if strings.HasPrefix(u.Host, "github.") {
+		if strings.HasPrefix(u.Host, "github.boschdevcloud.") {
+			// Rewrite the URL and fetch the GitHub Asset (using PAT authentication).
 			*task.Deps = append(*task.Deps, Dep{
 				Task: "download-file-github-asset",
 				Vars: func() *OMap {
@@ -196,6 +197,22 @@ func parseUrl(task *Task, uses *ast.Uses, modelName string) string {
 					om := OMap{orderedmap.NewOrderedMap[string, string]()}
 					om.Set("URL", uses.Url)
 					om.Set("FILE", downloadFile)
+					if uses.User != nil {
+						userValue := *uses.User
+						if strings.HasPrefix(userValue, "$") {
+							om.Set("USER", fmt.Sprintf("{{.%s}}", userValue[1:]))
+						} else {
+							om.Set("USER", userValue)
+						}
+					}
+					if uses.Token != nil {
+						tokenValue := *uses.Token
+						if strings.HasPrefix(tokenValue, "$") {
+							om.Set("TOKEN", fmt.Sprintf("{{.%s}}", tokenValue[1:]))
+						} else {
+							om.Set("TOKEN", tokenValue)
+						}
+					}
 					return &om
 				}(),
 			})
@@ -362,6 +379,7 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 							},
 						})
 						*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", varUses.Name))
+						usesDownloadFilePaths[varUses.Name] = fmt.Sprintf("{{.PATH}}/%s", varUses.Name)
 					}
 				}
 			}

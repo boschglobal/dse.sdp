@@ -200,11 +200,11 @@ func (c *ResolveCommand) loadMetadata() error {
 					return fmt.Errorf("Error parsing cache YAML file: %v", err)
 				}
 			} else {
-				yamlData = fetchMetadata(rawUrl)
+				yamlData = fetchMetadata(rawUrl, use)
 				saveCacheFile(cacheFilepath, yamlData)
 			}
 		} else {
-			yamlData = fetchMetadata(rawUrl)
+			yamlData = fetchMetadata(rawUrl, use)
 		}
 
 		// Update the lookup.
@@ -272,9 +272,9 @@ func genGitRawURL(useMap map[string]interface{}) string {
 	return useUrl
 }
 
-func fetchMetadata(url string) map[string]interface{} {
+func fetchMetadata(url string, use map[string]interface{}) map[string]interface{} {
 	var yamlData = map[string]interface{}{}
-
+	var git_url = strings.TrimSpace(use["url"].(string))
 	url = strings.ReplaceAll(url, `{{.GHE_TOKEN}}`, os.Getenv("GHE_TOKEN"))
 	resp, err := http.Get(url)
 	if err != nil {
@@ -282,9 +282,17 @@ func fetchMetadata(url string) map[string]interface{} {
 		return yamlData
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		slog.Error("Bad return code", "code", resp.StatusCode)
-		return yamlData
+	if resp.StatusCode == http.StatusNotFound {
+		var log_msg = fmt.Sprintf("404 Not Found: The repository or Taskfile could not be located. Please check if the URL is correct: %s", git_url)
+		slog.Error(log_msg)
+		os.Exit(1)
+	} else {
+		if resp.StatusCode != http.StatusOK {
+			slog.Error("Bad return code", "code", resp.StatusCode)
+			slog.Error("url : ", url)
+			os.Exit(1)
+			return yamlData
+		}
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -327,8 +335,13 @@ func (c *ResolveCommand) updateAstUsesMetadata() {
 		// Locate the metadata.
 		metadata := getYamlPath(c.yamlMetadata, use["name"].(string), "metadata")
 		if metadata == nil {
-			slog.Info("Repo does not have associated metadata", "name", use["name"].(string))
-			continue
+			if strings.Contains(use["url"].(string), "blob") || strings.Contains(use["url"].(string), "releases") {
+				continue
+			}
+			taskfileURL := fmt.Sprintf("%s/blob/%s/Taskfile.yml", use["url"], use["version"].(string))
+			slog.Error("Repo does not have associated metadata", "name", use["name"].(string))
+			slog.Info(fmt.Sprintf("Include Metadata in %s to resolve the issue", taskfileURL))
+			os.Exit(1)
 		}
 		// Update (merge) to the underlying map/slice.
 		slog.Info("Merge metadata to spec/uses[]", "name", use["name"].(string))
