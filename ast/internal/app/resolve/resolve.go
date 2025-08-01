@@ -240,7 +240,7 @@ func genGitRawURL(useMap map[string]interface{}) string {
 		return url.Parse(_u)
 	}()
 	if strings.HasPrefix(u.Host, "github.") == false {
-		slog.Error("Unsupported metadata url", "url", useUrl)
+		slog.Debug("Unsupported metadata url", "url", useUrl)
 		return ""
 	}
 	pathParts := strings.Split(u.Path, string(os.PathSeparator))
@@ -331,6 +331,9 @@ func (c *ResolveCommand) updateAstUsesMetadata() {
 	}
 	for _, _use := range uses.([]interface{}) {
 		use := _use.(map[string]interface{})
+		if (strings.HasPrefix(use["url"].(string), "https://github.")) == false || (strings.HasPrefix(use["version"].(string), "v")) == false {
+			continue
+		}
 		slog.Info("Uses item", "name", use["name"].(string))
 		// Locate the metadata.
 		metadata := getYamlPath(c.yamlMetadata, use["name"].(string), "metadata")
