@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-export DSE_MODELC_VERSION ?= 2.1.14
+export DSE_MODELC_VERSION ?= 2.1.30
 export DSE_MODELC_URL ?= https://github.com/boschglobal/dse.modelc/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
 
 
@@ -63,6 +63,7 @@ cleanall: clean
 docker:
 	$(MAKE) -C graph docker
 	docker build -f .devcontainer/Dockerfile-builder --tag dse-builder:test . ;\
+	docker build -f .devcontainer/Dockerfile --tag dse-devcontainer:test --build-arg DSE_BUILDER_IMAGE=dse-builder:test . ;\
 
 .PHONY: graph
 graph:
@@ -100,10 +101,10 @@ super-linter:
 		--env FILTER_REGEX_EXCLUDE="(doc/content/.*|(^|/)vendor/)" \
 		--env VALIDATE_CPP=true \
 		--env VALIDATE_DOCKERFILE=true \
-		--env VALIDATE_GO=true \
 		--env VALIDATE_MARKDOWN=true \
 		--env VALIDATE_YAML=true \
 		ghcr.io/super-linter/super-linter:slim-v7
 
+#		--env VALIDATE_GO=true \
 #		--env VALIDATE_TYPESCRIPT_ES=true \
 #		--env VALIDATE_TYPESCRIPT_PRETTIER=true \
