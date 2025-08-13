@@ -32,4 +32,3 @@ jobs:
           # VALIDATE_GO: true
           VALIDATE_MARKDOWN: true
           VALIDATE_YAML: true
-
