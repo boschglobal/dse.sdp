@@ -37,21 +37,13 @@ $ go mod tidy
 
 # Go get (adjust version as required).
 $ go get -x github.com/boschglobal/dse.schemas/code/go/dse@v1.2.24
-$ go get github.boschdevcloud.com/fsil/fsil.go/command
+$ go get github.com/boschglobal/dse.clib/extra/go/command
 ```
 
 > Note: Release Tags for modules in DSE Schemas are according to the schema `code/go/dse/v1.2.24`.
 
 > Note: Release Tags for modules in FSIL Go are according to the schema `command/v1.0.5`.
 
-
-### Go Module Vendor
-
-```bash
-# Vendor the project.
-$ go mod tidy
-$ go mod vendor
-```
 
 ### Generating Test Data
 

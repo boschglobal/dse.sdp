@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command"
 
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )

@@ -12,7 +12,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command/util"
+	"github.com/boschglobal/dse.clib/extra/go/command/util"
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 	"github.com/boschglobal/dse.schemas/code/go/dse/kind"
 )

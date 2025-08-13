@@ -5,8 +5,8 @@ import (
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
-	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 	"github.com/boschglobal/dse.schemas/code/go/dse/kind"
+	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type RunnableSpec kind.RunnableSpec

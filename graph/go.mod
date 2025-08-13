@@ -3,7 +3,7 @@ module github.com/boschglobal/dse.sdp/graph
 go 1.23.5
 
 require (
-	github.boschdevcloud.com/fsil/fsil.go/command v1.0.4
+	github.com/boschglobal/dse.clib/extra/go/command v1.0.35
 	github.com/boschglobal/dse.schemas/code/go/dse v1.2.23
 	github.com/gabriel-vasile/mimetype v1.4.9
 	github.com/jedib0t/go-pretty/v6 v6.6.7

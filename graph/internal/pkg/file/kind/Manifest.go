@@ -5,8 +5,8 @@ import (
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
-	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 	"github.com/boschglobal/dse.schemas/code/go/dse/kind"
+	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type ManifestSpec kind.ManifestSpec
@@ -38,10 +38,10 @@ func (m *ManifestSpec) MergeGraph(ctx context.Context, session neo4j.SessionWith
 	for _, model := range m.Models {
 		matchProps := map[string]string{"name": model.Name}
 		nodeProps := map[string]any{
-			"arch":     model.Arch,
-			"repo":     model.Repo,
-			"schema":   model.Schema,
-			"version":  model.Version,
+			"arch":    model.Arch,
+			"repo":    model.Repo,
+			"schema":  model.Schema,
+			"version": model.Version,
 		}
 		model_id, _ := graph.NodeExt(ctx, session, []string{"Sim:Model"}, matchProps, nodeProps)
 		graph.Relation(ctx, session, manifest_id, model_id, []string{"Has"})
@@ -114,7 +114,7 @@ func (m *ManifestSpec) MergeGraph(ctx context.Context, session neo4j.SessionWith
 			for _, model := range sim.Models {
 				modelMatchProps := map[string]string{"name": model.Name}
 				modelNodeProps := map[string]any{
-					"model":    model.Model,
+					"model": model.Model,
 				}
 				model_id, _ := graph.NodeExt(ctx, session, []string{"Sim:Models"}, modelMatchProps, modelNodeProps)
 				graph.Relation(ctx, session, sim_id, model_id, []string{"Has"})

@@ -20,7 +20,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command"
 )
 
 type ResolveCommand struct {

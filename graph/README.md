@@ -88,13 +88,3 @@ $ go get github.com/jedib0t/go-pretty/v6/text@v6.6.6
 ```
 
 > Note: Release Tags for modules in DSE Schemas are according to the schema `code/go/dse/v1.2.11`.
-
-
-
-### Go Module Vendor
-
-```bash
-# Vendor the project.
-$ go mod tidy
-$ go mod vendor
-```

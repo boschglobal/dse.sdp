@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
-	"github.boschdevcloud.com/fsil/fsil.go/command/log"
+	"github.com/boschglobal/dse.clib/extra/go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command/log"
 
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )

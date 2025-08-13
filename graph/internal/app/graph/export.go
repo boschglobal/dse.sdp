@@ -8,14 +8,14 @@ import (
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command"
 
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type GraphExportCommand struct {
 	command.Command
-	optDb     string
+	optDb string
 }
 
 func NewGraphExportCommand(name string) *GraphExportCommand {

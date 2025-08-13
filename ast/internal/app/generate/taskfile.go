@@ -15,7 +15,7 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 	//	"github.com/elliotchance/orderedmap/v2"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command/util"
+	"github.com/boschglobal/dse.clib/extra/go/command/util"
 )
 
 type OMap struct {

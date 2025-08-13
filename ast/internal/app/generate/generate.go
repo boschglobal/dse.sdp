@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
-	"github.boschdevcloud.com/fsil/fsil.go/command/log"
+	"github.com/boschglobal/dse.clib/extra/go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command/log"
 
-	"github.boschdevcloud.com/fsil/fsil.go/file/handler"
-	"github.boschdevcloud.com/fsil/fsil.go/file/handler/kind"
+	"github.com/boschglobal/dse.clib/extra/go/file/handler"
+	"github.com/boschglobal/dse.clib/extra/go/file/handler/kind"
 
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 )

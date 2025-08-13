@@ -4,24 +4,24 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
-	"path/filepath"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
-	"fmt"
 
-	"gopkg.in/yaml.v3"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"gopkg.in/yaml.v3"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
-	"github.boschdevcloud.com/fsil/fsil.go/command/log"
+	"github.com/boschglobal/dse.clib/extra/go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command/log"
 
-	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/file/kind"
+	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type GraphReportCommand struct {
@@ -45,11 +45,11 @@ type Query struct {
 }
 
 type Report struct {
-	Name  	 string     `yaml:"name"`
-	Tags     []string   `yaml:"tags"`
-	Queries  []Query    `yaml:"queries"`
-	Hint   	 string     `yaml:"hint"`
-	FilePath string     `yaml:"-"`
+	Name     string   `yaml:"name"`
+	Tags     []string `yaml:"tags"`
+	Queries  []Query  `yaml:"queries"`
+	Hint     string   `yaml:"hint"`
+	FilePath string   `yaml:"-"`
 }
 
 func NewGraphReportCommand(name string) *GraphReportCommand {
@@ -199,13 +199,13 @@ func (c *GraphReportCommand) Run() error {
 	}
 
 	var (
-		reports        []Report
-		tagSet         = make(map[string]struct{})
-		totalReports   int
-		passedReports  int
-		failedReports  int
-		failedList     []string
-		passedList     []string
+		reports       []Report
+		tagSet        = make(map[string]struct{})
+		totalReports  int
+		passedReports int
+		failedReports int
+		failedList    []string
+		passedList    []string
 	)
 
 	// Allow ; seperated report names.
@@ -247,9 +247,9 @@ func (c *GraphReportCommand) Run() error {
 				tagSet[tag] = struct{}{}
 			}
 
-		if (len(c.optTags) > 0 && !hasTag(r.Tags, c.optTags)) || (len(c.optNames) > 0 && !hasName(r.Name, c.optNames)) {
-			continue
-		}
+			if (len(c.optTags) > 0 && !hasTag(r.Tags, c.optTags)) || (len(c.optNames) > 0 && !hasName(r.Name, c.optNames)) {
+				continue
+			}
 			reports = append(reports, r)
 		}
 
@@ -362,7 +362,7 @@ func (c *GraphReportCommand) runReport(ctx context.Context, session neo4j.Sessio
 		for _, line := range lines {
 			fmt.Printf("    %s\n", line)
 		}
-			
+
 		result, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 			queryResult, err := tx.Run(ctx, q.Query, nil)
 			if err != nil {
@@ -432,14 +432,14 @@ func (c *GraphReportCommand) runReport(ctx context.Context, session neo4j.Sessio
 }
 
 func hasTag(reportTags, checkTags []string) bool {
-    for _, c := range checkTags {
-        for _, t := range reportTags {
-            if t == c {
-                return true
-            }
-        }
-    }
-    return false
+	for _, c := range checkTags {
+		for _, t := range reportTags {
+			if t == c {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func hasName(name string, optNames []string) bool {

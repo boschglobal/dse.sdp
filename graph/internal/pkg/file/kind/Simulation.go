@@ -5,8 +5,8 @@ import (
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
-	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
+	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type SimulationSpec ast.SimulationSpec
@@ -53,7 +53,7 @@ func (s *SimulationSpec) MergeGraph(ctx context.Context, session neo4j.SessionWi
 		if stack.Env != nil {
 			for _, env := range *stack.Env {
 				envMatchProps := map[string]string{
-					"env_name": env.Name,
+					"env_name":  env.Name,
 					"env_value": env.Value,
 				}
 				envNodeProps := map[string]any{}
@@ -66,7 +66,7 @@ func (s *SimulationSpec) MergeGraph(ctx context.Context, session neo4j.SessionWi
 		for _, model := range stack.Models {
 			modelMatchProps := map[string]string{"model_name": model.Name}
 			modelNodeProps := map[string]any{
-				"arch": model.Arch,
+				"arch":  model.Arch,
 				"model": model.Model,
 			}
 			modelID, _ := graph.NodeExt(ctx, session, []string{"Ast:ModelInst"}, modelMatchProps, modelNodeProps)
@@ -81,7 +81,6 @@ func (s *SimulationSpec) MergeGraph(ctx context.Context, session neo4j.SessionWi
 				}
 				channelID, _ := graph.NodeExt(ctx, session, []string{"Ast:ModelChannel"}, channelMatchProps, channelNodeProps)
 				graph.Relation(ctx, session, modelID, channelID, []string{"Contains"})
-
 
 				connectQuery := `
 				MATCH (mc:Ast:ModelChannel {channel_name: $channelName}),
@@ -98,7 +97,7 @@ func (s *SimulationSpec) MergeGraph(ctx context.Context, session neo4j.SessionWi
 			if model.Env != nil {
 				for _, env := range *model.Env {
 					envMatchProps := map[string]string{
-						"env_name": env.Name,
+						"env_name":  env.Name,
 						"env_value": env.Value,
 					}
 					envNodeProps := map[string]any{}

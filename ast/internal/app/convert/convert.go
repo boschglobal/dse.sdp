@@ -13,9 +13,9 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
-	"github.boschdevcloud.com/fsil/fsil.go/command/log"
-	"github.boschdevcloud.com/fsil/fsil.go/command/util"
+	"github.com/boschglobal/dse.clib/extra/go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command/log"
+	"github.com/boschglobal/dse.clib/extra/go/command/util"
 
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 )

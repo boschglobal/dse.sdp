@@ -6,8 +6,8 @@ import (
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
-	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 	"github.com/boschglobal/dse.schemas/code/go/dse/kind"
+	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type StackSpec kind.StackSpec
@@ -50,7 +50,7 @@ func (s *StackSpec) MergeGraph(ctx context.Context, session neo4j.SessionWithCon
 			} else if mi.Name != "simbus" {
 				match_props := map[string]string{
 					"name": mi.Name,
-					"uid": strconv.Itoa(mi.Uid),
+					"uid":  strconv.Itoa(mi.Uid),
 				}
 				node_props := map[string]any{
 					"annotations": mi.Annotations,
@@ -83,9 +83,9 @@ func (s *StackSpec) MergeGraph(ctx context.Context, session neo4j.SessionWithCon
 						if c.Selectors != nil && c.Alias != nil {
 							for key, value := range *c.Selectors {
 								selector_match_props := map[string]string{
-									"channelName":  channelName,
-									"channelAlias": *c.Alias,
-									"selectorName": key,
+									"channelName":   channelName,
+									"channelAlias":  *c.Alias,
+									"selectorName":  key,
 									"selectorValue": value,
 								}
 								selector_node_props := map[string]any{}

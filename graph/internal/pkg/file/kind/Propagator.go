@@ -5,8 +5,8 @@ import (
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
-	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 	"github.com/boschglobal/dse.schemas/code/go/dse/kind"
+	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type PropagatorSpec kind.PropagatorSpec
@@ -86,8 +86,8 @@ func (p *PropagatorSpec) MergeGraph(ctx context.Context, session neo4j.SessionWi
 			nodeProps := map[string]any{
 				"direction": *p.Options.Direction,
 			}
-		options_id, _ := graph.NodeExt(ctx, session, []string{"Sim:Options"}, matchProps, nodeProps)
-		graph.Relation(ctx, session, propagator_id, options_id, []string{"Has"})
+			options_id, _ := graph.NodeExt(ctx, session, []string{"Sim:Options"}, matchProps, nodeProps)
+			graph.Relation(ctx, session, propagator_id, options_id, []string{"Has"})
 		}
 	}
 

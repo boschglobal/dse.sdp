@@ -2,20 +2,20 @@ package graph
 
 import (
 	"context"
-	"os"
-	"path/filepath"
-	"strings"
 	"flag"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
-	"github.boschdevcloud.com/fsil/fsil.go/command/log"
+	"github.com/boschglobal/dse.clib/extra/go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command/log"
 
-	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/file/kind"
+	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type GraphImportCommand struct {

@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.boschdevcloud.com/fsil/fsil.go/command"
+	"github.com/boschglobal/dse.clib/extra/go/command"
 	"github.com/boschglobal/dse.sdp/ast/internal/app/convert"
 	"github.com/boschglobal/dse.sdp/ast/internal/app/generate"
 	"github.com/boschglobal/dse.sdp/ast/internal/app/resolve"
