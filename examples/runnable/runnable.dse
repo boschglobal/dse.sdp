@@ -3,9 +3,9 @@ channel signal
 channel network
 
 uses
-fsil.runnable https://{{.GHE_TOKEN}}@github.boschdevcloud.com/fsil/fsil.runnable v1.1.2 user={{.AR_USER}} token={{.AR_TOKEN}}
-dse.fmi https://github.com/boschglobal/dse.fmi v1.1.34
-example https://github.boschdevcloud.com/fsil/fsil.runnable/releases/download/v1.1.2/example.zip token={{.GHE_PAT}}
+fsil.runnable https://{{.GHE_TOKEN}}@github.boschdevcloud.com/fsil/fsil.runnable v1.2.4 user={{.AR_USER}} token={{.AR_TOKEN}}
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.37
+example https://github.boschdevcloud.com/fsil/fsil.runnable/releases/download/v1.2.4/example.zip token={{.GHE_PAT}}
 
 
 model runnable fsil.runnable
@@ -18,6 +18,8 @@ workflow unpack-runnable-target
     var DIR {{.SIMDIR}}/{{.PATH}}
 
 workflow generate-runnable
+    var STRUCT_HEADER_FILE {{.PATH}}/data/target.h
+    var FUNCTION_HEADER_FILE {{.PATH}}/data/target.h
     var INPUT_FILE {{.PATH}}/data/target.h
     var TARGET_LIB {{.PATH}}/lib/target.so
     var FUNCTION_LIB {{.PATH}}/lib/function.so
@@ -28,6 +30,7 @@ workflow generate-runnable
     var FRAME_ID {"frame_in":"0x1f0u","frame_out":"0x1f1u"}
     var MEASUREMENT measurement.txt
     var OUT_DIR {{.PATH}}/data
+    var TARGET_NAME target
 
 workflow generate-fmimodelc
     var FMU_NAME runnable

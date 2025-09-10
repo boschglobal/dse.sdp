@@ -89,6 +89,11 @@ do-test_testscript-e2e:
 			-e REPODIR=$(HOST_DOCKER_WORKSPACE) \
 			-e http_proxy=$(http_proxy) \
 			-e https_proxy=$(https_proxy) \
+			-e GHE_USER=$(GHE_USER) \
+			-e GHE_TOKEN=$(GHE_TOKEN) \
+			-e GHE_PAT=$(GHE_PAT) \
+			-e AR_USER=$(AR_USER) \
+			-e AR_TOKEN=$(AR_TOKEN) \
 			$$t ;\
 	done;
 
