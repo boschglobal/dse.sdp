@@ -171,9 +171,14 @@ func generateModelRuntime(model ast.Model) *kind.ModelInstanceRuntime {
 		},
 		External: model.External,
 	}
-	var i386 bool = true
-	if model.Arch != nil && *model.Arch == "linux-i386" {
-		runtime.I386 = &i386
+	if model.Arch != nil {
+		if *model.Arch == "linux-i386" {
+			i386 := true
+			runtime.I386 = &i386
+		} else if *model.Arch == "linux-x86" {
+			x32 := true
+			runtime.X32 = &x32
+		}
 	}
 	return &runtime
 }
