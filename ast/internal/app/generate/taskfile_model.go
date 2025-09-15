@@ -219,13 +219,15 @@ func parseUrl(task *Task, uses *ast.Uses, modelName string) string {
 		}
 	} else {
 		if filepath.IsAbs(uses.Url) {
-			*task.Cmds = append(*task.Cmds, Cmd{
-				Cmd: fmt.Sprintf("cp %s %s", uses.Url, downloadFile),
-			})
+			*task.Cmds = append(*task.Cmds,
+				Cmd{Cmd: fmt.Sprintf("mkdir -p $(dirname %s)", downloadFile)},
+				Cmd{Cmd: fmt.Sprintf("cp %s %s", uses.Url, downloadFile)},
+			)
 		} else {
-			*task.Cmds = append(*task.Cmds, Cmd{
-				Cmd: fmt.Sprintf("cp {{.ENTRYDIR}}/%s %s", uses.Url, downloadFile),
-			})
+			*task.Cmds = append(*task.Cmds,
+				Cmd{Cmd: fmt.Sprintf("mkdir -p $(dirname %s)", downloadFile)},
+				Cmd{Cmd: fmt.Sprintf("cp {{.ENTRYDIR}}/%s %s", uses.Url, downloadFile)},
+			)
 		}
 	}
 	*task.Generates = append(*task.Generates, downloadFile)
