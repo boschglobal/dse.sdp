@@ -6,7 +6,7 @@ export DSE_MODELC_VERSION ?= 2.1.30
 export DSE_MODELC_URL ?= https://github.com/boschglobal/dse.modelc/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
 
 
-SUBDIRS = ast graph dsl lsp doc
+SUBDIRS = ast graph dsl lsp doc examples/models
 
 ###############
 ## Docker Images.
@@ -31,11 +31,15 @@ downloads:
 examples: downloads
 	mkdir -p out/examples
 	test -d out/examples/modelc || ( cp -R build/downloads/ModelC-$(DSE_MODELC_VERSION)-linux-amd64/examples out/examples/modelc )
+	$(MAKE) -C examples/models build
+	cp examples/models/build/_dist/* out/examples
 
 
 .PHONY: build
 build:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d build ); done
+	mkdir -p out/examples
+	cp examples/models/build/_dist/* out/examples
 
 
 .PHONY: test

@@ -1,0 +1,40 @@
+---
+version: '3'
+
+metadata:
+  package:
+    download: '{{.REPO}}/releases/download/v{{.TAG}}/Models-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+
+  container:
+    repository: ghcr.io/boschglobal/dse-sdp
+
+  models:
+    Simple:
+      name: Simple
+      displayName: Simple
+      path:  simple
+      workflows: []
+      platforms:
+        - linux-amd64
+        - linux-x86
+        - linux-i386
+      channels:
+        - alias: signal
+vars:
+  # When running from E2E tests (i.e. Docker in Docker), the ENTRYDIR (for
+  # Docker commands) must be set to the host relative path.
+  ENTRYDIR: '{{if .SIM}}{{.ENTRYWORKDIR}}/{{.SIM}}{{else}}{{.PWD}}{{end}}'
+  # Container image specification.
+  SDP_IMAGE: '{{.SDP_IMAGE | default "ghcr.io/boschglobal/dse-sdp"}}'
+  IMAGE_TAG: '{{if .SDP_TAG}}{{.SDP_TAG}}{{else}}{{if .IMAGE_TAG}}{{.IMAGE_TAG}}{{else}}latest{{end}}{{end}}'
+
+tasks:
+
+  info:
+    run: always
+    dir: '{{.USER_WORKING_DIR}}'
+    label: dse:sdp:info
+    cmds:
+      - echo "{{.ENTRYDIR}}"
+      - echo "{{.SDP_IMAGE}}"
+      - echo "{{.IMAGE_TAG}}"

@@ -1,0 +1,20 @@
+
+exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
+exec sh -e $WORK/workflow.sh openloop.dse BUILD_ONLY
+
+exists out/downloads/models/example/remote_foo.txt
+exists out/sim/model/example/data/remote_foo.txt
+cmp out/downloads/models/example/remote_foo.txt out/sim/model/example/data/remote_foo.txt
+
+-- openloop.dse --
+simulation
+channel signal
+
+uses
+dse.modelc https://github.com/boschglobal/dse.modelc v2.1.32
+remote_foo https://github.boschdevcloud.com/fsil/dse.sdp/releases/download/v0.8.5/tests/testdata/e2e/remote_foo.txt token={{.GHE_PAT}}
+
+
+model example dse.modelc.csv
+channel signal signal_vector
+file remote_foo.txt uses remote_foo

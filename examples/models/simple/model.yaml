@@ -1,0 +1,24 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: Simple
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libsimple.so
+      - os: linux
+        arch: x86
+        path: lib/libsimple.so
+      - os: linux
+        arch: i386
+        path: lib/libsimple.so
+  channels:
+    - alias: signal
+      selectors:
+        signal: signal
