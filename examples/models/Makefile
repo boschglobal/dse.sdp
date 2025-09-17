@@ -12,7 +12,7 @@ DSE_MODELC_VERSION ?= 2.1.32
 export DSE_MODELC_LIB_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-$(PACKAGE_ARCH).zip
 
 GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:main
-DOCKER_BUILDER_CMD := docker run -it --rm \
+DOCKER_BUILDER_CMD := docker run -t --rm \
 	--user $$(id -u):$$(id -g) \
 	--env PACKAGE_ARCH=$(PACKAGE_ARCH) \
 	--env PACKAGE_VERSION=$(PACKAGE_VERSION) \
