@@ -29,8 +29,6 @@ jobs:
           - linux-amd64
           - linux-x86
           - linux-i386
-    container:
-      image: ghcr.io/boschglobal/dse-gcc-builder:main
     steps:
       - name: Checkout
         uses: actions/checkout@v5

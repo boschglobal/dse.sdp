@@ -12,7 +12,7 @@ metadata:
     Simple:
       name: Simple
       displayName: Simple
-      path:  simple
+      path: simple
       workflows: []
       platforms:
         - linux-amd64

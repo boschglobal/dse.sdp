@@ -7,24 +7,19 @@ export PACKAGE_ARCH ?= linux-amd64
 export PLATFORM_OS := $(word 1,$(subst -, ,$(PACKAGE_ARCH)))
 export PLATFORM_ARCH := $(word 2,$(subst -, ,$(PACKAGE_ARCH)))
 
-GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:main
-###############
-## External Projects.
 DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
 DSE_MODELC_VERSION ?= 2.1.32
 export DSE_MODELC_LIB_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-$(PACKAGE_ARCH).zip
 
-ifneq ($(CI), true)
-	DOCKER_BUILDER_CMD := docker run -it --rm \
-		--user $$(id -u):$$(id -g) \
-		--env PACKAGE_ARCH=$(PACKAGE_ARCH) \
-		--env PACKAGE_VERSION=$(PACKAGE_VERSION) \
-		--env DSE_MODELC_LIB_URL=$(DSE_MODELC_LIB_URL) \
-		--volume $$(pwd):/tmp/repo \
-		--workdir /tmp/repo \
-		$(GCC_BUILDER_IMAGE)
-endif
-
+GCC_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-gcc-builder:main
+DOCKER_BUILDER_CMD := docker run -it --rm \
+	--user $$(id -u):$$(id -g) \
+	--env PACKAGE_ARCH=$(PACKAGE_ARCH) \
+	--env PACKAGE_VERSION=$(PACKAGE_VERSION) \
+	--env DSE_MODELC_LIB_URL=$(DSE_MODELC_LIB_URL) \
+	--volume $$(pwd):/tmp/repo \
+	--workdir /tmp/repo \
+	$(GCC_BUILDER_IMAGE)
 
 default: build
 
