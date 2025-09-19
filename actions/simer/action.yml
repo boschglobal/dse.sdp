@@ -23,7 +23,7 @@ inputs:
   transport:
     description: "SimBus transport"
     default: "redis"
-  uri: 
+  uri:
     description: "SimBus connection URI"
     default: "redis://localhost:6379"
   logger:
@@ -35,15 +35,15 @@ runs:
   env:
     SIM_PATH: ${{ inputs.path }}
   args:
-    - stepsize 
+    - stepsize
     - ${{ inputs.stepsize }}
-    - endtime 
+    - endtime
     - ${{ inputs.endtime }}
-    - transport 
+    - transport
     - ${{ inputs.transport }}
-    - uri 
+    - uri
     - ${{ inputs.uri }}
-    - logger 
+    - logger
     - ${{ inputs.logger }}
 branding:
   icon: navigation-2
