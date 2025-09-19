@@ -1,0 +1,45 @@
+# Copyright 2025 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+name: "Simer"
+author: "Robert Bosch GmbH"
+description: "Simulation Runner, part of the DSE Core Platform."
+inputs:
+  stepsize:
+    description: "simulation step size"
+    default: "0.0005"
+  endtime:
+    description: "simulation end time"
+    default: "0.0020"
+  stack:
+    description: "run the named simulation stacks, ';' delimited list"
+    optional: true
+  transport:
+    description: "SimBus transport"
+    default: "redis"
+  uri: 
+    description: "SimBus connection URI"
+    default: "redis://localhost:6379"
+  logger:
+    description: "log level, select between 0..4"
+    default: "3"
+runs:
+  using: docker
+  image: ghcr.io/boschglobal/dse-simer:latest
+  env: {}
+  args:
+    - stepsize 
+    - ${{ inputs.stepsize }}
+    - endtime 
+    - ${{ inputs.endtime }}
+    - transport 
+    - ${{ inputs.transport }}
+    - uri 
+    - ${{ inputs.uri }}
+    - logger 
+    - ${{ inputs.logger }}
+branding:
+  icon: navigation-2
+  color: blue
