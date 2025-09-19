@@ -7,6 +7,10 @@ name: "Simer"
 author: "Robert Bosch GmbH"
 description: "Simulation Runner, part of the DSE Core Platform."
 inputs:
+  path:
+    description: "path to simulation"
+    default: "/"
+    optional: true
   stepsize:
     description: "simulation step size"
     default: "0.0005"
@@ -28,7 +32,8 @@ inputs:
 runs:
   using: docker
   image: ghcr.io/boschglobal/dse-simer:latest
-  env: {}
+  env:
+    SIM_PATH: ${{ inputs.path }}
   args:
     - stepsize 
     - ${{ inputs.stepsize }}
