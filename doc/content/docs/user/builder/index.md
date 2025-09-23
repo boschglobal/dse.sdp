@@ -1,7 +1,7 @@
 ---
 title: "Builder - Simulation Development Platform"
 linkTitle: "Builder"
-weight: 30
+weight: 15
 tags:
 - SDP
 - DSELang
@@ -329,3 +329,4 @@ export GHE_TOKEN=goo_token
 # Specify the shell function.
 $ builder() { ( if test -f "$1"; then cd $(dirname "$1"); fi && docker run -it --user $(id -u):$(id -g) --rm -e AR_USER -e AR_TOKEN -e GHE_TOKEN -v $(pwd):/workdir $BUILDER_IMAGE "$@"; ) }
 ```
+
