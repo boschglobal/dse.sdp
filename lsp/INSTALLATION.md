@@ -10,6 +10,7 @@ $ make
 
 ### Install the Extension
 ```bash
+$ make install-extension
 $ code --install-extension <path-to-your-extension>.vsix
 ```
 

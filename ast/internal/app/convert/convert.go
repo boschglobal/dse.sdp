@@ -202,6 +202,14 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 						return nil
 					}
 				}(),
+				Uid: func() *int {
+					v := value.Get("object.payload.model_uid.value")
+					if v.Exists() {
+						uid := int(v.Int())
+						return &uid
+					}
+					return nil
+				}(),
 			}
 			// Channels
 			channelList := buildList(value, "children.channels", func(value gjson.Result) ast.ModelChannel {
