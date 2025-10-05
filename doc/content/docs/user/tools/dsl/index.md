@@ -68,10 +68,24 @@ Defines a network interface.
 
 ### uses  
 Imports external dependencies such as modules, FMUs, or files.
+The `uses` keyword supports both **remote** and **local** references.
+
+#### Remote references
+Dependencies can be fetched from external sources such as GitHub or artifact repositories.  
+Authentication (e.g., using a personal access token) may be required.
 <pre>
 <b>uses</b>
 dse.fmi https://github.com/boschglobal/dse.fmi v1.1.34
 example https://github.boschdevcloud.com/fsil/fsil.runnable/releases/download/v1.1.2/example.zip <b>token</b>={{.GHE_PAT}}
+</pre>
+
+#### Local references
+Dependencies can also be referenced directly from the local filesystem.
+Both absolute and relative paths are supported.
+<pre>
+<b>uses</b>
+example1 /home/users/example.zip
+example2 example.zip
 </pre>
 
 ### var  
@@ -227,3 +241,7 @@ linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.23/Fmi-
 <b>var</b> MCL_PATH {{.PATH}}/lib/libfmimcl.so
 </pre>
 </details>
+
+## Syntax Diagram
+
+![Syntax Diagrams](syntax_diagrams.png)
