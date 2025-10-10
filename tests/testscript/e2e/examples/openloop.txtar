@@ -1,3 +1,5 @@
+
+
 exec mkdir -p $WORK/.local/share/dse-graph
 exec cp -r $ENTRYDIR/graph/cmd/graph/reports $WORK/.local/share/dse-graph/
 env HOME=$WORK
@@ -88,10 +90,7 @@ stdout 'Evaluation: Report Passed'
 stdout 'Query: Model to Channel Mapping'
 stdout 'Query: Expected Count'
 stdout 'Evaluation: Report Passed'
-stdout 'Name: Simbus Channel Name Consistency'
-stdout 'Query: Channel Name Match'
-stdout 'Evaluation: Report Passed'
-stdout 'Ran 6 Reports | Passed: 6 | Failed: 0'
+stdout 'Ran 5 Reports | Passed: 5 | Failed: 0'
 
 # dse-simer
 

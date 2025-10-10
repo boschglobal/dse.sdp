@@ -1,7 +1,7 @@
 ---
 title: "Builder - Simulation Development Platform"
 linkTitle: "Builder"
-weight: 15
+weight: 30
 tags:
 - SDP
 - DSELang
@@ -91,7 +91,7 @@ model =
     [ "uid=", UID ];
 channel = { "channel", CHANNEL_NAME, CHANNEL_ALIAS }-;
 envar = { "envar", ENVAR_NAME, VALUE }-;
-file = { "file", MODEL_FILE, (FILE_SOURCE | "uses", USES_NAME) }-;
+file = { "file", MODEL_FILE, FILE_SOURCE }-;
 
 
 workflow = 
@@ -143,13 +143,11 @@ workflow =
 ### File
 
 <pre>
-<b>file</b> <var>MODEL_FILE</var> [FILE_SOURCE]
-<b>file</b> <var>MODEL_FILE</var> [use USES_NAME]
+<b>file</b> <var>MODEL_FILE</var> <var>FILE_SOURCE</var>
 </pre>
 
 * <code><var>MODEL_FILE</var></code>: the _name_ by which the model refers to the file.
 * <code><var>FILE_SOURCE</var></code>: the actual _path_ of the file.
-* <code><var>USES_NAME</var></code>: the name of a dependency that this file entry imports.
 
 
 ### Model
