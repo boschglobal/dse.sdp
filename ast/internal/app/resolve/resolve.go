@@ -156,6 +156,7 @@ func (c *ResolveCommand) loadMetadata() error {
 	if c.repoName != "" && c.metadataFile != "" {
 		// Supports E2E tests.
 		// eg: bin/ast resolve -input ast.yml -uses dse.fmi -file md_dse.fmi.yml
+		slog.Info("Load metadata from local file", "repo", c.repoName, "file", c.metadataFile)
 		data, err := os.ReadFile(c.metadataFile)
 		if err != nil {
 			return fmt.Errorf("Error reading Metadata YAML AST file: %v", err)
@@ -288,8 +289,7 @@ func fetchMetadata(url string, use map[string]interface{}) map[string]interface{
 		os.Exit(1)
 	} else {
 		if resp.StatusCode != http.StatusOK {
-			slog.Error("Bad return code", "code", resp.StatusCode)
-			slog.Error("url : ", url)
+			slog.Error("Bad return code", "code", resp.StatusCode, "url", url)
 			os.Exit(1)
 			return yamlData
 		}
