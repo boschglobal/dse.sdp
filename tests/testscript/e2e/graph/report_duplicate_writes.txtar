@@ -1,0 +1,25 @@
+# Copy reports to local share path.
+exec mkdir -p $WORK/.local/share/dse-graph
+exec cp -r $ENTRYDIR/graph/cmd/graph/reports $WORK/.local/share/dse-graph/
+env HOME=$WORK
+
+env STATIC_VALIDATION=examples/graph/static_validation
+env DUPLICATE_WRITES=examples/graph/duplicate_writes
+env STACK=examples/graph/stack
+env REPORTS=graph/cmd/graph/reports
+
+
+exec dse-graph ping
+
+# Duplicate Writes Report.
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_good
+exec dse-graph export export_duplicate_writes.cyp
+exec dse-graph report -tag signal -reports=$ENTRYDIR/$REPORTS/duplicate_writes.yaml $ENTRYDIR/$DUPLICATE_WRITES/sim_good
+
+
+# Duplicate Writes Report with error.
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_with_error
+exec dse-graph export export_duplicate_writes.cyp
+! exec dse-graph report --reports=$ENTRYDIR/$REPORTS/duplicate_writes.yaml $ENTRYDIR/$DUPLICATE_WRITES/sim_with_error

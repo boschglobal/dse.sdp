@@ -1,5 +1,3 @@
-
-
 exec mkdir -p $WORK/.local/share/dse-graph
 exec cp -r $ENTRYDIR/graph/cmd/graph/reports $WORK/.local/share/dse-graph/
 env HOME=$WORK
@@ -10,7 +8,10 @@ exec mkdir -p $WORK/input
 exec cp -r $DSE_DIR/input/. $WORK/input
 exec cp $DSE_DIR/openloop.dse $WORK/
 
-exec sh -e $WORK/build.sh openloop.dse
+exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
+exec sh -e $WORK/workflow.sh openloop.dse
+
+# dse-builder
 
 stdout 'Parameters:'
 stdout '  input_file = openloop.dse'
@@ -71,7 +72,7 @@ stderr 'task: "build-models" finished'
 stderr 'task: "build" finished'
 stderr 'task: "default" finished'
 
-exec sh -e $WORK/report.sh
+# dse-report
 
 stdout 'Name: Duplicate Writes Check'
 stdout 'Query: Duplicate Write Signals'
@@ -87,9 +88,12 @@ stdout 'Evaluation: Report Passed'
 stdout 'Query: Model to Channel Mapping'
 stdout 'Query: Expected Count'
 stdout 'Evaluation: Report Passed'
-stdout 'Ran 5 Reports | Passed: 5 | Failed: 0'
+stdout 'Name: Simbus Channel Name Consistency'
+stdout 'Query: Channel Name Match'
+stdout 'Evaluation: Report Passed'
+stdout 'Ran 6 Reports | Passed: 6 | Failed: 0'
 
-exec sh -e $WORK/simer.sh
+# dse-simer
 
 stdout 'Load YAML File: data/simulation\.yaml'
 stdout 'Load YAML File: model/input/data/model.yaml'
@@ -97,36 +101,3 @@ stdout 'Loading symbol: model_create \.\.\. ok'
 stdout 'Loading symbol: model_step \.\.\. ok'
 stdout 'Loading symbol: model_destroy \.\.\. ok'
 stdout 'Measurement File: /sim/measurement\.mf4'
-
--- build.sh --
-INPUT_DSE="$1"
-export TASK_X_REMOTE_TASKFILES=1
-export DSE_BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
-docker run --rm \
-    --network=host \
-		-e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
-    -e http_proxy -e https_proxy -e no_proxy \
-		-v $(pwd):/workdir \
-    --user $(id -u):$(id -g) \
-		"$DSE_BUILDER_IMAGE" "$INPUT_DSE"
-task -y -v
-
--- report.sh --
-export DSE_REPORT_IMAGE=ghcr.io/boschglobal/dse-report:latest
-docker run --rm \
-		-v $(pwd)/out/sim:/sim \
-		"$DSE_REPORT_IMAGE" /sim
-
--- simer.sh --
-export DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-docker run --rm \
-  -v "$(pwd)/out/sim":/sim \
-  -p 2159:2159 -p 6379:6379 \
-  "$DSE_SIMER_IMAGE" \
-  -redis="" \
-  -simbus="" \
-  -transport="loopback" \
-  -uri="loopback" \
-  -endtime 0.100 \
-  -logger 4 \
-  -env SIMBUS_LOGLEVEL=2

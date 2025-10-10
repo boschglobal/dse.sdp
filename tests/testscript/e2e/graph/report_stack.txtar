@@ -1,0 +1,39 @@
+# Copy reports to local share path.
+exec mkdir -p $WORK/.local/share/dse-graph
+exec cp -r $ENTRYDIR/graph/cmd/graph/reports $WORK/.local/share/dse-graph/
+env HOME=$WORK
+
+env STATIC_VALIDATION=examples/graph/static_validation
+env DUPLICATE_WRITES=examples/graph/duplicate_writes
+env STACK=examples/graph/stack
+env REPORTS=graph/cmd/graph/reports
+
+
+exec dse-graph ping
+
+# Stack Report: ModelInstance Name Check
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$STACK/sim_good
+exec dse-graph export export_stack_modelinstance_name.cyp
+exec dse-graph report -tag report_modelinstance_name -reports=$ENTRYDIR/$REPORTS/stack.yaml $ENTRYDIR/$STACK/sim_good
+
+
+# Stack Report: ModelInstance Name Check with error
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$STACK/sim_with_error
+exec dse-graph export export_stack_modelinstance_name.cyp
+! exec dse-graph report -tag report_modelinstance_name -reports=$ENTRYDIR/$REPORTS/stack.yaml $ENTRYDIR/$STACK/sim_with_error
+
+
+# Stack Report: Model UID Check
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$STACK/sim_good
+exec dse-graph export export_stack_model_uid.cyp
+exec dse-graph report -tag report_model_uid -reports=$ENTRYDIR/$REPORTS/stack.yaml $ENTRYDIR/$STACK/sim_good
+
+
+# Stack Report: Model UID Check with error
+exec dse-graph drop --all
+exec dse-graph import $ENTRYDIR/$STACK/sim_with_error
+exec dse-graph export export_stack_model_uid.cyp
+! exec dse-graph report -tag report_model_uid -reports=$ENTRYDIR/$REPORTS/stack.yaml $ENTRYDIR/$STACK/sim_with_error

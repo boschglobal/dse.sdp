@@ -6,7 +6,10 @@ env DSE_DIR=$REPODIR/examples/runnable
 
 exec cp $DSE_DIR/runnable.dse $WORK/
 
-exec sh -e $WORK/build.sh runnable.dse
+exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
+exec sh -e $WORK/workflow.sh runnable.dse
+
+# dse-builder
 
 stdout 'Parameters:'
 stdout '  input_file = runnable.dse'
@@ -47,17 +50,17 @@ stderr 'Writing to folder: .'
 stderr 'Writing taskfile: Taskfile.yml'
 stderr 'Writing simulation: simulation.yaml'
 
-stderr 'task: "dse.fmi-v1.1.34:gen-modelcfmu-annotations" finished'
-stderr 'task: "dse.fmi-v1.1.34:gen-fmu" started'
+stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-modelcfmu-annotations" finished'
+stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-fmu" started'
 stderr 'Running FMI Toolset command: gen-fmu'
-stderr 'task: "dse.fmi-v1.1.34:gen-fmu" finished'
-stderr 'task: "dse.fmi-v1.1.34:generate-fmimodelc" finished'
+stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-fmu" finished'
+stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:generate-fmimodelc" finished'
 stderr 'task: "model-runnable" finished'
 stderr 'task: "build-models" finished'
 stderr 'task: "build" finished'
 stderr 'task: "default" finished'
 
-exec sh -e $WORK/report.sh
+# dse-report
 
 stdout 'Name: Duplicate Writes Check'
 stdout 'Query: Duplicate Write Signals'
@@ -73,9 +76,12 @@ stdout 'Evaluation: Report Passed'
 stdout 'Query: Model to Channel Mapping'
 stdout 'Query: Expected Count'
 stdout 'Evaluation: Report Passed'
-stdout 'Ran 5 Reports | Passed: 5 | Failed: 0'
+stdout 'Name: Simbus Channel Name Consistency'
+stdout 'Query: Channel Name Match'
+stdout 'Evaluation: Report Passed'
+stdout 'Ran 6 Reports | Passed: 6 | Failed: 0'
 
-exec sh -e $WORK/simer.sh
+# dse-simer
 
 stdout 'Load YAML File: data/simulation.yaml'
 stdout 'Load YAML File: model/runnable/data/model.yaml'
@@ -86,36 +92,3 @@ stdout 'Model Name: fsil.runnable'
 stdout 'Model File: model/runnable/lib/runnable.so'
 stdout 'Model Location: model/runnable/lib/runnable.so'
 stdout 'Loading dynamic model: model/runnable/lib/runnable.so ...'
-
--- build.sh --
-INPUT_DSE="$1"
-export TASK_X_REMOTE_TASKFILES=1
-export DSE_BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
-docker run --rm \
-    --network=host \
-		-e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
-    -e http_proxy -e https_proxy -e no_proxy \
-		-v $(pwd):/workdir \
-    --user $(id -u):$(id -g) \
-		"$DSE_BUILDER_IMAGE" "$INPUT_DSE"
-task -y -v
-
--- report.sh --
-export DSE_REPORT_IMAGE=ghcr.io/boschglobal/dse-report:latest
-docker run --rm \
-		-v $(pwd)/out/sim:/sim \
-		"$DSE_REPORT_IMAGE" /sim
-
--- simer.sh --
-export DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-docker run --rm \
-  -v "$(pwd)/out/sim":/sim \
-  -p 2159:2159 -p 6379:6379 \
-  "$DSE_SIMER_IMAGE" \
-  -redis="" \
-  -simbus="" \
-  -transport="loopback" \
-  -uri="loopback" \
-  -endtime 0.100 \
-  -logger 4 \
-  -env SIMBUS_LOGLEVEL=2

@@ -12,6 +12,7 @@ queries:
 
 tags:
   - stack
+  - report_modelinstance_name
 ---
 name: Model UID Check
 queries:
@@ -26,3 +27,4 @@ queries:
 
 tags:
   - stack
+  - report_model_uid
