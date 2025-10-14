@@ -151,13 +151,11 @@
         },
         {
           "type": "RepetitionMandatory",
-          "definition": [
-            {
-              "type": "NonTerminal",
-              "name": "network",
-              "idx": 1
-            }
-          ]
+          "definition": [{
+            "type": "NonTerminal",
+            "name": "network",
+            "idx": 1
+          }]
         },
         {
           "type": "Option",
@@ -297,28 +295,41 @@
           "name": "model_name",
           "label": "name",
           "idx": 1
-        },        
+        },
         {
-          "type": "Option",
+          "type": "Alternation",
           "idx": 2,
           "definition": [{
-            "type": "NonTerminal",
-            "name": "repo_name",
-            "idx": 0
-          }]
+              "type": "Alternative",
+              "definition": [{
+                  "type": "NonTerminal",
+                  "name": "repo_name",
+                  "idx": 0
+                },
+                {
+                  "type": "Option",
+                  "idx": 0,
+                  "definition": [{
+                    "type": "NonTerminal",
+                    "name": "external",
+                    "idx": 0
+                  }]
+                }
+              ]
+            },
+            {
+              "type": "Alternative",
+              "definition": [{
+                "type": "NonTerminal",
+                "name": "external",
+                "idx": 0
+              }]
+            }
+          ]
         },
         {
           "type": "Option",
           "idx": 3,
-          "definition": [{
-            "type": "NonTerminal",
-            "name": "external",
-            "idx": 0
-          }]
-        },
-        {
-          "type": "Option",
-          "idx": 4,
           "definition": [{
             "type": "NonTerminal",
             "name": "arch",
@@ -327,7 +338,7 @@
         },
         {
           "type": "Option",
-          "idx": 5,
+          "idx": 4,
           "definition": [{
             "type": "NonTerminal",
             "name": "uid",
@@ -337,7 +348,7 @@
         },
         {
           "type": "Option",
-          "idx": 6,
+          "idx": 5,
           "definition": [{
             "type": "RepetitionMandatory",
             "definition": [{
@@ -355,7 +366,7 @@
         },
         {
           "type": "Option",
-          "idx": 7,
+          "idx": 6,
           "definition": [{
             "type": "RepetitionMandatory",
             "definition": [{
@@ -373,7 +384,7 @@
         },
         {
           "type": "Option",
-          "idx": 8,
+          "idx": 7,
           "definition": [{
             "type": "RepetitionMandatory",
             "definition": [{
@@ -388,10 +399,9 @@
               }
             ]
           }]
-        },
+        }
       ]
-    },
-    {
+    }, {
       "type": "Rule",
       "name": "stack",
       "orgText": "",
@@ -549,9 +559,9 @@
       "name": "network",
       "orgText": "",
       "definition": [{
-        "type": "NonTerminal",
-        "name": "NL",
-        "idx": 0
+          "type": "NonTerminal",
+          "name": "NL",
+          "idx": 0
         },
         {
           "type": "Terminal",
@@ -598,14 +608,27 @@
     {
       "type": "Rule",
       "name": "bool assignments",
-      "definition": [
-        {
+      "definition": [{
           "type": "Alternation",
           "id": 0,
-          "definition": [
-            { "type": "Terminal", "name": "sequential", "label": "sequential", "idx": 0 },
-            { "type": "Terminal", "name": "stacked", "label": "stacked", "idx": 0 },
-            { "type": "Terminal", "name": "external", "label": "external", "idx": 0 }
+          "definition": [{
+              "type": "Terminal",
+              "name": "sequential",
+              "label": "sequential",
+              "idx": 0
+            },
+            {
+              "type": "Terminal",
+              "name": "stacked",
+              "label": "stacked",
+              "idx": 0
+            },
+            {
+              "type": "Terminal",
+              "name": "external",
+              "label": "external",
+              "idx": 0
+            }
           ]
         },
         {
@@ -624,15 +647,33 @@
     {
       "type": "Rule",
       "name": "string assignments",
-      "definition": [
-        {
+      "definition": [{
           "type": "Alternation",
           "id": 0,
-          "definition": [
-            { "type": "Terminal", "name": "arch", "label": "arch", "idx": 0 },
-            { "type": "Terminal", "name": "path", "label": "path", "idx": 0 },
-            { "type": "Terminal", "name": "user", "label": "user", "idx": 0 },
-            { "type": "Terminal", "name": "token", "label": "token", "idx": 0 }
+          "definition": [{
+              "type": "Terminal",
+              "name": "arch",
+              "label": "arch",
+              "idx": 0
+            },
+            {
+              "type": "Terminal",
+              "name": "path",
+              "label": "path",
+              "idx": 0
+            },
+            {
+              "type": "Terminal",
+              "name": "user",
+              "label": "user",
+              "idx": 0
+            },
+            {
+              "type": "Terminal",
+              "name": "token",
+              "label": "token",
+              "idx": 0
+            }
           ]
         },
         {
@@ -651,14 +692,27 @@
     {
       "type": "Rule",
       "name": "number assignments",
-      "definition": [
-        {
+      "definition": [{
           "type": "Alternation",
           "id": 0,
-          "definition": [
-            { "type": "Terminal", "name": "stepsize", "label": "stepsize", "idx": 0 },
-            { "type": "Terminal", "name": "endtime", "label": "endtime", "idx": 0 },
-            { "type": "Terminal", "name": "uid", "label": "uid", "idx": 0 }
+          "definition": [{
+              "type": "Terminal",
+              "name": "stepsize",
+              "label": "stepsize",
+              "idx": 0
+            },
+            {
+              "type": "Terminal",
+              "name": "endtime",
+              "label": "endtime",
+              "idx": 0
+            },
+            {
+              "type": "Terminal",
+              "name": "uid",
+              "label": "uid",
+              "idx": 0
+            }
           ]
         },
         {
@@ -939,8 +993,8 @@
         ]
       }]
     },
-    
-    
+
+
   ];
 </script>
 

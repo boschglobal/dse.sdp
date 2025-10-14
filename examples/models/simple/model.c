@@ -5,6 +5,14 @@
 #include <errno.h>
 #include <stddef.h>
 #include <dse/modelc/model.h>
+#include <dse/logger.h>
+
+ModelDesc* model_create(ModelDesc* model)
+{
+    log_notice("Message: %s", getenv("MESSAGE"));
+    return model;
+}
+
 
 int model_step(ModelDesc* m, double* model_time, double stop_time)
 {

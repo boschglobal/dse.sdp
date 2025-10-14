@@ -21,7 +21,6 @@ queries:
       RETURN mi.name AS modelInstName, a.name as alias, ch.name AS channelName
 tags:
   - stack
-  - report_expected_modelcount
 ---
 name: Count 'ModelInst' in AST and SIM
 queries:
@@ -41,29 +40,3 @@ hint: |
   The number of Model Instances in AST do not match the number of Model Instances in SIM.
 tags:
   - stack
-  - report_modelinst_count
-
----
-name: Simbus Channel Name Consistency
-queries:
-  - name: Channel Name Match
-    expect_rows: true
-    query: |
-      MATCH (sc:SimbusChannel)
-      WITH collect(DISTINCT sc.name) AS simbus_channels
-      MATCH (mi:ModelInst)-[:Alias]->(ch:Channel)
-      WITH mi, collect(DISTINCT ch.name) AS model_channels, simbus_channels
-      WITH mi, model_channels, simbus_channels,
-          (ALL(x IN model_channels WHERE x IN simbus_channels) AND
-           ALL(x IN simbus_channels WHERE x IN model_channels)) AS ChannelsMatch
-      RETURN
-        mi.name AS ModelInstanceName,
-        model_channels AS ModelChannels,
-        simbus_channels AS SimbusChannels,
-        ChannelsMatch
-      ORDER BY ModelInstanceName
-    description: |
-      Checks that each model instance has exactly the same set of channel names as SimbusChannel, but only if a Stack node exists.
-tags:
-  - stack
-  - report_channel_check

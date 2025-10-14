@@ -1,0 +1,31 @@
+exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
+exec sh -e $WORK/workflow.sh localfile.dse
+
+stdout 'Message: hello_from_model'
+
+-- localfile.dse --
+simulation
+channel signal
+
+uses
+dse.sdp https://github.com/boschglobal/dse.sdp $RELEASE_VERSION
+
+envar MESSAGE hello_from_simulation
+stack default
+envar MESSAGE hello_from_stack
+model simple Simple
+channel signal data
+envar MESSAGE hello_from_model
+file signalgroup.yaml signalgroup.yaml
+
+-- signalgroup.yaml --
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    model: simple
+    signal: data
+spec:
+  signals:
+    - signal: counter

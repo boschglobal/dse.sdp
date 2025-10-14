@@ -7,7 +7,6 @@ export DSE_MODELC_URL ?= https://github.com/boschglobal/dse.modelc/releases/down
 
 
 SUBDIRS = ast graph dsl lsp doc examples/models
-TESTSUBDIRS = ast graph dsl lsp
 
 ###############
 ## Docker Images.
@@ -45,7 +44,7 @@ build:
 
 .PHONY: test
 test: graph
-	@for d in $(TESTSUBDIRS); do ($(MAKE) -C $$d test ); done
+	@for d in $(SUBDIRS); do ($(MAKE) -C $$d test ); done
 
 
 .PHONY: install

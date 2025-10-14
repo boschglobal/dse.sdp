@@ -251,7 +251,7 @@ class FsilParser extends EmbeddedActionsParser {
           let env_vars = $.SUBRULE($.envvars);
           env_vars = Array.isArray(env_vars) ? env_vars : [env_vars];
           if (global_env_vars.length > 0) {
-            env_vars.push(...global_env_vars);
+            env_vars = [...global_env_vars, ...env_vars];
           }
 
           let name = "default";

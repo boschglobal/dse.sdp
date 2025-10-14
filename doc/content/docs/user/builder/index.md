@@ -91,7 +91,7 @@ model =
     [ "uid=", UID ];
 channel = { "channel", CHANNEL_NAME, CHANNEL_ALIAS }-;
 envar = { "envar", ENVAR_NAME, VALUE }-;
-file = { "file", MODEL_FILE, FILE_SOURCE }-;
+file = { "file", MODEL_FILE, (FILE_SOURCE | "uses", USES_NAME) }-;
 
 
 workflow = 
@@ -143,11 +143,13 @@ workflow =
 ### File
 
 <pre>
-<b>file</b> <var>MODEL_FILE</var> <var>FILE_SOURCE</var>
+<b>file</b> <var>MODEL_FILE</var> [FILE_SOURCE]
+<b>file</b> <var>MODEL_FILE</var> [use USES_NAME]
 </pre>
 
 * <code><var>MODEL_FILE</var></code>: the _name_ by which the model refers to the file.
 * <code><var>FILE_SOURCE</var></code>: the actual _path_ of the file.
+* <code><var>USES_NAME</var></code>: the name of a dependency that this file entry imports.
 
 
 ### Model
@@ -329,4 +331,3 @@ export GHE_TOKEN=goo_token
 # Specify the shell function.
 $ builder() { ( if test -f "$1"; then cd $(dirname "$1"); fi && docker run -it --user $(id -u):$(id -g) --rm -e AR_USER -e AR_TOKEN -e GHE_TOKEN -v $(pwd):/workdir $BUILDER_IMAGE "$@"; ) }
 ```
-
