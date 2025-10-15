@@ -1,0 +1,19 @@
+exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
+exec sh -e $WORK/workflow.sh openloop.dse
+
+stdout 'Stacked: yes'
+
+-- openloop.dse --
+simulation
+channel signal
+
+uses
+dse.sdp https://github.com/boschglobal/dse.sdp $RELEASE_VERSION
+
+stack simple_model stacked=true
+
+model simple Simple
+channel signal data
+
+model simple_new Simple
+channel signal_new data

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 export DSE_MODELC_VERSION ?= 2.1.30
+export RELEASE_VERSION := v0.8.6
 export DSE_MODELC_URL ?= https://github.com/boschglobal/dse.modelc/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
 
 
@@ -98,6 +99,7 @@ do-test_testscript-e2e:
 			-e GHE_PAT=$(GHE_PAT) \
 			-e AR_USER=$(AR_USER) \
 			-e AR_TOKEN=$(AR_TOKEN) \
+			-e RELEASE_VERSION=$(RELEASE_VERSION) \
 			$$t ;\
 	done;
 

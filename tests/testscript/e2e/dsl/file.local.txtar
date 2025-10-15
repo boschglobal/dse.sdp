@@ -1,18 +1,17 @@
-
 exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
 exec sh -e $WORK/workflow.sh openloop.dse BUILD_ONLY
 
-exists out/sim/model/example/data/foo.txt
-cmp local_foo.txt out/sim/model/example/data/foo.txt
+exists out/sim/model/simple/data/foo.txt
+cmp local_foo.txt out/sim/model/simple/data/foo.txt
 
 -- openloop.dse --
 simulation
 channel signal
 
 uses
-dse.modelc https://github.com/boschglobal/dse.modelc v2.1.32
+dse.sdp https://github.com/boschglobal/dse.sdp $RELEASE_VERSION
 
-model example dse.modelc.csv
+model simple Simple
 channel signal signal_vector
 file foo.txt local_foo.txt
 

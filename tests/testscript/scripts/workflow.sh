@@ -8,6 +8,8 @@ export DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
 
 run_builder() {
   echo "[INFO] Running builder..."
+  envsubst < "$INPUT_DSE" > "${INPUT_DSE}.tmp" # for expanding all envar references
+  mv "${INPUT_DSE}.tmp" "$INPUT_DSE"
   docker run --rm \
     --network=host \
     -e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
@@ -18,16 +20,14 @@ run_builder() {
   task -y -v
 }
 
-if echo " $* " | grep -q " BUILD_ONLY "; then
-  run_builder
-else  
-  run_builder
-
+run_report() {
   echo "[INFO] Running report..."
   docker run --rm \
     -v "$(pwd)/out/sim":/sim \
     "$DSE_REPORT_IMAGE" /sim
+}
 
+run_simer() {
   echo "[INFO] Running simer..."
   docker run --rm \
     -v "$(pwd)/out/sim":/sim \
@@ -40,4 +40,12 @@ else
     -endtime 0.100 \
     -logger 4 \
     -env SIMBUS_LOGLEVEL=2
+}
+
+if echo " $* " | grep -q " BUILD_ONLY "; then
+  run_builder
+else  
+  run_builder
+  run_report
+  run_simer
 fi
