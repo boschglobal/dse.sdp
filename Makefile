@@ -4,7 +4,7 @@
 
 DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
 DSE_MODELC_VERSION ?= 2.2.9
-export DSE_MODELC_URL ?= $(DSE_MODELC_REPO)/archive/refs/tags/v$(DSE_MODELC_VERSION).zip
+export DSE_MODELC_PKG_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
 
 SUBDIRS = ast graph dsl lsp doc examples/models
 
@@ -24,7 +24,7 @@ default: build
 
 downloads:
 	mkdir -p build/downloads
-	cd build/downloads; test -s ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip || ( curl -fSLO $(DSE_MODELC_URL) && unzip -q ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip )
+	cd build/downloads; test -s ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip || ( curl -fSLO $(DSE_MODELC_PKG_URL) && unzip -q ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip )
 
 
 .PHONY: examples
