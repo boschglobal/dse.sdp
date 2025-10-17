@@ -120,4 +120,5 @@ jobs:
           tag: ${{ github.ref_name }}
         run: |
           gh release upload "$tag" \
-            Models-${{ env.PACKAGE_VERSION }}-${{ matrix.package_arch }}.zip
+            Models-${{ env.PACKAGE_VERSION }}-${{ matrix.package_arch }}.zip \
+            --clobber

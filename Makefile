@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-export DSE_MODELC_VERSION ?= 2.1.30
-export DSE_MODELC_URL ?= https://github.com/boschglobal/dse.modelc/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
-
+DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
+DSE_MODELC_VERSION ?= 2.2.9
+export DSE_MODELC_URL ?= $(DSE_MODELC_REPO)/archive/refs/tags/v$(DSE_MODELC_VERSION).zip
 
 SUBDIRS = ast graph dsl lsp doc examples/models
 
