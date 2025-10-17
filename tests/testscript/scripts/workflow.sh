@@ -33,12 +33,6 @@ run_simer() {
     -v "$(pwd)/out/sim":/sim \
     -p 2159:2159 -p 6379:6379 \
     "$DSE_SIMER_IMAGE" \
-    -redis="" \
-    -simbus="" \
-    -transport="loopback" \
-    -uri="loopback" \
-    -endtime 0.100 \
-    -logger 4 \
     -env SIMBUS_LOGLEVEL=2
 }
 
