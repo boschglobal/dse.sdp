@@ -1,4 +1,4 @@
-FROM golang:bullseye AS builder
+FROM golang:bookworm AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -6,7 +6,7 @@ RUN go mod download
 COPY . .
 RUN go build -o /html2img main.go
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt-get update && \
     apt-get install -y wget gnupg ca-certificates && \
