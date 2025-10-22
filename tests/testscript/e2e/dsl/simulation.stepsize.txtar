@@ -9,7 +9,7 @@ simulation stepsize=0.001
 channel signal
 
 uses
-dse.sdp https://github.com/boschglobal/dse.sdp v$RELEASE_VERSION
+dse.sdp https://github.com/boschglobal/dse.sdp $RELEASE_VERSION
 
 model simple Simple
 channel signal data

@@ -11,7 +11,7 @@ simulation
 channel signal
 
 uses
-dse.sdp https://github.com/boschglobal/dse.sdp v$RELEASE_VERSION
+dse.sdp https://github.com/boschglobal/dse.sdp $RELEASE_VERSION
 remote_foo https://raw.github.boschdevcloud.com/fsil/dse.sdp/devel/tests/testdata/e2e/remote_foo.txt user=$GHE_USER token=$GHE_PAT
 
 model simple Simple

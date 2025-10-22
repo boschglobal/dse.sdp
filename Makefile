@@ -2,9 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
-DSE_MODELC_VERSION ?= 2.2.9
-export DSE_MODELC_PKG_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
+export DSE_MODELC_VERSION ?= 2.1.30
+export RELEASE_VERSION := v0.8.6
+export DSE_MODELC_URL ?= https://github.com/boschglobal/dse.modelc/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
+
 
 SUBDIRS = ast graph dsl lsp doc examples/models
 
@@ -24,7 +25,7 @@ default: build
 
 downloads:
 	mkdir -p build/downloads
-	cd build/downloads; test -s ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip || ( curl -fSLO $(DSE_MODELC_PKG_URL) && unzip -q ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip )
+	cd build/downloads; test -s ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip || ( curl -fSLO $(DSE_MODELC_URL) && unzip -q ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip )
 
 
 .PHONY: examples
@@ -82,13 +83,12 @@ generate:
 
 
 do-test_testscript-e2e:
-	@set -eu; \
-	RELEASE_VERSION=$$( \
-		git fetch origin --tags --force >/dev/null; \
-		git tag --sort=-v:refname --list 'v[0-9]*.[0-9]*.[0-9]*' | head -n 1 | sed 's/^v//' \
-	); \
-	for t in $(TESTSCRIPT_E2E_FILES); do \
-		echo "Running Test: $$t"; \
+# Test debug;
+#   Additional logging: add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
+#   Retain work folder: add '-work' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -work \).
+	@set -eu; for t in $(TESTSCRIPT_E2E_FILES) ;\
+	do \
+		echo "Running Test: $$t" ;\
 		testscript \
 			-e ENTRYDIR=$(HOST_ENTRYDIR) \
 			-e REPODIR=$(HOST_DOCKER_WORKSPACE) \
@@ -99,10 +99,9 @@ do-test_testscript-e2e:
 			-e GHE_PAT=$(GHE_PAT) \
 			-e AR_USER=$(AR_USER) \
 			-e AR_TOKEN=$(AR_TOKEN) \
-			-e RELEASE_VERSION=$$RELEASE_VERSION \
-			$$t; \
-	done
-
+			-e RELEASE_VERSION=$(RELEASE_VERSION) \
+			$$t ;\
+	done;
 
 .PHONY: super-linter
 super-linter:

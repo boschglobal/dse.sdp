@@ -1,0 +1,18 @@
+# Copyright 2025 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: Gateway
+spec:
+  runtime:
+    gateway: {}
+  channels:
+    - alias: scalar_vector
+      selectors:
+        channel: scalar
+    - alias: binary_vector
+      selectors:
+        channel: binary

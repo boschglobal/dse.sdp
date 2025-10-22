@@ -6,7 +6,7 @@
 
 # Go Builder
 # ==========
-FROM golang:1.23.5-bookworm AS golang-builder
+FROM golang:1.23.5-bullseye AS golang-builder
 COPY ast /src/ast
 RUN go install github.com/boschglobal/task/v3/cmd/task@latest
 RUN set -eux; \
@@ -17,7 +17,7 @@ RUN set -eux; \
 
 # Node Builder
 # ============
-FROM node:22-bookworm AS node-builder
+FROM node:22-bullseye AS node-builder
 COPY dsl /src/dsl
 COPY lsp /src/lsp
 RUN set -eux; \
@@ -31,7 +31,7 @@ RUN set -eux; \
 
 # Builder Image
 # =============
-FROM debian:bookworm-slim
+FROM debian:bullseye-slim
 LABEL maintainer="timothy.rule@de.bosch.com";
 ENV DEBIAN_FRONTEND=noninteractive
 

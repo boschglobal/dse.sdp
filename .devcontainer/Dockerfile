@@ -10,7 +10,7 @@ FROM $DSE_BUILDER_IMAGE AS dse-builder
 
 # Go Builder
 # ==========
-FROM golang:bookworm AS go
+FROM golang:bullseye AS go
 RUN GOBIN=/usr/local/bin go install github.com/rogpeppe/go-internal/cmd/testscript@latest
 RUN GOBIN=/usr/local/bin go install github.com/boschglobal/task/v3/cmd/task@latest
 

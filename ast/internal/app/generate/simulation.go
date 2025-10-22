@@ -111,12 +111,7 @@ func (c *GenerateCommand) GenerateSimulation() error {
 
 			model := kind.ModelInstance{
 				Name: astModel.Name,
-				Uid: func() int {
-					if astModel.Uid != nil && *astModel.Uid != 0 {
-						return *astModel.Uid
-					}
-					return nextUid()
-				}(),
+				Uid:  nextUid(),
 				Model: struct {
 					Mcl *struct {
 						Models []struct {

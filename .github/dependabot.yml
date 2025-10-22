@@ -5,7 +5,7 @@ updates:
     directories:
       - "**/*"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     groups:
       gomod-automerge:
         update-types:
@@ -17,7 +17,7 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     groups:
       actions-merge:
         update-types:

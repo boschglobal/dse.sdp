@@ -1,0 +1,37 @@
+exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
+exec sh -e $WORK/workflow.sh gateway.dse BUILD_ONLY
+
+stdout 'Using gateway symbols: ...'
+stdout 'Setup for async Simulation Model run ...'
+stdout 'Call symbol: model_destroy ...'
+stdout 'Controller exit ...'
+
+stdout '\[0.000000\] binary\[0\] = <0:0>\(null\) \(binary_foo\)'
+stdout '\[0.000000\] binary\[1\] = <0:0>\(null\) \(binary_bar\)'
+stdout '\[0.002000\] binary\[0\] = <20:20>st=0.001500,index=0 \(binary_foo\)'
+stdout '\[0.002000\] binary\[1\] = <20:20>st=0.001500,index=1 \(binary_bar\)'
+stdout '\[0.000000\] scalar\[0\] = 0.000000 \(scalar_foo\)'
+stdout '\[0.000000\] scalar\[1\] = 0.000000 \(scalar_bar\)'
+stdout '\[0.002000\] scalar\[0\] = 16.000000 \(scalar_foo\)'
+stdout '\[0.002000\] scalar\[1\] = 32.000000 \(scalar_bar\)'
+
+-- gateway.dse --
+simulation
+
+stack remote
+model gateway external=true
+
+-- test.sh --
+export DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
+export SIM_PATH="$(pwd)/out/sim"
+export LD_LIBRARY_PATH=$ENTRYDIR/examples/models/build/_deps/dse_modelc_lib-src/examples/runtime/lib
+
+docker run --name simer -d --rm \
+		-v $(SIM_PATH)/model/gateway:/sim \
+		--network=host \
+		$(DSE_SIMER_IMAGE) \
+			-env simbus:SIMBUS_LOGLEVEL=4 \
+			-stack local \
+			-timeout 5
+
+"$SIM_PATH/bin/gateway" 0.0005 0.0020 "$(SIM_PATH)/model/gateway/data/gateway.yaml"
