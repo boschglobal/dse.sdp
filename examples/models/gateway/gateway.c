@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <dse/modelc/gateway.h>
 #include <dse/logger.h>
+#include <cstdio>
 
 
 /**

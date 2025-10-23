@@ -115,7 +115,7 @@ super-linter:
 		--env VALIDATE_DOCKERFILE=true \
 		--env VALIDATE_MARKDOWN=true \
 		--env VALIDATE_YAML=true \
-		ghcr.io/super-linter/super-linter:slim-v7
+		ghcr.io/super-linter/super-linter:slim-v8
 
 #		--env VALIDATE_GO=true \
 #		--env VALIDATE_TYPESCRIPT_ES=true \
