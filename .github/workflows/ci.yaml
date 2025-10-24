@@ -130,6 +130,13 @@ jobs:
       image: ghcr.io/boschglobal/dse-testscript:latest
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
+    services:
+      memgraph:
+        image: memgraph/memgraph-platform
+        ports:
+          - 3000:3000
+          - 7444:7444
+          - 7687:7687
     steps:
       - uses: actions/checkout@v5
         with:

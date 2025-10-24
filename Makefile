@@ -2,22 +2,34 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+
+################
+## DSE Projects.
 DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
-DSE_MODELC_VERSION ?= 2.2.9
+DSE_MODELC_VERSION ?= 2.2.12
 export DSE_MODELC_PKG_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
 
-SUBDIRS = ast graph dsl lsp doc examples/models
 
 ###############
 ## Docker Images.
 TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:$(DSE_MODELC_VERSION)
 
+
+###############
+## Build parameters.
+SUBDIRS = ast graph dsl lsp doc examples/models
+
+
+###############
 ## Test Parameters.
+export EXAMPLE_VERSION ?= 0.8.17
 export HOST_ENTRYDIR ?= $(shell pwd -P)
 export HOST_DOCKER_WORKSPACE ?= $(shell pwd -P)
-export TESTSCRIPT_E2E_DIR ?= tests/testscript/e2e
-TESTSCRIPT_E2E_FILES = $(wildcard $(TESTSCRIPT_E2E_DIR)/*/*.txtar)
+export TESTSCRIPT_E2E_DIR ?= tests/e2e
+#TESTSCRIPT_E2E_FILES = $(wildcard $(TESTSCRIPT_E2E_DIR)/*/*.txtar)
+TESTSCRIPT_E2E_FILES = $(TESTSCRIPT_E2E_DIR)/dsl/arch.default.txtar
+
 
 default: build
 
@@ -43,9 +55,11 @@ build:
 
 
 .PHONY: test
-test: graph
+test:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d test ); done
 
+.PHONY: test_e2e
+test_e2e: do-test_testscript-e2e
 
 .PHONY: install
 install:
@@ -69,12 +83,9 @@ docker:
 	docker build -f .devcontainer/Dockerfile-builder --tag dse-builder:test . ;\
 	docker build -f .devcontainer/Dockerfile --tag dse-devcontainer:test --build-arg DSE_BUILDER_IMAGE=dse-builder:test . ;\
 
-.PHONY: graph
-graph:
+.PHONY: run_graph
+run_graph:
 	$(MAKE) -C graph graph
-
-.PHONY: test_e2e
-test_e2e: graph do-test_testscript-e2e
 
 .PHONY: generate
 generate:
@@ -82,25 +93,36 @@ generate:
 
 
 do-test_testscript-e2e:
+# Test debug;
+#   Additional logging: add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
+#   Retain work folder: add '-work' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -work \).	@-docker kill builder 2>/dev/null ; true
+	@-docker kill report 2>/dev/null ; true
+	@-docker kill simer 2>/dev/null ; true
 	@set -eu; \
-	RELEASE_VERSION=$$( \
-		git fetch origin --tags --force >/dev/null; \
-		git tag --sort=-v:refname --list 'v[0-9]*.[0-9]*.[0-9]*' | head -n 1 | sed 's/^v//' \
-	); \
 	for t in $(TESTSCRIPT_E2E_FILES); do \
-		echo "Running Test: $$t"; \
-		testscript \
-			-e ENTRYDIR=$(HOST_ENTRYDIR) \
-			-e REPODIR=$(HOST_DOCKER_WORKSPACE) \
-			-e http_proxy=$(http_proxy) \
-			-e https_proxy=$(https_proxy) \
-			-e GHE_USER=$(GHE_USER) \
-			-e GHE_TOKEN=$(GHE_TOKEN) \
-			-e GHE_PAT=$(GHE_PAT) \
-			-e AR_USER=$(AR_USER) \
-			-e AR_TOKEN=$(AR_TOKEN) \
-			-e RELEASE_VERSION=$$RELEASE_VERSION \
-			$$t; \
+		echo "Running E2E Test: $$t"; \
+		export ENTRYWORKDIR=$$(mktemp -d) ;\
+		docker run -i --rm \
+			--network=host \
+			-e ENTRYHOSTDIR=$(HOST_DOCKER_WORKSPACE) \
+			-e ENTRYWORKDIR=$${ENTRYWORKDIR} \
+			-v /var/run/docker.sock:/var/run/docker.sock \
+			-v $(HOST_DOCKER_WORKSPACE):/repo \
+			-v $${ENTRYWORKDIR}:/workdir \
+			$(TESTSCRIPT_IMAGE) \
+				-e ENTRYHOSTDIR=$(HOST_DOCKER_WORKSPACE) \
+				-e ENTRYWORKDIR=$${ENTRYWORKDIR} \
+				-e REPODIR=/repo \
+				-e WORKDIR=/workdir \
+				-e http_proxy=$(http_proxy) \
+				-e https_proxy=$(https_proxy) \
+				-e GHE_USER=$(GHE_USER) \
+				-e GHE_TOKEN=$(GHE_TOKEN) \
+				-e GHE_PAT=$(GHE_PAT) \
+				-e AR_USER=$(AR_USER) \
+				-e AR_TOKEN=$(AR_TOKEN) \
+				-e RELEASE_VERSION=$(EXAMPLE_VERSION) \
+				$$t; \
 	done
 
 
