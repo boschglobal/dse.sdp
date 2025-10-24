@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 3.21)
+cmake_policy(SET CMP0135 NEW)
 
 if ($ENV{PACKAGE_ARCH} MATCHES "linux-amd64")
     set(CMAKE_SYSTEM_NAME Linux)
