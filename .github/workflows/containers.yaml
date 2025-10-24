@@ -4,7 +4,7 @@ name: Containers
 on:  # yamllint disable-line rule:truthy
   workflow_dispatch:
   push:
-    branches: [main, devel]
+    branches: [main]
     tags:
       - 'v*.*.*'
 
@@ -71,3 +71,4 @@ jobs:
              PACKAGE_VERSION=${{ env.PACKAGE_VERSION }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
