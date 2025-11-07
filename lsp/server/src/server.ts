@@ -249,7 +249,7 @@ function taskFileParser(yamlData: any, model: any) {
 function setDiagnostics(repoUrlAndVersion: { [key: string]: any }, textDocument: TextDocument, diagnostics: Diagnostic[], seen: Set<string>, err_type: string) {
   const text = textDocument.getText();
   const url = repoUrlAndVersion['link'];
-  let escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "\\s+v\\d\.*";
+  let escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "\\s+v\\d\\.*";
   const regex = new RegExp(escapedUrl, 'g');
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
