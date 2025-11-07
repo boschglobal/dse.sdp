@@ -1,3 +1,5 @@
+skip 'TODO run graph tool from inside the Report container'
+
 # SETUP: construct working folder layout
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 exec cp -r . $WORKDIR
