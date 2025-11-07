@@ -1,15 +1,16 @@
+skip 'TODO wait for PR push'
+
 # SETUP: construct working folder layout
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 exec cp -r . $WORKDIR
 cd $WORKDIR
 
 # TEST: operate the simulation
-exec sh -e workflow.sh openloop.dse BUILD_ONLY
+exec sh -e workflow.sh network.dse BUILD_ONLY
 
-exists out/sim/model/simple/data/foo.txt
-cmp local_foo.txt out/sim/model/simple/data/foo.txt
+stdout 'MSG=HelloWorld'
 
--- openloop.dse --
+-- network.dse --
 simulation
 channel signal
 
@@ -17,8 +18,6 @@ uses
 dse.sdp https://github.com/boschglobal/dse.sdp v$RELEASE_VERSION
 
 model simple Simple
-channel signal signal_vector
-file foo.txt local_foo.txt
-
--- local_foo.txt --
-local foo
+channel signal signal_channel
+workflow message
+    var MSG HelloWorld

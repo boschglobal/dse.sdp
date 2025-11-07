@@ -27,8 +27,7 @@ export EXAMPLE_VERSION ?= 0.8.17
 export HOST_ENTRYDIR ?= $(shell pwd -P)
 export HOST_DOCKER_WORKSPACE ?= $(shell pwd -P)
 export TESTSCRIPT_E2E_DIR ?= tests/e2e
-#TESTSCRIPT_E2E_FILES = $(wildcard $(TESTSCRIPT_E2E_DIR)/*/*.txtar)
-TESTSCRIPT_E2E_FILES = $(TESTSCRIPT_E2E_DIR)/dsl/arch.default.txtar
+TESTSCRIPT_E2E_FILES = $(wildcard $(TESTSCRIPT_E2E_DIR)/*/*.txtar)
 
 
 default: build
@@ -96,6 +95,8 @@ do-test_testscript-e2e:
 # Test debug;
 #   Additional logging: add '-v' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -v \).
 #   Retain work folder: add '-work' to Testscript command (e.g. $(TESTSCRIPT_IMAGE) -work \).	@-docker kill builder 2>/dev/null ; true
+#   To skip tests add 'skip' or 'skip message' at start of txtar file.
+	@-docker kill builder 2>/dev/null ; true
 	@-docker kill report 2>/dev/null ; true
 	@-docker kill simer 2>/dev/null ; true
 	@set -eu; \
@@ -114,6 +115,9 @@ do-test_testscript-e2e:
 				-e ENTRYWORKDIR=$${ENTRYWORKDIR} \
 				-e REPODIR=/repo \
 				-e WORKDIR=/workdir \
+				-e DSE_BUILDER_IMAGE=$(DSE_BUILDER_IMAGE) \
+				-e DSE_REPORT_IMAGE=$(DSE_REPORT_IMAGE) \
+				-e DSE_SIMER_IMAGE=$(DSE_SIMER_IMAGE) \
 				-e http_proxy=$(http_proxy) \
 				-e https_proxy=$(https_proxy) \
 				-e GHE_USER=$(GHE_USER) \

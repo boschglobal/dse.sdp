@@ -2,7 +2,7 @@ simulation
 channel physical
 
 uses
-dse.fmi https://github.com/boschglobal/dse.fmi v1.1.8
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.39
 
 stack remote
 envar key_one val_one

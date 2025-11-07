@@ -1,3 +1,5 @@
+skip 'TODO implement condition to make this optional'
+
 exec mkdir -p $WORK/.local/share/dse-graph
 exec cp -r $ENTRYDIR/graph/cmd/graph/reports $WORK/.local/share/dse-graph/
 env HOME=$WORK

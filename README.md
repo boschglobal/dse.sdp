@@ -16,26 +16,32 @@ Simulation Development Platform for the Dynamic Simulation Environment (DSE) Cor
 ### Project Structure
 
 ```text
-.devcontainer/  <-- devcontainer definition
-ast             <-- AST tools
-doc             <-- documentation
-└── html2img/   <-- containerized tool to convert html to image
-dsl             <-- DSL parser (using Chevrotain)
-examples
-└── graph       <-- graph examples (for Report tool)
-└── openloop    <-- Open Loop simulation using FMU based Linear Equation model
-└── notebook    <-- Jupyter base simulation example
-└── vscode      <-- VS Code integration examples
-graph
-graph
-└── build/package
-    └── report/     <-- Report tool
-licenses            <-- Third Party Licenses
-lsp                 <-- VS Code Language Server
-tests
-└── testscript
-    └── e2e/        <-- repo level end-to-end tests
-Makefile            <-- repo level Makefile
+dse.sdp
+└── .devcontainer/          <-- Devcontainer definition.
+    └── Dockerfile-builder  <-- Builder tool container appliance (Dockerfile).
+└── actions                 <-- GitHub actions (for Builder, Report and Simer containers).
+└── ast                     <-- AST tools.
+└── doc                     <-- Project documentation.
+└── dsl                     <-- DSL parser (using Chevrotain).
+└── examples
+    └── graph               <-- Graph examples (for Report tool)
+    └── models              <-- Model examples, used by E2E tests.
+    └── openloop            <-- Open Loop simulation using FMU based Linear Equation model.
+    └── notebook            <-- Jupyter base simulation example.
+    └── vscode              <-- VS Code integration examples.
+└── graph                   <-- Graph tool (including Report tool).
+    └── build/package/
+        └── report/         <-- Report tool container appliance (Dockerfile).
+    └── cmd/graph/
+        └── reports/        <-- Reports, packaged with Report container.
+└── licenses                <-- Third Party Licenses.
+└── lsp                     <-- VS Code Language Server.
+└── tests
+    └── e2e                 <-- End-to-end (E2E) tests.
+    └── scripts             <-- Scripts used by E2E tests.
+    └── testdata            <-- Testdata, used by E2E tests.
+└── Makefile                <-- Repo level Makefile.
+└── Taskfile.yml            <-- Taskfile containing supporting automation for E2E tests.
 ```
 
 
@@ -100,116 +106,6 @@ $ make run
 > Hint: Find more information about the Report [command options here](https://boschglobal.github.io/dse.doc/docs/user/report/#options).
 
 
-### Connect a Remote Gateway Model to a Simulation running in Cloudspace
-
-A Cloudspace can forward ports to allow remote connections to services running in that Cloudspace.
-In particular these scenarios exist:
-
-1. Cloudspace running in a Web Browser: ports are forwarded via HTTP endpoints (i.e. URLs). This is not suitable for Simer based simulations as there is no support for HTTP endpoints (at this time).
-2. Cloudspace running in VS Code: ports are forwarded to local host. Local applications can connect to these ports and access services running in the Cloudspace. This **is** suitable for Simer based simulations.
-
-#### Connect VS Code to a Cloudspace
-
-> Hint: Start the Codespace in a Web Browser first, then connect to the running Codespace from VS Code.
-
-1. Start VS Code, refresh the Remote Explorer, select Github Codespaces (from the dropdown).
-2. Add a Codespace for the repo; [boschglobal/dse.sdp](https://github.com/boschglobal/dse.sdp) ; you will need to authenticate the connection to GitHub and the Repo.
-3. Connect to the Codespace.
-4. Open a Terminal.
-
-
-#### Run the ModelC Gateway Example Simulation
-
-**Local WSL**
-```bash
-# Build a local version of the ModelC library for Windows (or download).
-$ git clone https://github.com/boschglobal/dse.modelc 
-$ cd dse.modelc
-$ PACKAGE_ARCH=windows-x64 make
-```
-
-**Cloudspace Terminal**
-```bash
-# Check your environment.
-$ dse-env
-DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
-DSE_MODELC_VERSION=2.1.14
-
-# Build the examples and start the Gateway Example.
-$ make examples
-
-# Run the simulation, in **host** network mode, selecting the **local** stack only.
-$ dse-simer-host out/examples/modelc/gateway/ -stack local
-```
-
-> Note: The port mapping (under PORTS tab) may be different if the local port was already in use. Note the forwarded address.
-
-**Local Powershell**
-```powershell
-# Locate the Gateway example, adjust the gateway.yaml file for the mapped port if necesary.
-PS> cd working\dse.modelc\dse\modelc\build\_out\examples\gateway
-
-# Run the Gateway.
-PS> .\bin\gateway.exe 0.0005 0.02 .\data\gateway.yaml
-Load YAML File: .\data\gateway.yaml←[0m
-...
-Create the Endpoint object ...←[0m
-  Redis:←[0m
-    path: (null)←[0m
-    hostname: localhost←[0m
-    port: 6380←[0m
-    major version: 6←[0m
-    minor version: 0←[0m
-  Endpoint: ←[0m
-    Model UID: 6←[0m
-    Push Endpoint: dse.simbus←[0m
-Create the Controller object ...←[0m
-Create the Adapter object ...←[0m
-Load endpoint create function: adapter_create_msg_vtable←[0m
-Load and configure the Simulation Models ...←[0m
-Using gateway symbols: ...←[0m
-...
-Setup for async Simulation Model run ...←[0m
-    Pull Endpoint: dse.model.42←[0m
-←[0m[INFO]   [0.000000] binary[0] = <0:0>(null) (binary_foo) (main:56)←[0m
-←[0m[INFO]   [0.000000] binary[1] = <0:0>(null) (binary_bar) (main:56)←[0m
-←[0m[INFO]   [0.000000] scalar[0] = 0.000000 (scalar_foo) (main:69)←[0m
-←[0m[INFO]   [0.000000] scalar[1] = 0.000000 (scalar_bar) (main:69)←[0m
-←[0m[INFO]   [0.000500] binary[0] = <20:20>st=0.000000,index=0 (binary_foo) (main:56)←[0m
-←[0m[INFO]   [0.000500] binary[1] = <20:20>st=0.000000,index=1 (binary_bar) (main:56)←[0m
-```
-
-
-### Generate an AST from a Simulation defined in the DSE DSL
-
-> Definitions:<br/>
-  AST : Abstract Syntax Tree<br/>
-  DSL : Domain Specific Language
-
-Start a Codespace, then type the following commands in the terminal window.
-
-```bash
-
-# Build the project
-$ make
-$ make install
-
-# Parse one of the sample Simulations written in the DSE DSL and generate an AST.
-$ parse2ast examples/dsl/single_fmu.dse single_fmu.json
-parse2ast
----------
-Version: devel
-Parameters:
-  input_file = examples/dsl/single_fmu.dse
-  output_file = single_fmu.json
-Read from file: examples/dsl/single_fmu.dse
-Parsing ...
-Writing to file: single_fmu.json
-
-# Convert the DSL AST to a Simulation AST file.
-$ dse-ast convert -input single_fmu.json -output ast.yaml
-```
-
 
 ## Build
 
@@ -226,17 +122,37 @@ $ sudo npm install -g vsce
 $ sudo npm install -g http-server
 $ sudo npm install -g typescript
 
+# Set your path to include ~/.local/bin if necessary. Permanent alterations
+# can be made to your '~/.bashrc' or '~/.profile' file.
+$ export PATH="$HOME/.local/bin:$PATH"
+
 # Clone the repo.
 $ git clone https://github.boschdevcloud.com/fsil/dse.sdp.git
 $ cd dse.sdp
 
-# Setup the SDP.
+# Setup the SDP (local install).
 $ make
 $ make build install
 
-# Set your path to include ~/.local/bin if necessary. Permanent alterations
-# can be made to your '~/.bashrc' or '~/.profile' file.
-$ export PATH="$HOME/.local/bin:$PATH"
+# Build containerised tools (container/docker install).
+$ make docker
+
+# Optionally use local container images.
+$ DSE_BUILDER_IMAGE=dse-builder:test
+$ DSE_REPORT_IMAGE=dse-report:test
+$ DSE_SIMER_IMAGE=dse-simer:test
+
+# Run tests.
+$ make run_graph
+$ make test
+$ make test_e2e
+
+# Generate documentation.
+$ make generate
+
+# Remove (clean) temporary build artifacts.
+$ make clean
+$ make cleanall
 ```
 
 

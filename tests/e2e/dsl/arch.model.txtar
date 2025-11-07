@@ -1,9 +1,14 @@
-exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
-exec sh -e $WORK/workflow.sh openloop.dse
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
 
-exists out/downloads/Models-${RELEASE_VERSION}-linux-x86.zip
+# TEST: operate the simulation
+exec sh -e workflow.sh openloop.dse
+
+exists out/downloads/Models-${RELEASE_VERSION}-linux-i386.zip
 exists out/sim/model/simple/lib/libsimple.so
-stdout 'Platform: linux-x86'
+stdout 'Platform: linux-i386'
 stdout 'Model File: model/simple/lib/libsimple.so'
 stdout 'val=9\.000000, final_val=9\.000000, name=counter'
 
@@ -14,7 +19,7 @@ channel signal
 uses
 dse.sdp https://github.com/boschglobal/dse.sdp v$RELEASE_VERSION
 
-model simple Simple arch=linux-x86
+model simple Simple arch=linux-i386
 channel signal data
 file signalgroup.yaml signalgroup.yaml
 

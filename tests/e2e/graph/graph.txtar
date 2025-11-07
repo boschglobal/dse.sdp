@@ -1,7 +1,13 @@
-# Copy reports to local share path.
-exec mkdir -p $WORK/.local/share/dse-graph
-exec cp -r $ENTRYDIR/graph/cmd/graph/reports $WORK/.local/share/dse-graph/
-env HOME=$WORK
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# SETUP: graph reports
+exec mkdir -p $WORKDIR/.local/share/dse-graph
+exec cp -r $REPODIR/graph/cmd/graph/reports $WORKDIR/.local/share/dse-graph/
+env HOME=$WORKDIR
+env DSE_GRAPH=$REPODIR/graph/bin/graph
 
 env STATIC_VALIDATION=examples/graph/static_validation
 env DUPLICATE_WRITES=examples/graph/duplicate_writes
@@ -9,46 +15,47 @@ env STACK=examples/graph/stack
 env REPORTS=graph/cmd/graph/reports
 
 
-exec dse-graph ping
+# TEST: basic graph connectivity
+exec $REPODIR/graph/bin/graph ping
 
 
-# Static Report.
-exec dse-graph drop --all
-exec dse-graph import $ENTRYDIR/$STATIC_VALIDATION/sim_good
-exec dse-graph export export_static_validation.cyp
-exec dse-graph report -tag stack -reports=$ENTRYDIR/$REPORTS/static_validation.yaml $ENTRYDIR/$STATIC_VALIDATION/sim_good
+# TEST: Static Report.
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$STATIC_VALIDATION/sim_good
+exec $DSE_GRAPH export export_static_validation.cyp
+exec $DSE_GRAPH report -tag stack -reports=$REPODIR/$REPORTS/static_validation.yaml $REPODIR/$STATIC_VALIDATION/sim_good
 
 
-# Static Report with Error.
-exec dse-graph drop --all
-exec dse-graph import $ENTRYDIR/$STATIC_VALIDATION/sim_with_error
-exec dse-graph export export_static_validation.cyp
-! exec dse-graph report --reports=$ENTRYDIR/$REPORTS/static_validation.yaml $ENTRYDIR/$STATIC_VALIDATION/sim_with_error
+# TEST: Static Report with Error.
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$STATIC_VALIDATION/sim_with_error
+exec $DSE_GRAPH export export_static_validation.cyp
+! exec $DSE_GRAPH report --reports=$REPODIR/$REPORTS/static_validation.yaml $REPODIR/$STATIC_VALIDATION/sim_with_error
 
 
-# Duplicate Writes Report.
-exec dse-graph drop --all
-exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_good
-exec dse-graph export export_duplicate_writes.cyp
-exec dse-graph report -tag signal -reports=$ENTRYDIR/$REPORTS/duplicate_writes.yaml $ENTRYDIR/$DUPLICATE_WRITES/sim_good
+# TEST: Duplicate Writes Report.
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$DUPLICATE_WRITES/sim_good
+exec $DSE_GRAPH export export_duplicate_writes.cyp
+exec $DSE_GRAPH report -tag signal -reports=$REPODIR/$REPORTS/duplicate_writes.yaml $REPODIR/$DUPLICATE_WRITES/sim_good
 
 
-# Duplicate Writes Report with error.
-exec dse-graph drop --all
-exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_with_error
-exec dse-graph export export_duplicate_writes.cyp
-! exec dse-graph report --reports=$ENTRYDIR/$REPORTS/duplicate_writes.yaml $ENTRYDIR/$DUPLICATE_WRITES/sim_with_error
+# TEST: Duplicate Writes Report with error.
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$DUPLICATE_WRITES/sim_with_error
+exec $DSE_GRAPH export export_duplicate_writes.cyp
+! exec $DSE_GRAPH report --reports=$REPODIR/$REPORTS/duplicate_writes.yaml $REPODIR/$DUPLICATE_WRITES/sim_with_error
 
 
-# Stack Report.
-exec dse-graph drop --all
-exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_good
-exec dse-graph export export_duplicate_writes.cyp
-exec dse-graph report -tag signal -reports=$ENTRYDIR/$REPORTS/stack.yaml $ENTRYDIR/$STACK/sim_good
+# TEST: Stack Report.
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$DUPLICATE_WRITES/sim_good
+exec $DSE_GRAPH export export_duplicate_writes.cyp
+exec $DSE_GRAPH report -tag signal -reports=$REPODIR/$REPORTS/stack.yaml $REPODIR/$STACK/sim_good
 
 
-# Stack Report with error.
-exec dse-graph drop --all
-exec dse-graph import $ENTRYDIR/$DUPLICATE_WRITES/sim_with_error
-exec dse-graph export export_duplicate_writes.cyp
-! exec dse-graph report --reports=$ENTRYDIR/$REPORTS/stack.yaml $ENTRYDIR/$STACK/sim_with_error
+# TEST: Stack Report with error.
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$DUPLICATE_WRITES/sim_with_error
+exec $DSE_GRAPH export export_duplicate_writes.cyp
+! exec $DSE_GRAPH report --reports=$REPODIR/$REPORTS/stack.yaml $REPODIR/$STACK/sim_with_error

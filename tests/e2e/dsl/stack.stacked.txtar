@@ -1,5 +1,10 @@
-exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
-exec sh -e $WORK/workflow.sh openloop.dse
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh openloop.dse
 
 stdout 'Stacked: yes'
 

@@ -50,7 +50,7 @@ func main_() int {
 	}
 	// Dispatch the command.
 	if err := command.DispatchCommand(os.Args[1], cmds); err != nil {
-		slog.Error(err.Error())
+		slog.Error("Error from command", "command", os.Args[1], "error", err.Error())
 		return 2
 	}
 
