@@ -27,6 +27,9 @@ default: build
 build:
 	@${DOCKER_BUILDER_CMD} $(MAKE) do-build
 
+.PHONY: test
+test:
+
 .PHONY: clean
 clean:
 	rm -rf build

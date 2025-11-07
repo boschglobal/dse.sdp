@@ -1,5 +1,5 @@
 env
-exec ast resolve -input $WORK/ast.yaml -uses dse-modelc-csv -file $WORK/md_dse.modelc.yaml
+exec ast resolve -input $WORK/ast.yaml -uses dse.modelc -file $WORK/md_dse.modelc.yaml
 exec ls -R $WORK
 exec cat ast.yaml
 
@@ -9,7 +9,7 @@ yamlcontains ast.yaml $.spec.vars[0].name sim_key
 yamlcontains ast.yaml $.spec.vars[0].value sim_value
 
 yamlcontains ast.yaml $.spec.stacks[0].models[0].name input
-yamlcontains ast.yaml $.spec.stacks[0].models[0].uses dse-modelc-csv
+yamlcontains ast.yaml $.spec.stacks[0].models[0].uses dse.modelc
 yamlcontains ast.yaml $.spec.stacks[0].models[0].files[0] input.csv
 yamlcontains ast.yaml $.spec.stacks[0].models[0].files[1] signalgroup.yaml
 
@@ -20,14 +20,6 @@ yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.dse-modelc-csv.
 yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.dse-modelc-csv.path examples/csv
 yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.dse-modelc-csv.platforms[0] linux-amd64
 
-yamlcontains ast.yaml $.spec.stacks[0].models[1].name linear
-yamlcontains ast.yaml $.spec.stacks[0].models[1].uses dse.fmi
-yamlcontains ast.yaml $.spec.stacks[0].models[1].workflows[0].name generate-fmimcl
-yamlcontains ast.yaml $.spec.stacks[0].models[1].workflows[0].vars[0].name FMU_DIR
-
-yamlcontains ast.yaml $.spec.uses[1].name dse.fmi
-yamlcontains ast.yaml $.spec.uses[1].url https://github.com/boschglobal/dse.fmi
-yamlcontains ast.yaml $.spec.uses[1].version v1.1.20
 
 -- ast.yaml --
 ---
@@ -48,22 +40,6 @@ spec:
           files:
             - input.csv
             - signalgroup.yaml
-        - name: linear
-          model: dse.fmi.mcl
-          uses: dse.fmi
-          channels:
-            - alias: scalar_vector
-              name: physical
-          workflows:
-            - name: generate-fmimcl
-              vars:
-                - name: FMU_DIR
-                  reference: uses
-                  value: linear_fmu
-                - name: OUT_DIR
-                  value: '{{.PATH}}/data'
-                - name: MCL_PATH
-                  value: '{{.PATH}}/lib/libfmimcl.so'
   uses:
     - name: dse.modelc
       url: https://github.com/boschglobal/dse.modelc
@@ -73,18 +49,6 @@ spec:
           repository: ghcr.io/boschglobal/dse-modelc
           image_var: MODELC_IMAGE
           tag_var: MODELC_TAG
-    - name: dse.fmi
-      url: https://github.com/boschglobal/dse.fmi
-      version: v1.1.20
-      metadata:
-        container:
-          repository: ghcr.io/boschglobal/dse-fmi
-          image_var: FMI_IMAGE
-          tag_var: FMI_TAG
-    - name: linear_fmu
-      url: https://github.com/boschglobal/dse.fmi/releases/download/v1.1.20/Fmi-1.1.20-linux-amd64.zip
-      path: examples/fmu/linear/fmi2/linear.fmu
-      metadata: {}
 
   vars:
     - name: sim_key

@@ -411,8 +411,11 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					if uses.Metadata == nil {
 						continue
 					}
-					md = *uses.Metadata
-					models := md["models"].(map[string]interface{})
+					usesMd := *uses.Metadata
+					if _, ok := usesMd["models"]; !ok {
+						continue
+					}
+					models := usesMd["models"].(map[string]interface{})
 					for _, model := range models {
 						for _, w := range model.(map[string]interface{})["workflows"].([]interface{}) {
 							if w.(string) == workflow.Name {
