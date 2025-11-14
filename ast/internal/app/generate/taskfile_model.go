@@ -475,6 +475,9 @@ func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 	simSpec := c.simulationAst
 
 	for _, stack := range simSpec.Stacks {
+		if stack.Name == "external" {
+			continue
+		}
 		for _, model := range stack.Models {
 			modelName := fmt.Sprintf("model-%s", model.Name)
 			modelTaskNames = append(modelTaskNames, modelName)

@@ -161,7 +161,7 @@ workflow =
 
 * <code><var>MODEL_INST_NAME</var></code>: the name of the _model_ (used within the simulation).
 * <code><var>MODEL_NAME</var></code>: the name of the _model_ as referenced by a _uses_ item.
-* <code><var>EXTERNAL</var></code>: the boolean flag indicating that the model is external, either a complete external model or one linked with workflows.
+* <code><var>EXTERNAL</var></code>: the boolean flag indicating that the model is external, either a complete external model or one linked with workflows. When the model is fully external, it belongs to the external stack.
 * <code><var>ARCH</var></code>: the architecture of this _model_.
 * <code><var>UID</var></code>: the unique id of the model.
 * <code><var>CHANNEL_NAME</var></code>: the name of a simulation channel to be mapped to this _model_.

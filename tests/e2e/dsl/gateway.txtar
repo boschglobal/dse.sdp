@@ -9,28 +9,31 @@ cd $WORKDIR
 exec sh -e workflow.sh gateway.dse BUILD_ONLY
 exec sh -e test.sh
 
-stdout 'Channel: binary \(expected models=1\)'
-stdout 'Channel: scalar \(expected models=1\)'
+stdout 'Channel: signal \(expected models=2\)'
 
 stdout 'Platform OS: linux'
 stdout 'Platform Arch: amd64'
 stdout 'Using gateway symbols: ...'
-stdout 'Unique signals identified: 2'
+stdout 'Unique signals identified: 1'
 stdout 'Setup for async Simulation Model run ...'
-stdout '\[0.004500\] scalar\[0\] = 36.000000 \(scalar_foo\)'
-stdout '\[0.004500\] scalar\[1\] = 72.000000 \(scalar_bar\)'
+stdout '\[0.004500\] signal\[0\] = 9.000000 \(counter\)'
 stdout 'Call symbol: model_destroy ...'
 stdout 'Controller exit ...'
 
 
 -- gateway.dse --
 simulation
-channel binary
-channel scalar
+channel signal
+
+uses
+dse.sdp https://github.com/boschglobal/dse.sdp v$RELEASE_VERSION
 
 model gateway external=true
-channel scalar scalar_vector
-channel binary binary_vector
+channel signal data
+
+model simple Simple
+channel signal data
+file signalgroup.yaml signalgroup.yaml
 
 
 -- gw.yaml --
@@ -50,14 +53,10 @@ spec:
       model:
         name: Gateway
       channels:
-        - name: scalar
-          alias: scalar_vector
+        - name: signal
+          alias: signal
           selectors:
-            channel: scalar
-        - name: binary
-          alias: binary_vector
-          selectors:
-            channel: binary
+            channel: signal
 ---
 kind: Model
 metadata:
@@ -66,40 +65,31 @@ spec:
   runtime:
     gateway: {}
   channels:
-    - alias: scalar_vector
+    - alias: signal
       selectors:
-        channel: scalar
-    - alias: binary_vector
-      selectors:
-        channel: binary
+        channel: signal
 ---
 kind: SignalGroup
 metadata:
-  name: test_scalar_signals
+  name: signal
   labels:
-    channel: scalar
+    channel: signal
 spec:
   signals:
-    - signal: scalar_foo
-    - signal: scalar_bar
+    - signal: counter
+
+
+-- signalgroup.yaml --
 ---
 kind: SignalGroup
 metadata:
-  name: test_binary_signals
+  name: data
   labels:
-    channel: binary
-  annotations:
-    vector_type: binary
-    vector_name: network_vector
+    model: simple
+    signal: data
 spec:
   signals:
-    - signal: binary_foo
-      annotations:
-        name: binary_foo
-    - signal: binary_bar
-      annotations:
-        name: binary_bar
-        mime_type: application/custom-stream
+    - signal: counter
 
 
 -- test.sh --

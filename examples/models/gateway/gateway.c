@@ -37,7 +37,6 @@ int main(int argc, char** argv)
     /* Setup the gateway. */
     ModelGatewayDesc gw;
     model_gw_setup(&gw, "gateway", yaml_files, LOG_INFO, step_size, end_time);
-
     /* Run the simulation. */
     while (model_time <= end_time) {
         int rc = model_gw_sync(&gw, model_time);
@@ -48,32 +47,15 @@ int main(int argc, char** argv)
             continue;
         }
 
-        /* Process the signal vectors. */
+        /* observe signal vectors. */
         SignalVector* sv = gw.sv;
         while (sv && sv->name) {
-            if (sv->is_binary) {
-                /* Binary vector. */
+            if (!sv->is_binary) {
                 for (uint32_t i = 0; i < sv->count; i++) {
-                    log_info("[%f] %s[%d] = <%d:%d>%s (%s)", model_time,
-                        sv->name, i, sv->length[i], sv->buffer_size[i],
-                        sv->binary[i], sv->signal[i]);
-                    /* Exchange/update the gateway signal. */
-                    uint8_t buffer[100];
-                    snprintf((char*)buffer, sizeof(buffer), "st=%f,index=%d",
-                        model_time, i);
-                    signal_reset(sv, i);
-                    signal_append(sv, i, buffer, strlen((char*)buffer) + 1);
-                }
-            } else {
-                /* Scalar vector. */
-                for (uint32_t i = 0; i < sv->count; i++) {
-                    log_info("[%f] %s[%d] = %f (%s)", model_time, sv->name, i,
-                        sv->scalar[i], sv->signal[i]);
-                    /* Exchange/update the gateway signal. */
-                    sv->scalar[i] = sv->scalar[i] + ((i + 1) << 2);
+                    printf("[%f] %s[%u] = %f (%s)\n",
+                        model_time, sv->name, i, sv->scalar[i], sv->signal[i]);
                 }
             }
-            /* Next signal vector. */
             sv++;
         }
 

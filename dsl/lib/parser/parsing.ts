@@ -260,19 +260,53 @@ class FsilParser extends EmbeddedActionsParser {
           }
 
           const stacked_models = $.SUBRULE($.models);
-          if (stacked_models.length !== 0) {
+          if (stacked_models.length !== 0 && !('description' in stacked_models)) {
+
+            let externalModels: any[] = [];
+            let models: any[] = [];
+            // external models must be pushed to a seperate stack named "external"
+            stacked_models.forEach((model: any) => {
+              if (model.object.payload.external.value === "true" && model.object.payload.model_repo_name.value === "") {
+                externalModels.push(model);
+              } else {
+                models.push(model)
+              }
+            });
+
             stacks.push({
               type: "Stack",
               name: name,
               object: updateTokenObject(stack),
               env_vars: env_vars,
               children: {
-                models: stacked_models,
+                models: models,
               },
             });
+
+            if (externalModels.length !== 0) {
+              stacks.push({
+                type: "Stack",
+                name: "external",
+                object: updateTokenObject(stack),
+                //env_vars: env_vars,
+                children: {
+                  models: externalModels,
+                },
+              });
+            }
           }
         },
       });
+      const hasOtherModels = stacks.some(
+        s => s.name !== "default" && s.name !== "external" && Array.isArray(s.children?.models) && s.children.models.length > 0
+      );
+      stacks = stacks
+        .filter(stack => {
+          if (stack.name === "external") return true;
+          if (stack.name === "default") return !hasOtherModels;
+          return !(Array.isArray(stack.children?.models) && stack.children.models.length === 0);
+        }) // keep 'external'; remove 'default' only if other stacks (not 'external') have models
+        .sort((a, b) => (a.name === "external" ? 1 : b.name === "external" ? -1 : 0)); // move 'external' stack to the end (for simbus model to appear correct stack)
       return stacks;
     });
 

@@ -27,12 +27,11 @@ metadata:
       displayName: Gateway
       path: gateway
       workflows:
-        - info
+        - filedownload
       platforms:
         - linux-amd64
       channels:
-        - alias: scalar_vector
-        - alias: binary_vector
+        - alias: signal
 vars:
   # When running from E2E tests (i.e. Docker in Docker), the ENTRYDIR (for
   # Docker commands) must be set to the host relative path.

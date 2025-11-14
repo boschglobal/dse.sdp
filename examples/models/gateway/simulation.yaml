@@ -17,9 +17,7 @@ spec:
       model:
         name: simbus
       channels:
-        - name: scalar
-          expectedModelCount: 1
-        - name: binary
+        - name: signal
           expectedModelCount: 1
 ---
 kind: Model

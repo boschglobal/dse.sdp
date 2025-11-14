@@ -23,7 +23,7 @@ SUBDIRS = ast graph dsl lsp doc examples/models
 
 ###############
 ## Test Parameters.
-export EXAMPLE_VERSION ?= 0.8.17
+export EXAMPLE_VERSION ?= 0.8.21
 export HOST_ENTRYDIR ?= $(shell pwd -P)
 export HOST_DOCKER_WORKSPACE ?= $(shell pwd -P)
 export TESTSCRIPT_E2E_DIR ?= tests/e2e

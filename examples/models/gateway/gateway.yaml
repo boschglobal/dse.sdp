@@ -18,14 +18,10 @@ spec:
       model:
         name: Gateway
       channels:
-        - name: scalar
-          alias: scalar_vector
+        - name: signal
+          alias: signal
           selectors:
-            channel: scalar
-        - name: binary
-          alias: binary_vector
-          selectors:
-            channel: binary
+            channel: signal
 ---
 kind: Model
 metadata:
@@ -34,37 +30,15 @@ spec:
   runtime:
     gateway: {}
   channels:
-    - alias: scalar_vector
+    - alias: signal
       selectors:
-        channel: scalar
-    - alias: binary_vector
-      selectors:
-        channel: binary
+        channel: signal
 ---
 kind: SignalGroup
 metadata:
-  name: test_scalar_signals
+  name: signal
   labels:
-    channel: scalar
+    channel: signal
 spec:
   signals:
-    - signal: scalar_foo
-    - signal: scalar_bar
----
-kind: SignalGroup
-metadata:
-  name: test_binary_signals
-  labels:
-    channel: binary
-  annotations:
-    vector_type: binary
-    vector_name: network_vector
-spec:
-  signals:
-    - signal: binary_foo
-      annotations:
-        name: binary_foo
-    - signal: binary_bar
-      annotations:
-        name: binary_bar
-        mime_type: application/custom-stream
+    - signal: counter

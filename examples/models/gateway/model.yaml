@@ -10,9 +10,6 @@ spec:
   runtime:
     gateway: {}
   channels:
-    - alias: scalar_vector
+    - alias: data
       selectors:
-        channel: scalar
-    - alias: binary_vector
-      selectors:
-        channel: binary
+        channel: signal
