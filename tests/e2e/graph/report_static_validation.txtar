@@ -1,0 +1,54 @@
+skip 'TODO update/check'
+
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# SETUP: graph reports
+exec mkdir -p $WORKDIR/.local/share/dse-graph
+exec cp -r $REPODIR/graph/cmd/graph/reports $WORKDIR/.local/share/dse-graph/
+env HOME=$WORKDIR
+env DSE_GRAPH=$REPODIR/graph/bin/graph
+
+env STATIC_VALIDATION=examples/graph/static_validation
+env REPORTS=graph/cmd/graph/reports
+
+# TEST: basic graph connectivity
+exec $DSE_GRAPH ping
+
+# TEST: Channel 'expectedModelCount'
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$STATIC_VALIDATION/sim_good
+exec $DSE_GRAPH export export_static_validation.cyp
+exec $DSE_GRAPH report -tag report_expected_modelcount -reports=$REPODIR/$REPORTS/static_validation.yaml $REPODIR/$STATIC_VALIDATION/sim_good
+
+# TEST: Channel 'expectedModelCount' with error
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$STATIC_VALIDATION/sim_with_error
+exec $DSE_GRAPH export export_static_validation.cyp
+! exec $DSE_GRAPH report --reports=$REPODIR/$REPORTS/static_validation.yaml $REPODIR/$STATIC_VALIDATION/sim_with_error
+
+# TEST: Count 'ModelInst' in AST and SIM
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$STATIC_VALIDATION/sim_good
+exec $DSE_GRAPH export export_static_validation.cyp
+exec $DSE_GRAPH report -tag report_modelinst_count -reports=$REPODIR/$REPORTS/static_validation.yaml $REPODIR/$STATIC_VALIDATION/sim_good
+
+# TEST: Count 'ModelInst' in AST and SIM with error
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$STATIC_VALIDATION/sim_with_error
+exec $DSE_GRAPH export export_static_validation.cyp
+! exec $DSE_GRAPH report -tag report_modelinst_count -reports=$REPODIR/$REPORTS/static_validation.yaml $REPODIR/$STATIC_VALIDATION/sim_with_error
+
+# TEST: Simbus Channel Name Consistency
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$STATIC_VALIDATION/sim_good
+exec $DSE_GRAPH export export_static_validation.cyp
+exec $DSE_GRAPH report -tag report_channel_check -reports=$REPODIR/$REPORTS/static_validation.yaml $REPODIR/$STATIC_VALIDATION/sim_good
+
+# TEST: Simbus Channel Name Consistency with error
+exec $DSE_GRAPH drop --all
+exec $DSE_GRAPH import $REPODIR/$STATIC_VALIDATION/sim_with_error
+exec $DSE_GRAPH export export_static_validation.cyp
+! exec $DSE_GRAPH report -tag report_channel_check -reports=$REPODIR/$REPORTS/static_validation.yaml $REPODIR/$STATIC_VALIDATION/sim_with_error
