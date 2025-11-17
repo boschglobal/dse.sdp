@@ -6,7 +6,7 @@ require (
 	github.com/boschglobal/dse.clib/extra/go/command v1.0.36
 	github.com/boschglobal/dse.schemas/code/go/dse v1.2.25
 	github.com/gabriel-vasile/mimetype v1.4.11
-	github.com/jedib0t/go-pretty/v6 v6.7.1
+	github.com/jedib0t/go-pretty/v6 v6.7.2
 	github.com/neo4j/neo4j-go-driver/v5 v5.28.4
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/stretchr/testify v1.11.1
