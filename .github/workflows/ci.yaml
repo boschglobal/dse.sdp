@@ -54,7 +54,7 @@ jobs:
         run: |
           make examples
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: Models-${{ matrix.package_arch }}-package
           path: |
@@ -116,7 +116,7 @@ jobs:
           outputs: type=docker,dest=/tmp/${{ matrix.name }}.tar
 
       - name: Upload image artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: image_${{ matrix.name }}
           path: /tmp/${{ matrix.name }}.tar
@@ -143,12 +143,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: image_builder
           path: /tmp
       - name: Download artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: image_report
           path: /tmp
@@ -217,7 +217,7 @@ jobs:
         run: |
           echo "PACKAGE_VERSION=${{ fromJSON(steps.package_meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: Models-${{ matrix.package_arch }}-package
 
@@ -250,7 +250,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: image_${{ matrix.container }}
           path: /tmp
