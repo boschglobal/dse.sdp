@@ -1,5 +1,3 @@
-skip 'TODO update/check'
-
 # SETUP: construct working folder layout
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 exec cp -r . $WORKDIR
@@ -38,7 +36,7 @@ model gateway external=true
 channel signal data
 
 stack model
-model simple Simple
+model simple Simple arch=linux-i386
 channel signal data
 file signalgroup.yaml signalgroup.yaml
 

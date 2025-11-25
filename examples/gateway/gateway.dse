@@ -1,20 +1,24 @@
 simulation
-channel binary
-channel scalar
-channel physical
+channel signal
 
 uses
-dse.sdp https://github.com/boschglobal/dse.sdp v0.8.21
+dse.modelc https://github.com/boschglobal/dse.modelc v2.2.19
 dse.fmi https://github.com/boschglobal/dse.fmi v1.1.43
 linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.43/Fmi-1.1.43-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
 
 model gateway external=true
-channel scalar scalar_vector
-channel binary binary_vector
+channel signal data
 
 stack model
+model input dse.modelc.csv
+channel signal signal_channel
+envar CSV_FILE model/input/data/input.csv
+envar SIMBUS_LOGLEVEL 5
+file input.csv input.csv
+file signalgroup.yaml input_signalgroup.yaml  
+
 model linear dse.fmi.mcl arch=linux-amd64
-channel physical signal_channel
+channel signal signal_channel
 envar MEASUREMENT_FILE /sim/measurement.mf4
 envar SIMBUS_LOGLEVEL 4
 workflow generate-fmimcl

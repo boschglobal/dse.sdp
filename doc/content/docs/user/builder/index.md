@@ -195,7 +195,7 @@ workflow =
 * <code><var>STACKED</var></code>: the boolean flag that indicates if the models in a stack should be layered.
 * <code><var>SEQUENTIAL</var></code>: the boolean flag for stacks that ensures models are executed one after another, in a defined order.
 * <code><var>ARCH</var></code>: the architecture of this _stack_ and the models it contains.
-
+> Note: When a model is fully external, it belongs to the `external` stack.
 
 ### Uses
 

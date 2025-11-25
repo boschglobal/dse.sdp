@@ -5,7 +5,7 @@
 ---
 kind: Stack
 metadata:
-  name: local
+  name: remote
 spec:
   connection:
     transport:
@@ -13,12 +13,15 @@ spec:
         uri: redis://localhost:6379
         timeout: 60
   models:
-    - name: simbus
+    - name: gateway
+      uid: 42
       model:
-        name: simbus
+        name: Gateway
       channels:
         - name: signal
-          expectedModelCount: 1
+          alias: signal
+          selectors:
+            channel: signal
 ---
 kind: Model
 metadata:

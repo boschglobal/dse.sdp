@@ -1,105 +1,38 @@
-skip 'TODO update/check'
-
 # SETUP: construct working folder layout
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+
+env GW_DIR=$REPODIR/examples/models/gateway
+exec cp $GW_DIR/model.yaml $WORKDIR/
+exec cp $GW_DIR/signalgroup.yaml $WORKDIR/
+exec cp $GW_DIR/simulation.yaml $WORKDIR/gw_simulation.yaml
+
+env GW_EXAMPLE_DIR=$REPODIR/examples/gateway
+exec cp $GW_EXAMPLE_DIR/gateway.dse $WORKDIR/
+exec cp $GW_EXAMPLE_DIR/input.csv $WORKDIR/
+exec cp $GW_EXAMPLE_DIR/input_signalgroup.yaml $WORKDIR/
+
 exec cp -r . $WORKDIR
 cd $WORKDIR
 
 # TEST: operate the simulation
-exec sh -e workflow.sh gateway.dse BUILD_ONLY
+exec sh -e workflow.sh $WORKDIR/gateway.dse BUILD_ONLY
 exec sh -e test.sh
 
-stdout 'Channel: binary \(expected models=1\)'
-stdout 'Channel: scalar \(expected models=1\)'
+stdout 'Platform OS: linux'
+stdout 'Platform Arch: amd64'
+stdout 'Channel: signal \(expected models=3\)'
+stdout 'Unique signals identified: 4'
 
 stdout 'Platform OS: linux'
 stdout 'Platform Arch: amd64'
 stdout 'Using gateway symbols: ...'
-stdout 'Unique signals identified: 2'
+stdout 'Unique signals identified: 3'
 stdout 'Setup for async Simulation Model run ...'
-stdout '\[0.004500\] scalar\[0\] = 36.000000 \(scalar_foo\)'
-stdout '\[0.004500\] scalar\[1\] = 72.000000 \(scalar_bar\)'
+stdout '\[0.004500\] signal\[0\] = 1.300000 \(input\)'
+stdout '\[0.004500\] signal\[1\] = 2.300000 \(factor\)'
+stdout '\[0.004500\] signal\[2\] = -3.300000 \(offset\)'
 stdout 'Call symbol: model_destroy ...'
 stdout 'Controller exit ...'
-
-
--- gateway.dse --
-simulation
-channel binary
-channel scalar
-
-model gateway external=true
-channel scalar scalar_vector
-channel binary binary_vector
-
-
--- gw.yaml --
----
-kind: Stack
-metadata:
-  name: remote
-spec:
-  connection:
-    transport:
-      redis:
-        uri: redis://localhost:6379
-        timeout: 60
-  models:
-    - name: gateway
-      uid: 42
-      model:
-        name: Gateway
-      channels:
-        - name: scalar
-          alias: scalar_vector
-          selectors:
-            channel: scalar
-        - name: binary
-          alias: binary_vector
-          selectors:
-            channel: binary
----
-kind: Model
-metadata:
-  name: Gateway
-spec:
-  runtime:
-    gateway: {}
-  channels:
-    - alias: scalar_vector
-      selectors:
-        channel: scalar
-    - alias: binary_vector
-      selectors:
-        channel: binary
----
-kind: SignalGroup
-metadata:
-  name: test_scalar_signals
-  labels:
-    channel: scalar
-spec:
-  signals:
-    - signal: scalar_foo
-    - signal: scalar_bar
----
-kind: SignalGroup
-metadata:
-  name: test_binary_signals
-  labels:
-    channel: binary
-  annotations:
-    vector_type: binary
-    vector_name: network_vector
-spec:
-  signals:
-    - signal: binary_foo
-      annotations:
-        name: binary_foo
-    - signal: binary_bar
-      annotations:
-        name: binary_bar
-        mime_type: application/custom-stream
 
 
 -- test.sh --
@@ -111,7 +44,7 @@ docker run --name simer -i --rm \
     --network=host \
     "${DSE_SIMER_IMAGE}" \
         -env simbus:SIMBUS_LOGLEVEL=4 \
-        -stack default \
+        -stack model \
         -timeout 5 &
 
-/repo/examples/models/build/_out/gateway/bin/gateway 0.0005 0.005 gw.yaml
+/repo/examples/models/build/_out/gateway/bin/gateway 0.0005 0.005 gw_simulation.yaml signalgroup.yaml model.yaml

@@ -52,7 +52,7 @@ func TestGenerateTaskfile_includes(t *testing.T) {
 	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.dir", "{{.OUTDIR}}/{{.SIMDIR}}")
 	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.IMAGE_TAG", "2.1.15")
 	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.SIM", "{{.SIMDIR}}")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.ENTRYWORKDIR", "{{.PWD}}/{{.OUTDIR}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.ENTRYWORKDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/{{.OUTDIR}}{{else}}{{.PWD}}/{{.OUTDIR}}{{end}}")
 
 }
 

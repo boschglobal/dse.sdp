@@ -34,7 +34,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 		}
 		vars := map[string]string{
 			"SIM":          "{{.SIMDIR}}",
-			"ENTRYWORKDIR": "{{.PWD}}/{{.OUTDIR}}",
+			"ENTRYWORKDIR": "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/{{.OUTDIR}}{{else}}{{.PWD}}/{{.OUTDIR}}{{end}}",
 			"IMAGE_TAG":    cleanTag(*uses.Version),
 		}
 		if uses.User != nil {
