@@ -32,6 +32,30 @@ metadata:
         - linux-amd64
       channels:
         - alias: signal
+    Network_CAN:
+      name: Network_CAN
+      displayName: Network_CAN
+      path: network_can
+      workflows: []
+      platforms:
+        - linux-amd64
+        - linux-x86
+        - windows-x64
+        - windows-x86
+      channels:
+        - alias: binary
+    Network_PDU:
+      name: Network_PDU
+      displayName: Network_PDU
+      path: network_pdu
+      workflows: []
+      platforms:
+        - linux-amd64
+        - linux-x86
+        - windows-x64
+        - windows-x86
+      channels:
+        - alias: binary
 vars:
   # When running from E2E tests (i.e. Docker in Docker), the ENTRYDIR (for
   # Docker commands) must be set to the host relative path.

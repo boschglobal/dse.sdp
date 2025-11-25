@@ -1,0 +1,50 @@
+# Copyright 2024 Robert Bosch GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+---
+kind: Model
+metadata:
+  name: Network_CAN
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libnetwork_can.so
+      - os: linux
+        arch: x86
+        path: lib/libnetwork_can.so
+      - os: windows
+        arch: x64
+        path: lib/libnetwork_can.dll
+      - os: windows
+        arch: x86
+        path: lib/libnetwork_can.dll
+  channels:
+    - alias: binary
+      selectors:
+        channel: binary_channel
+---
+kind: Model
+metadata:
+  name: Network_PDU
+spec:
+  runtime:
+    dynlib:
+      - os: linux
+        arch: amd64
+        path: lib/libnetwork_pdu.so
+      - os: linux
+        arch: x86
+        path: lib/libnetwork_pdu.so
+      - os: windows
+        arch: x64
+        path: lib/libnetwork_pdu.dll
+      - os: windows
+        arch: x86
+        path: lib/libnetwork_pdu.dll
+  channels:
+    - alias: binary
+      selectors:
+        channel: binary_channel

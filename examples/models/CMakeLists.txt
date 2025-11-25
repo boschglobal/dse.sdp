@@ -54,6 +54,7 @@ FetchContent_MakeAvailable(dse_modelc_lib)
 
 add_subdirectory(simple)
 add_subdirectory(gateway)
+add_subdirectory(network)
 
 set(CPACK_SYSTEM_NAME $ENV{PACKAGE_ARCH})
 set(CPACK_PACKAGE_VENDOR "Robert Bosch GmbH")
