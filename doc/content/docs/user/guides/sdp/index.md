@@ -1,5 +1,5 @@
 ---
-title: "SDP - Simulation Development Platform"
+title: "Guide : Simulation Development Platform (SDP)"
 linkTitle: "SDP"
 weight: 50
 tags:
