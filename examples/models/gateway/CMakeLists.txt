@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 cmake_minimum_required(VERSION 3.21)
+cmake_policy(SET CMP0135 NEW)
 set(MODEL_NAME "gateway")
 project(${MODEL_NAME})
 
@@ -62,3 +63,14 @@ install(
     COMPONENT
         gateway_model
 )
+
+if (NOT WIN32)
+    install(
+        FILES
+            ${dse_modelc_lib_SOURCE_DIR}/lib/libmodelc.so
+        DESTINATION
+            ${EXE_PATH}/lib
+        COMPONENT
+            gateway_model
+    )
+endif()
