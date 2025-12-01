@@ -12,7 +12,7 @@ github_subdir: "doc"
 
 ## Synopsis
 
-Containerised simulation builder with DSL (DSE Lang).
+Containerised simulation builder with DSL (DSE Script).
 
 
 #### Describe a Simulation
@@ -55,11 +55,11 @@ $ simer out/sim -stepsize 0.0005 -endtime 0.10
 ```
 
 
-## DSE Lang
+## DSE Script
 
 Simulations using the Simulation Development Platform (SDP) are written in a
-custom DSL called **DSE Lang**. 
-This DSL is used to describe the construction of a _simulation_ and its 
+custom DSL called **DSE Script**.
+This DSL is used to describe the construction of a _simulation_ and its
 constituent _channels_, _models_ and _workflows_.
 
 <div hidden>
@@ -69,7 +69,7 @@ constituent _channels_, _models_ and _workflows_.
 
 @startebnf dse-lang-syntax
 
-title DSE Lang Syntax
+title DSE Script Syntax
 
 (* Simulation Structural Elements *)
 
@@ -94,7 +94,7 @@ envar = { "envar", ENVAR_NAME, VALUE }-;
 file = { "file", MODEL_FILE, (FILE_SOURCE | "uses", USES_NAME) }-;
 
 
-workflow = 
+workflow =
     "workflow", NAME, [ "uses ", USES_NAME ],
     {[ "var", VAR_NAME, (VALUE | "uses", USES_NAME | "var", VAR_NAME)]}-;
 @endebnf
@@ -231,7 +231,7 @@ workflow =
 </pre>
 
 * <code><var>WORKFLOW_NAME</var></code>: the name of the _workflow_.
-* <code><var>USES_NAME</var></code> (workflow level): the name of a dependency that this workflow imports.  
+* <code><var>USES_NAME</var></code> (workflow level): the name of a dependency that this workflow imports.
 * <code><var>VAR_NAME</var></code>: the _name_ of a variable used by this workflow.
 * <code><var>VAR_VALUE</var></code>: the variable _value_.
 * <code><var>USES_NAME</var></code> (variable level): sets the variable value to the path of this _uses_ item.
@@ -240,7 +240,7 @@ workflow =
 
 ## Special Variables
 
-DSE Lang uses a templating mechanism to introduce special variables to a DSE
+DSE Script uses a templating mechanism to introduce special variables to a DSE
 Script (in the form: `{{ .SPECIAL_VAR }}`). Those variables are used to influence how a simulation is constructed.
 Additionally, the templating mechanism can be used to introduce environment
 variables to a DSE Script (useful for authentication).
