@@ -78,6 +78,11 @@ jobs:
             ghcr.io/boschglobal/dse-builder:latest \
               "$(basename "${{ inputs.script }}")"
 
+      - name: Install Task
+        run: |
+          go install github.com/boschglobal/task/v3/cmd/task@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+      
       - name: Run Task
         env:
           GHE_USER: "${{ secrets.GHE_USER }}"
@@ -86,7 +91,6 @@ jobs:
           TASK_X_REMOTE_TASKFILES: 1
         working-directory: ${{ github.workspace }}/${{ steps.projectdir.outputs.project_dir }}
         run: |
-          go install github.com/boschglobal/task/v3/cmd/task@latest
           task -y -v
 
       - name: Ensure simulation output directory exists
