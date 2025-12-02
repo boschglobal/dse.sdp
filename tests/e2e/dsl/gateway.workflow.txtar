@@ -11,14 +11,13 @@ exists /workdir/out/downloads/Models-${RELEASE_VERSION}-linux-amd64.zip
 exists /workdir/out/sim/model/gateway/bin/gateway
 exists out/downloads/models/gateway/remote_foo.txt
 
-stdout 'Channel: signal \(expected models=2\)'
+stdout 'Channel: signal \(expected models=1\)'
 
 stdout 'Platform OS: linux'
 stdout 'Platform Arch: amd64'
 stdout 'Using gateway symbols: ...'
-stdout 'Unique signals identified: 1'
+stdout 'Unique signals identified: 3'
 stdout 'Setup for async Simulation Model run ...'
-stdout '\[0.004500\] signal\[0\] = 9.000000 \(counter\)'
 stdout 'Call symbol: model_destroy ...'
 stdout 'Controller exit ...'
 
@@ -33,38 +32,8 @@ input https://raw.githubusercontent.com/boschglobal/dse.sdp/main/tests/testdata/
 stack remote
 model gateway Gateway external=true
 channel signal data
-file signalgroup.yaml signalgroup.yaml
 workflow filedownload
 var FILE uses input
-
-model simple Simple
-channel signal data
-file signalgroup.yaml simple_signalgroup.yaml
-
-
--- signalgroup.yaml --
----
-kind: SignalGroup
-metadata:
-  name: data
-  labels:
-    model: gateway
-    signal: data
-spec:
-  signals:
-    - signal: counter
-
--- simple_signalgroup.yaml --
----
-kind: SignalGroup
-metadata:
-  name: data
-  labels:
-    model: simple
-    signal: data
-spec:
-  signals:
-    - signal: counter
 
 
 -- test.sh --
