@@ -43,8 +43,8 @@ This will ensure that all necessary global dependencies are installed properly.
 
 
 | Command | Description |
-|---------|-------------|
-| **Build** (`DSE: Build`) | Builds `simulation.yaml` and `Taskfile.yml` from dse file|
+| ------- | ----------- |
+| **Build** (`DSE: Build`) | Builds `simulation.yaml` and `Taskfile.yml` from dse file |
 | **Check** (`DSE: Check`) | Runs graph reporting to visualize and verify simulation |
 | **Run** (`DSE: Run`) | Runs the simulation |
 | **Clean** (`DSE: Clean`) | Runs `task: clean` |
