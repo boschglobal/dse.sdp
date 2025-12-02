@@ -71,6 +71,7 @@ jobs:
         run: |
           docker run \
             --rm \
+            --user "$(id -u):$(id -g)" \
             -v "${{ github.workspace }}/${{ steps.projectdir.outputs.project_dir }}:/workdir" \
             -e GHE_USER="${{ secrets.GHE_USER }}" \
             -e GHE_TOKEN="${{ secrets.GHE_TOKEN }}" \
@@ -105,6 +106,7 @@ jobs:
         run: |
           docker run \
             --rm \
+            --user "$(id -u):$(id -g)" \
             -v "${{ github.workspace }}/${{ steps.projectdir.outputs.project_dir }}/out/sim:/sim" \
             -e SIMBUS_TRANSPORT="${{ inputs.transport }}" \
             -e SIMBUS_URI="${{ inputs.uri }}" \
