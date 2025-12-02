@@ -106,7 +106,6 @@ jobs:
         run: |
           docker run \
             --rm \
-            --user "$(id -u):$(id -g)" \
             -v "${{ github.workspace }}/${{ steps.projectdir.outputs.project_dir }}/out/sim:/sim" \
             -e SIMBUS_TRANSPORT="${{ inputs.transport }}" \
             -e SIMBUS_URI="${{ inputs.uri }}" \
