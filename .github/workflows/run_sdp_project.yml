@@ -77,12 +77,13 @@ jobs:
         run: |
           docker run \
             --rm \
+            --entrypoint /usr/local/bin/task \
             -v "${{ github.workspace }}/${{ steps.projectdir.outputs.project_dir }}:/workdir" \
             -e GHE_USER="${{ secrets.GHE_USER }}" \
             -e GHE_TOKEN="${{ secrets.GHE_TOKEN }}" \
             -e GHE_PAT="${{ secrets.GHE_PAT }}" \
             ghcr.io/boschglobal/dse-builder:latest \
-            task -y -v
+            -y -v
 
       - name: Ensure simulation output directory exists
         run: |
