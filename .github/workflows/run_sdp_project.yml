@@ -82,6 +82,7 @@ jobs:
             -e GHE_USER="${{ secrets.GHE_USER }}" \
             -e GHE_TOKEN="${{ secrets.GHE_TOKEN }}" \
             -e GHE_PAT="${{ secrets.GHE_PAT }}" \
+            -e TASK_X_REMOTE_TASKFILES=1 \
             ghcr.io/boschglobal/dse-builder:latest \
             -y -v
 
