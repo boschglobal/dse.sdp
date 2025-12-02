@@ -1,0 +1,22 @@
+---
+name: Example Simulations Release Test
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+#  push:
+#    tags:
+#      - 'v*.*.*'
+
+jobs:
+  run:
+    strategy:
+      matrix:
+        script:
+          - 'examples/openloop/openloop.dse'
+
+    uses: ./.github/workflows/run_sdp_project.yml
+    secrets:
+      GHE_USER: ${{ secrets.GHE_USER }}
+      GHE_TOKEN: ${{ secrets.GHE_TOKEN }}
+      GHE_PAT: ${{ secrets.GHE_PAT }}
+    with:
+      script: ${{ matrix.script }}

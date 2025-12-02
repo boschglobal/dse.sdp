@@ -1,0 +1,105 @@
+---
+name: "Simulation with Builder and Simer"
+on:  # yamllint disable-line rule:truthy
+  workflow_call:
+    inputs:
+      script:
+        description: "Path to DSE Script file, relative to checkout root"
+        required: true
+        type: string
+      stepsize:
+        description: "Simulation step size"
+        required: false
+        default: "0.0005"
+        type: string
+      endtime:
+        description: "Simulation end time"
+        required: false
+        default: "0.0020"
+        type: string
+      transport:
+        description: "SimBus transport"
+        required: false
+        default: "redis"
+        type: string
+      uri:
+        description: "SimBus connection URI"
+        required: false
+        default: "redis://localhost:6379"
+        type: string
+      logger:
+        description: "Log level, select between 0..4"
+        required: false
+        default: "3"
+        type: string
+    secrets:
+      GHE_USER:
+        description: "GitHub Enterprise username"
+        required: true
+      GHE_TOKEN:
+        description: "GitHub Enterprise token"
+        required: true
+      GHE_PAT:
+        description: "GitHub Enterprise personal access token"
+        required: true
+
+jobs:
+  build-and-simulate:
+    name: Builder and Simer Sequential Run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure script file exists
+        run: |
+          if [ ! -f "${{ inputs.script }}" ]; then
+            echo "Script file '${{ inputs.script }}' does not exist!"
+            exit 1
+          fi
+
+      - name: Get project directory containing script
+        id: projectdir
+        run: echo "project_dir=$(dirname "${{ inputs.script }}")" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Run Builder
+        run: |
+          docker run \
+            --rm \
+            -v "${{ github.workspace }}/${{ steps.projectdir.outputs.project_dir }}:/workdir" \
+            -e GHE_USER="${{ secrets.GHE_USER }}" \
+            -e GHE_TOKEN="${{ secrets.GHE_TOKEN }}" \
+            -e GHE_PAT="${{ secrets.GHE_PAT }}" \
+            ghcr.io/boschglobal/dse-builder:latest \
+              "$(basename "${{ inputs.script }}")"
+
+      - name: Run Task
+        run: |
+          docker run \
+            --rm \
+            -v "${{ github.workspace }}/${{ steps.projectdir.outputs.project_dir }}:/workdir" \
+            -e GHE_USER="${{ secrets.GHE_USER }}" \
+            -e GHE_TOKEN="${{ secrets.GHE_TOKEN }}" \
+            -e GHE_PAT="${{ secrets.GHE_PAT }}" \
+            ghcr.io/boschglobal/dse-builder:latest \
+            task -y -v
+
+      - name: Ensure simulation output directory exists
+        run: |
+          SIMDIR="${{ github.workspace }}/${{ steps.set_projectdir.outputs.project_dir }}/out/sim"
+          if [ ! -d "$SIMDIR" ]; then
+            echo "Simer input directory '$SIMDIR' does not exist!"
+            exit 1
+          fi
+
+      - name: Run Simer
+        run: |
+          docker run \
+            --rm \
+            -v "${{ github.workspace }}/${{ steps.projectdir.outputs.project_dir }}/out/sim:/sim" \
+            -e SIMBUS_TRANSPORT="${{ inputs.transport }}" \
+            -e SIMBUS_URI="${{ inputs.uri }}" \
+            -e SIMBUS_LOGLEVEL="${{ inputs.logger }}" \
+            ghcr.io/boschglobal/dse-simer:latest \
+              -stepsize "${{ inputs.stepsize }}" \
+              -endtime "${{ inputs.endtime }}"
