@@ -1,0 +1,158 @@
+kind: Simulation
+metadata:
+  labels:
+    generator: ast convert
+    input_file: openloop.json
+spec:
+  arch: linux-amd64
+  channels:
+    - name: physical
+      networks: []
+  endtime: 0.005
+  stacks:
+    - models:
+        - arch: linux-amd64
+          channels:
+            - alias: signal_channel
+              name: physical
+          env:
+            - name: CSV_FILE
+              value: model/input/data/input.csv
+            - name: SIMBUS_LOGLEVEL
+              value: "5"
+          files:
+            - name: input.csv
+              value: input.csv
+          metadata:
+            container:
+              repository: ghcr.io/boschglobal/dse-modelc
+            models:
+              dse.modelc.csv:
+                channels:
+                  - alias: signal_channel
+                displayName: dse.modelc.csv
+                name: csv
+                path: examples/csv
+                platforms:
+                  - linux-amd64
+                  - linux-x86
+                  - linux-i386
+                  - windows-x64
+                  - windows-x86
+                workflows: []
+            package:
+              download: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+            tasks: {}
+          model: dse.modelc.csv
+          name: input
+          uses: dse.modelc
+          workflows: []
+        - arch: linux-amd64
+          channels:
+            - alias: signal_channel
+              name: physical
+          env:
+            - name: MEASUREMENT_FILE
+              value: /sim/measurement.mf4
+            - name: SIMBUS_LOGLEVEL
+              value: "4"
+          metadata:
+            container:
+              repository: ghcr.io/boschglobal/dse-fmi
+            models:
+              dse.fmi.mcl:
+                channels:
+                  - alias: signal_channel
+                  - alias: network_channel
+                displayName: dse.fmi.mcl
+                mcl: true
+                name: fmimcl
+                path: fmimcl
+                platforms:
+                  - linux-amd64
+                  - linux-x86
+                  - linux-i386
+                  - windows-x64
+                  - windows-x86
+                workflows:
+                  - generate-fmimcl
+                  - generate-fmimodelc
+                  - generate-fmigateway
+                  - patch-signalgroup
+            package:
+              download: '{{.REPO}}/releases/download/v{{.TAG}}/Fmi-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+            tasks:
+              generate-fmimcl:
+                generates:
+                  - data/model.yaml
+                  - data/signalgroup.yaml
+          model: dse.fmi.mcl
+          name: linear
+          uses: dse.fmi
+          workflows:
+            - name: generate-fmimcl
+              vars:
+                - name: FMU_DIR
+                  reference: uses
+                  value: linear_fmu
+                - name: OUT_DIR
+                  value: '{{.PATH}}/data'
+                - name: MCL_PATH
+                  value: '{{.PATH}}/lib/libfmimcl.so'
+      name: default
+  stepsize: 0.0005
+  uses:
+    - metadata:
+        container:
+          repository: ghcr.io/boschglobal/dse-modelc
+        models:
+          dse.modelc.csv:
+            channels:
+              - alias: signal_channel
+            displayName: dse.modelc.csv
+            name: csv
+            path: examples/csv
+            platforms:
+              - linux-amd64
+              - linux-x86
+              - linux-i386
+              - windows-x64
+              - windows-x86
+            workflows: []
+        package:
+          download: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+      name: dse.modelc
+      url: https://github.com/boschglobal/dse.modelc
+      version: v2.1.32
+    - metadata:
+        container:
+          repository: ghcr.io/boschglobal/dse-fmi
+        models:
+          dse.fmi.mcl:
+            channels:
+              - alias: signal_channel
+              - alias: network_channel
+            displayName: dse.fmi.mcl
+            mcl: true
+            name: fmimcl
+            path: fmimcl
+            platforms:
+              - linux-amd64
+              - linux-x86
+              - linux-i386
+              - windows-x64
+              - windows-x86
+            workflows:
+              - generate-fmimcl
+              - generate-fmimodelc
+              - generate-fmigateway
+              - patch-signalgroup
+        package:
+          download: '{{.REPO}}/releases/download/v{{.TAG}}/Fmi-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+      name: dse.fmi
+      url: https://github.com/boschglobal/dse.fmi
+      version: v1.1.37
+    - name: linear_fmu
+      path: examples/fmu/linear/fmi2/linear.fmu
+      url: https://github.com/boschglobal/dse.fmi/releases/download/v1.1.37/Fmi-1.1.37-linux-amd64.zip
+  vars: []

@@ -47,7 +47,7 @@ permissions:
   contents: read
   pull-requests: read
   packages: read
-  
+
 jobs:
   build-and-simulate:
     name: Builder and Simer Sequential Run
@@ -83,7 +83,7 @@ jobs:
         run: |
           go install github.com/boschglobal/task/v3/cmd/task@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
-      
+
       - name: Run Task
         env:
           GHE_USER: "${{ secrets.GHE_USER }}"

@@ -1,0 +1,258 @@
+version: "3"
+includes:
+  dse.fmi-v1.1.37:
+    taskfile: https://raw.githubusercontent.com/boschglobal/dse.fmi/refs/tags/v1.1.37/Taskfile.yml
+    dir: '{{.OUTDIR}}/{{.SIMDIR}}'
+    vars:
+      ENTRYWORKDIR: '{{.PWD}}/{{.OUTDIR}}'
+      IMAGE_TAG: 1.1.37
+      SIM: '{{.SIMDIR}}'
+  dse.modelc-v2.1.32:
+    taskfile: https://raw.githubusercontent.com/boschglobal/dse.modelc/refs/tags/v2.1.32/Taskfile.yml
+    dir: '{{.OUTDIR}}/{{.SIMDIR}}'
+    vars:
+      ENTRYWORKDIR: '{{.PWD}}/{{.OUTDIR}}'
+      IMAGE_TAG: 2.1.32
+      SIM: '{{.SIMDIR}}'
+vars:
+  ENTRYDIR: '{{if .SIM}}{{.ENTRYWORKDIR}}/{{.SIM}}{{else}}{{.PWD}}{{end}}'
+  OUTDIR: out
+  PLATFORM_ARCH: linux-amd64
+  SIMDIR: sim
+tasks:
+  build:
+    cmds:
+      - echo SIM={{.SIM}}
+      - echo ENTRYWORKDIR={{.ENTRYWORKDIR}}
+      - echo PWD={{.PWD}}
+      - env | sort
+      - mkdir -p {{.SIMDIR}}/data
+      - cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml
+      - task: build-models
+    dir: '{{.OUTDIR}}'
+    label: build
+    sources:
+      - '{{.ENTRYDIR}}/simulation.yaml'
+    generates:
+      - '{{.SIMDIR}}/data/simulation.yaml'
+  build-models:
+    label: build-models
+    deps:
+      - task: model-input
+      - task: model-linear
+  clean:
+    cmds:
+      - find ./out -mindepth 1 -maxdepth 1 ! -name downloads -exec rm -rf {} +
+  cleanall:
+    cmds:
+      - rm -rf ./out
+  default:
+    cmds:
+      - task: build
+  download-file:
+    cmds:
+      - echo "CURL {{.URL}} -> {{.FILE}}"
+      - mkdir -p $(dirname {{.FILE}})
+      - curl --retry 5 {{.AUTH}} -fL {{.URL}} -o {{.FILE}}
+    dir: '{{.OUTDIR}}'
+    label: dse:download-file:{{.URL}}-{{.FILE}}
+    run: when_changed
+    vars:
+      URL: '{{.URL}}'
+      FILE: '{{.FILE}}'
+      AUTH: '{{if all .USER .TOKEN}}-u {{.USER}}:{{.TOKEN}}{{else}}{{end}}'
+    generates:
+      - '{{.FILE}}'
+    status:
+      - test -f {{.FILE}}
+  download-file-github-asset:
+    cmds:
+      - echo "CURL {{.URL}} -> {{.FILE}}"
+      - mkdir -p $(dirname {{.FILE}})
+      - |
+        REL_JSON=$(curl \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer {{.TOKEN}}" \
+          {{.API_URL}}/releases/tags/{{.TAG}}); \
+        ASSET_URL=$(echo $REL_JSON | jq -r '.assets[] | select(.name | contains("{{.ASSET_NAME}}")) | .url'); \
+        curl \
+          -H "Accept: application/octet-stream" \
+          -H "Authorization: Bearer {{.TOKEN}}" \
+          -fL $ASSET_URL \
+          -o {{.FILE}}
+    dir: '{{.OUTDIR}}'
+    label: dse:download-file-github-asset:{{.URL}}-{{.FILE}}
+    run: when_changed
+    vars:
+      URL: '{{.URL}}'
+      FILE: '{{.FILE}}'
+      TOKEN: '{{.TOKEN}}'
+      ASSET_NAME: '{{.ASSET_NAME}}'
+      TAG: '{{.TAG}}'
+      API_URL: '{{.API_URL}}'
+    generates:
+      - '{{.FILE}}'
+    status:
+      - test -f {{.FILE}}
+  model-input:
+    cmds:
+      - echo "SIM Model input -> {{.SIMDIR}}/{{.PATH}}"
+      - mkdir -p {{.SIMDIR}}/{{.PATH}}/data
+      - cp {{.ENTRYDIR}}/input.csv {{.SIMDIR}}/{{.PATH}}/data/input.csv
+      - task: unzip-dir
+        vars:
+          DIR: '{{.SIMDIR}}/{{.PATH}}'
+          ZIP: downloads/{{base .PACKAGE_URL}}
+          ZIPDIR: '{{.PACKAGE_PATH}}'
+      - find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i 'with(.spec.runtime.dynlib[]; .path |= sub(".*/(.*$)", "{{.PATH}}/lib/${1}"))'
+      - rm -rf {{.SIMDIR}}/{{.PATH}}/examples
+      - find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f
+      - find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yml -print0  | xargs -r -0 rm -f
+    dir: '{{.OUTDIR}}'
+    label: sim:model:input
+    vars:
+      REPO: 'https://github.com/boschglobal/dse.modelc'
+      TAG: '2.1.32'
+      MODEL: 'input'
+      PATH: 'model/input'
+      PLATFORM_ARCH: 'linux-amd64'
+      PACKAGE_URL: '{{.REPO}}/releases/download/v{{.TAG}}/ModelC-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+      PACKAGE_PATH: 'examples/csv'
+    deps:
+      - task: download-file
+        vars:
+          URL: '{{.PACKAGE_URL}}'
+          FILE: 'downloads/{{base .PACKAGE_URL}}'
+    sources:
+      - input.csv
+    generates:
+      - downloads/{{base .PACKAGE_URL}}
+      - '{{.SIMDIR}}/{{.PATH}}/data/input.csv'
+      - '{{.SIMDIR}}/{{.PATH}}/**'
+  model-linear:
+    cmds:
+      - echo "SIM Model linear -> {{.SIMDIR}}/{{.PATH}}"
+      - mkdir -p {{.SIMDIR}}/{{.PATH}}/data
+      - task: unzip-dir
+        vars:
+          DIR: '{{.SIMDIR}}/{{.PATH}}'
+          ZIP: downloads/{{base .PACKAGE_URL}}
+          ZIPDIR: '{{.PACKAGE_PATH}}'
+      - find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i 'with(.spec.runtime.dynlib[]; .path |= sub(".*/(.*$)", "{{.PATH}}/lib/${1}"))'
+      - rm -rf {{.SIMDIR}}/{{.PATH}}/examples
+      - find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f
+      - find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yml -print0  | xargs -r -0 rm -f
+      - task: unzip-extract-fmu
+        vars:
+          FMUDIR: '{{.SIMDIR}}/{{.PATH}}/linear_fmu'
+          FMUFILE: examples/fmu/linear/fmi2/linear.fmu
+          ZIP: downloads/models/{{.MODEL}}/Fmi-1.1.37-linux-amd64.zip
+      - task: dse.fmi-v1.1.37:generate-fmimcl
+        vars:
+          FMU_DIR: downloads/models/{{.MODEL}}/Fmi-1.1.37-linux-amd64.zip
+          MCL_PATH: '{{.PATH}}/lib/libfmimcl.so'
+          MODEL: '{{.MODEL}}'
+          OUT_DIR: '{{.PATH}}/data'
+    dir: '{{.OUTDIR}}'
+    label: sim:model:linear
+    vars:
+      REPO: 'https://github.com/boschglobal/dse.fmi'
+      TAG: '1.1.37'
+      MODEL: 'linear'
+      PATH: 'model/linear'
+      PLATFORM_ARCH: 'linux-amd64'
+      PACKAGE_URL: '{{.REPO}}/releases/download/v{{.TAG}}/Fmi-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+      PACKAGE_PATH: 'fmimcl'
+    deps:
+      - task: download-file
+        vars:
+          URL: '{{.PACKAGE_URL}}'
+          FILE: 'downloads/{{base .PACKAGE_URL}}'
+      - task: download-file-github-asset
+        vars:
+          URL: 'https://github.com/boschglobal/dse.fmi/releases/download/v1.1.37/Fmi-1.1.37-linux-amd64.zip'
+          FILE: 'downloads/models/{{.MODEL}}/Fmi-1.1.37-linux-amd64.zip'
+          ASSET_NAME: 'Fmi-1.1.37-linux-amd64.zip'
+          TAG: 'v1.1.37'
+          API_URL: 'https://github.com/api/v3/repos/boschglobal/dse.fmi'
+    sources: []
+    generates:
+      - downloads/{{base .PACKAGE_URL}}
+      - '{{.SIMDIR}}/{{.PATH}}/**'
+      - downloads/models/{{.MODEL}}/Fmi-1.1.37-linux-amd64.zip
+      - '{{.SIMDIR}}/{{.PATH}}/linear_fmu'
+  unzip-dir:
+    cmds:
+      - echo "UNZIP DIR {{.ZIP}}/{{.ZIPDIR}} -> {{.DIR}}"
+      - mkdir -p {{.DIR}}
+      - unzip -o {{.ZIP}} {{.ZIPDIR}}/* -d {{.DIR}}
+      - rsync -a {{.DIR}}/{{.ZIPDIR}}/ {{.DIR}}/
+      - rm -rf {{.DIR}}/$(basename {{.ZIP}} {{ext .ZIP}})
+    dir: '{{.OUTDIR}}'
+    label: dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}
+    run: when_changed
+    vars:
+      ZIP: '{{.ZIP}}'
+      ZIPDIR: '$(basename {{.ZIP}} {{ext .ZIP}}){{if .ZIPDIR}}/{{.ZIPDIR}}{{end}}'
+      DIR: '{{.DIR}}'
+    sources:
+      - '{{.ZIP}}'
+    generates:
+      - '{{.DIR}}/**'
+  unzip-extract-fmu:
+    cmds:
+      - echo "UNZIP FMU {{.ZIP}}/{{.FMUFILE}} -> {{.FMUDIR}}"
+      - task: unzip-file
+        vars:
+          FILE: '{{.FMUTMPFILE}}'
+          ZIP: '{{.ZIP}}'
+          ZIPFILE: '{{.FMUFILE}}'
+      - task: unzip-rootdir
+        vars:
+          DIR: '{{.FMUDIR}}'
+          ZIP: '{{.FMUTMPFILE}}'
+      - rm -f {{.FMUTMPFILE}}
+    dir: '{{.OUTDIR}}'
+    label: dse:unzip-extract-fmu:{{.ZIP}}-{{.FMUDIR}}
+    run: when_changed
+    vars:
+      ZIP: '{{.ZIP}}'
+      FMUFILE: '{{.FMUFILE}}'
+      FMUDIR: '{{.FMUDIR}}'
+      FMUTMPFILE: '{{.FMUDIR}}.tmp'
+    sources:
+      - '{{.ZIP}}'
+    generates:
+      - '{{.FMUDIR}}/**'
+  unzip-file:
+    cmds:
+      - echo "UNZIP FILE {{.ZIP}}/{{.ZIPFILE}} -> {{.FILE}}"
+      - mkdir -p $(dirname {{.FILE}})
+      - unzip -o -j {{.ZIP}} $(basename {{.ZIP}} {{ext .ZIP}})/{{.ZIPFILE}} -d $(dirname {{.FILE}})
+      - mv -n $(dirname {{.FILE}})/$(basename {{.ZIPFILE}}) {{.FILE}}
+    dir: '{{.OUTDIR}}'
+    label: dse:unzip-file:{{.ZIPFILE}}-{{.FILEPATH}}
+    run: when_changed
+    vars:
+      ZIP: '{{.ZIP}}'
+      ZIPFILE: '{{.ZIPFILE}}'
+      FILE: '{{.FILE}}'
+    sources:
+      - '{{.ZIP}}'
+    generates:
+      - '{{.FILE}}'
+  unzip-rootdir:
+    cmds:
+      - echo "UNZIP DIR {{.ZIP}} -> {{.DIR}}"
+      - mkdir -p {{.DIR}}
+      - unzip -o {{.ZIP}} '*' -d {{.DIR}}
+    dir: '{{.OUTDIR}}'
+    label: dse:unzip-rootdir:{{.ZIPFILE}}-{{.DIR}}
+    run: when_changed
+    vars:
+      ZIP: '{{.ZIP}}'
+      DIR: '{{.DIR}}'
+    sources:
+      - '{{.ZIP}}'
+    generates:
+      - '{{.DIR}}/**'
