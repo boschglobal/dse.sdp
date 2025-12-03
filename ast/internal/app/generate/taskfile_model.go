@@ -17,6 +17,12 @@ import (
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 )
 
+func urlEscapedParse(u string) (*url.URL, error) {
+	u = strings.ReplaceAll(u, `{`, `%7B`)
+	u = strings.ReplaceAll(u, `}`, `%7D`)
+	return url.Parse(u)
+}
+
 func (c GenerateCommand) buildIncludes() map[string]Include {
 	includes := make(map[string]Include)
 	simSpec := c.simulationAst
@@ -26,64 +32,73 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 	}
 
 	for _, uses := range *simSpec.Uses {
-		if uses.Version == nil {
-			continue
-		}
-		if uses.Path != nil {
-			continue
-		}
+		u, _ := urlEscapedParse(uses.Url)
+
 		vars := map[string]string{
 			"SIM":          "{{.SIMDIR}}",
 			"ENTRYWORKDIR": "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/{{.OUTDIR}}{{else}}{{.PWD}}/{{.OUTDIR}}{{end}}",
-			"IMAGE_TAG":    cleanTag(*uses.Version),
-		}
-		if uses.User != nil {
-			vars["DOCKER_USER"] = *uses.User
-		}
-		if uses.Token != nil {
-			vars["DOCKER_TOKEN"] = *uses.Token
 		}
 
-		u, _ := func() (*url.URL, error) {
-			_u := uses.Url
-			_u = strings.ReplaceAll(_u, `{`, `%7B`)
-			_u = strings.ReplaceAll(_u, `}`, `%7D`)
-			return url.Parse(_u)
-		}()
-		if strings.HasPrefix(u.Host, "github.") == false {
-			continue
-		}
+		if u.Scheme == "file" {
+			dir := strings.TrimSuffix(u.Path, "/")
+			taskfile := filepath.Join(dir, "Taskfile.yml")
 
-		includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
-			Taskfile: func() string {
-				var finalUrl *url.URL
-				pathParts := strings.Split(u.Path, string(os.PathSeparator))
-				switch u.Host {
-				case "github.com":
-					u.Host = "raw.githubusercontent.com"
-					finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/refs/tags/%s/Taskfile.yml", pathParts[1], pathParts[2], *uses.Version))
-				case "github.boschdevcloud.com":
-					u.Host = "raw.github.boschdevcloud.com"
-					finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/%s/Taskfile.yml", pathParts[1], pathParts[2], *uses.Version))
-				default:
-					panic("unsupported includes URL")
-				}
-				return func() string {
-					_u := finalUrl.String()
-					_u = strings.ReplaceAll(_u, `%7B`, `{`)
-					_u = strings.ReplaceAll(_u, `%7D`, `}`)
-					return _u
-				}()
-			}(),
-			Dir:  "{{.OUTDIR}}/{{.SIMDIR}}",
-			Vars: &vars,
+			includes[fmt.Sprintf("%s", uses.Name)] = Include{
+				Taskfile: taskfile,
+				Dir:      dir,
+				Vars:     &vars,
+			}
+
+		} else {
+			if uses.Version == nil {
+				continue
+			}
+			if uses.Path != nil {
+				continue
+			}
+
+			vars["IMAGE_TAG"] = cleanTag(*uses.Version)
+
+			if uses.User != nil {
+				vars["DOCKER_USER"] = *uses.User
+			}
+			if uses.Token != nil {
+				vars["DOCKER_TOKEN"] = *uses.Token
+			}
+			if strings.HasPrefix(u.Host, "github.") == false {
+				continue
+			}
+			includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
+				Taskfile: func() string {
+					var finalUrl *url.URL
+					pathParts := strings.Split(u.Path, string(os.PathSeparator))
+					switch u.Host {
+					case "github.com":
+						u.Host = "raw.githubusercontent.com"
+						finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/refs/tags/%s/Taskfile.yml", pathParts[1], pathParts[2], *uses.Version))
+					case "github.boschdevcloud.com":
+						u.Host = "raw.github.boschdevcloud.com"
+						finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/%s/Taskfile.yml", pathParts[1], pathParts[2], *uses.Version))
+					default:
+						panic("unsupported includes URL")
+					}
+					return func() string {
+						_u := finalUrl.String()
+						_u = strings.ReplaceAll(_u, `%7B`, `{`)
+						_u = strings.ReplaceAll(_u, `%7D`, `}`)
+						return _u
+					}()
+				}(),
+				Dir:  "{{.OUTDIR}}/{{.SIMDIR}}",
+				Vars: &vars,
+			}
 		}
 	}
 
 	return includes
 }
 
-func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
+func createModelDownloadDeps(modelUses ast.Uses) []Dep {
 	deps := []Dep{
 		{
 			Task: "download-file",
@@ -111,6 +126,35 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 			}(),
 		},
 	}
+	return deps
+}
+
+func createModelCopyDeps(modelUses ast.Uses) []Dep {
+	deps := []Dep{
+		{
+			Task: "copy-file",
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("URL", "{{.REPO}}/{{.PACKAGE_URL}}")
+				om.Set("FILE", "downloads/{{base .PACKAGE_URL}}")
+				return &om
+			}(),
+		},
+	}
+	return deps
+}
+
+func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
+	modelUrl, _ := urlEscapedParse(modelUses.Url)
+	deps := func() []Dep {
+		switch modelUrl.Scheme {
+		case "file":
+			// <repo>/<package:file> -> downloads/base(<package:file>)
+			return createModelCopyDeps(modelUses)
+		default:
+			return createModelDownloadDeps(modelUses)
+		}
+	}()
 	cmds := []Cmd{
 		{
 			Cmd: fmt.Sprintf("echo \"SIM Model %s -> {{.SIMDIR}}/{{.PATH}}\"", model.Name),
@@ -132,9 +176,17 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 		Dir:   util.StringPtr("{{.OUTDIR}}"),
 		Label: util.StringPtr(fmt.Sprintf("sim:model:%s", model.Name)),
 		Vars: func() *OMap {
+			pkgUrlKey := "download"
+			repo := modelUses.Url
+			if modelUrl.Scheme == "file" {
+				// When the URL is a "file", use the package:file key.
+				pkgUrlKey = "file"
+				repo = strings.TrimSuffix(modelUrl.Path, "/")
+			}
+
 			om := OMap{orderedmap.NewOrderedMap[string, string]()}
 			if modelUses.Name != "" {
-				om.Set("REPO", modelUses.Url)
+				om.Set("REPO", repo)
 				if modelUses.Version != nil {
 					om.Set("TAG", cleanTag(*modelUses.Version))
 				}
@@ -150,7 +202,7 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 					if r := recover(); r != nil {
 					}
 				}()
-				om.Set("PACKAGE_URL", md["package"].(map[string]interface{})["download"].(string))
+				om.Set("PACKAGE_URL", md["package"].(map[string]interface{})[pkgUrlKey].(string))
 				om.Set("PACKAGE_PATH", md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string))
 			}()
 

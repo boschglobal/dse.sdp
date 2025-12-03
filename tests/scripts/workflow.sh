@@ -35,6 +35,7 @@ run_builder() {
         --network=host \
         --user "$(id -u):$(id -g)" \
         -v $ENTRYWORKDIR:/workdir \
+        -v $ENTRYHOSTDIR:/repo \
         -e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
         -e http_proxy -e https_proxy -e no_proxy \
         $DSE_BUILDER_IMAGE "$INPUT_DSE"

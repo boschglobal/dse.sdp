@@ -1,0 +1,34 @@
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh localfile.dse
+
+stderr 'Loading Taskfile from local path path=/repo'
+stdout 'val=9\.000000, final_val=9\.000000, name=counter'
+
+-- localfile.dse --
+simulation
+channel signal
+
+uses
+dse.sdp file:///repo
+
+model simple Simple
+channel signal data
+file signalgroup.yaml signalgroup.yaml
+
+-- signalgroup.yaml --
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    model: simple
+    signal: data
+spec:
+  signals:
+    - signal: counter

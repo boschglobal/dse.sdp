@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -152,6 +153,52 @@ func getYamlPath(root interface{}, keys ...string) interface{} {
 	return node
 }
 
+func parseFilePath(useMap map[string]interface{}) (bool, string) {
+	useUrl, ok := useMap["url"].(string)
+	if !ok {
+		slog.Error("Invalid or missing URL in uses map")
+		return false, ""
+	}
+
+	u, err := url.Parse(useUrl)
+	if err != nil {
+		return false, ""
+	}
+
+	if u.Scheme == "file" {
+		return true, u.Path
+	}
+
+	return false, ""
+}
+
+func resolvePath(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+	return filepath.Abs(path)
+}
+
+func loadTaskfile(filePath string) (map[string]interface{}, error) {
+	abs, err := resolvePath(filepath.Join(filePath, "Taskfile.yml"))
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := os.ReadFile(abs)
+	if err != nil {
+		slog.Error("Error : ", err)
+		return nil, err
+	}
+
+	yamlData := map[string]interface{}{}
+	if err := yaml.Unmarshal(data, &yamlData); err != nil {
+		return nil, err
+	}
+
+	return yamlData, nil
+}
+
 func (c *ResolveCommand) loadMetadata() error {
 	if c.repoName != "" && c.metadataFile != "" {
 		// Supports E2E tests.
@@ -177,37 +224,49 @@ func (c *ResolveCommand) loadMetadata() error {
 	for _, _use := range uses.([]interface{}) {
 		use := _use.(map[string]interface{})
 		// Fetch metadata.
-		slog.Debug("Fetch metadata for uses", "name", use["name"].(string))
-		var rawUrl = genGitRawURL(use)
-		if len(rawUrl) == 0 {
-			continue
-		}
-		slog.Info("Metadata download", "url", rawUrl)
-
-		// Search the cache.
 		var yamlData = map[string]interface{}{}
-		if c.cacheDir != "" {
-			var cacheFilepath = appendFileName(c.cacheDir, calculateSha256(rawUrl))
-			if !dirExists(c.cacheDir) {
-				createCacheDir(c.cacheDir)
+		slog.Debug("Fetch metadata for uses", "name", use["name"].(string))
+		ok_fileRef, path := parseFilePath(use)
+		if ok_fileRef {
+			// eg uses block, dse.sdp file:///mnt/c/Users/NUZ2KOR/Desktop/dse.sdp/
+			abs, err := resolvePath(path)
+			if err != nil {
+				return nil
 			}
-			if FileExists(cacheFilepath) {
-				slog.Info("Load from cache", "path", cacheFilepath)
-				data, err := os.ReadFile(cacheFilepath)
-				if err != nil {
-					return fmt.Errorf("Error reading cache file: %v", err)
+			slog.Info("Loading Taskfile from local path", "path", abs)
+			yamlData, err = loadTaskfile(abs)
+
+		} else {
+			// eg uses block, dse.sdp https://github.com/boschglobal/dse.sdp v0.8.26
+			var rawUrl = genGitRawURL(use)
+			if len(rawUrl) == 0 {
+				continue
+			}
+
+			slog.Info("Metadata download", "url", rawUrl)
+			// Search the cache.
+			if c.cacheDir != "" {
+				var cacheFilepath = appendFileName(c.cacheDir, calculateSha256(rawUrl))
+				if !dirExists(c.cacheDir) {
+					createCacheDir(c.cacheDir)
 				}
-				if err := yaml.Unmarshal(data, &yamlData); err != nil {
-					return fmt.Errorf("Error parsing cache YAML file: %v", err)
+				if FileExists(cacheFilepath) {
+					slog.Info("Load from cache", "path", cacheFilepath)
+					data, err := os.ReadFile(cacheFilepath)
+					if err != nil {
+						return fmt.Errorf("Error reading cache file: %v", err)
+					}
+					if err := yaml.Unmarshal(data, &yamlData); err != nil {
+						return fmt.Errorf("Error parsing cache YAML file: %v", err)
+					}
+				} else {
+					yamlData = fetchMetadata(rawUrl, use)
+					saveCacheFile(cacheFilepath, yamlData)
 				}
 			} else {
 				yamlData = fetchMetadata(rawUrl, use)
-				saveCacheFile(cacheFilepath, yamlData)
 			}
-		} else {
-			yamlData = fetchMetadata(rawUrl, use)
 		}
-
 		// Update the lookup.
 		slog.Info("Update metadata for repo", "name", use["name"].(string))
 		c.yamlMetadata[use["name"].(string)] = yamlData
@@ -332,28 +391,32 @@ func (c *ResolveCommand) updateAstUsesMetadata() {
 	for _, _use := range uses.([]interface{}) {
 		use := _use.(map[string]interface{})
 		urlStr, urlOk := use["url"].(string)
-		versionStr, versionOk := use["version"].(string)
-		if !urlOk || !versionOk || !strings.HasPrefix(versionStr, "v") {
-			continue
-		}
-
-		parsedUrl, err := url.Parse(urlStr)
-		if err != nil || strings.HasPrefix(parsedUrl.Host, "github.") == false {
-			continue
-		}
-
-		slog.Info("Uses item", "name", use["name"].(string))
 		// Locate the metadata.
+		re := regexp.MustCompile(`\{\{.*?\}\}@`) // for resolving Parse issue with urls like https://{{.GHE_TOKEN}}@github...
 		metadata := getYamlPath(c.yamlMetadata, use["name"].(string), "metadata")
-		if metadata == nil {
-			if strings.Contains(use["url"].(string), "blob") || strings.Contains(use["url"].(string), "releases") {
+		parsedUrl, err := url.Parse(re.ReplaceAllString(urlStr, ""))
+		if parsedUrl.Scheme != "file" {
+			versionStr, versionOk := use["version"].(string)
+			if !urlOk || !versionOk || !strings.HasPrefix(versionStr, "v") {
 				continue
 			}
-			taskfileURL := fmt.Sprintf("%s/blob/%s/Taskfile.yml", use["url"], use["version"].(string))
-			slog.Error("Repo does not have associated metadata", "name", use["name"].(string))
-			slog.Info(fmt.Sprintf("Include Metadata in %s to resolve the issue", taskfileURL))
-			os.Exit(1)
+
+			if err != nil || strings.HasPrefix(parsedUrl.Host, "github.") == false {
+				continue
+			}
+
+			slog.Info("Uses item", "name", use["name"].(string))
+			if metadata == nil {
+				if strings.Contains(use["url"].(string), "blob") || strings.Contains(use["url"].(string), "releases") {
+					continue
+				}
+				taskfileURL := fmt.Sprintf("%s/blob/%s/Taskfile.yml", use["url"], use["version"].(string))
+				slog.Error("Repo does not have associated metadata", "name", use["name"].(string))
+				slog.Info(fmt.Sprintf("Include Metadata in %s to resolve the issue", taskfileURL))
+				os.Exit(1)
+			}
 		}
+
 		// Update (merge) to the underlying map/slice.
 		slog.Info("Merge metadata to spec/uses[]", "name", use["name"].(string))
 		if _, ok := use["metadata"]; !ok {

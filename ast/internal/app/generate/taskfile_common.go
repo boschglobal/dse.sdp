@@ -125,6 +125,24 @@ func buildBaseTasks() map[string]Task {
 			Generates: &[]string{"{{.FILE}}"},
 			Status:    &[]string{"test -f {{.FILE}}"},
 		},
+		"copy-file": {
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Run:   util.StringPtr("when_changed"),
+			Label: util.StringPtr("dse:copy-file:{{.URL}}-{{.FILE}}"),
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("URL", "{{.URL}}")
+				om.Set("FILE", "{{.FILE}}")
+				return &om
+			}(),
+			Cmds: &[]Cmd{
+				{Cmd: "echo \"COPY {{.URL}} -> {{.FILE}}\""},
+				{Cmd: "mkdir -p $(dirname {{.FILE}})"},
+				{Cmd: "cp {{.URL}} {{.FILE}}"},
+			},
+			Sources:   &[]string{"{{.URL}}"},
+			Generates: &[]string{"{{.FILE}}"},
+		},
 		"download-file-github-asset": {
 			Dir:   util.StringPtr("{{.OUTDIR}}"),
 			Run:   util.StringPtr("when_changed"),
