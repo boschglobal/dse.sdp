@@ -93,7 +93,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            name=${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.name }},enable={{ startsWith(github.ref, 'refs/tags/') }}
+            name=${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
             name=${{ matrix.name }},enable=${{ !startsWith(github.ref, 'refs/tags/') }}
           tags: |
             type=semver,pattern={{version}}
