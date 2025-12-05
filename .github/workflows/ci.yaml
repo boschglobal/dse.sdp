@@ -92,10 +92,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.name }}
+          images: |
+            name=${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.name }},enable={{ startsWith(github.ref, 'refs/tags/') }}
+            name=${{ matrix.name }},enable={{ !startsWith(github.ref, 'refs/tags/') }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=test,enable=,enable={{ !startsWith(github.ref, 'refs/tags/') }}
 
       - name: Version
         if: startsWith(github.ref, 'refs/tags/')
@@ -159,9 +162,17 @@ jobs:
           docker load --input /tmp/report.tar
           docker image ls -a
 
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: Models-linux-amd64-package
+          path: ./examples/models/build/_dist
+
       - name: Set environment
         run: |
           echo "HOST_DOCKER_WORKSPACE=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "DSE_BUILDER_IMAGE=builder:test" >> $GITHUB_ENV
+          echo "DSE_REPORT_IMAGE=report:test" >> $GITHUB_ENV
 
       - name: Test
         run: |

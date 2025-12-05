@@ -4,7 +4,7 @@ version: '3'
 metadata:
   package:
     download: '{{.REPO}}/releases/download/v{{.TAG}}/Models-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
-    file: 'examples/models/build/_dist/Models-0.0.1-linux-amd64.zip'
+    file: 'examples/models/build/_dist/Models-0.0.2-linux-amd64.zip'
   container:
     repository: ghcr.io/boschglobal/dse-sdp
 
