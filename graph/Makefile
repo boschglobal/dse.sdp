@@ -34,7 +34,17 @@ docker:
 	for d in $(DOCKER_TOOLS) ;\
 	do \
 		docker build -f build/package/$$d/Dockerfile \
+				--build-arg MEMGRAPH_IMAGE=memgraph \
 				--tag dse-$$d:test . ;\
+	done;
+
+.PHONY: docker-mage
+docker-mage:
+	for d in $(DOCKER_TOOLS) ;\
+	do \
+		docker build --no-cache -f build/package/$$d/Dockerfile \
+				--build-arg MEMGRAPH_IMAGE=memgraph-mage \
+				--tag dse-$$d-mage:test . ;\
 	done;
 
 .PHONY: graph
@@ -45,8 +55,12 @@ ifeq ($(shell docker container list -q -f name=memgraph 2> /dev/null),)
 		-p 7444:7444 \
 		-p 7687:7687 \
 		-v mg_lib:/var/lib/memgraph \
-		memgraph/memgraph-platform
+		memgraph/memgraph-mage:3.7.1
 endif
+
+.PHONY: graph-stop
+graph-stop:
+	docker kill memgraph
 
 .PHONY: test
 test:
