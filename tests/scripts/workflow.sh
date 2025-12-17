@@ -10,12 +10,9 @@ INPUT_DSE="$1"
 
 echo "Workflow Script"
 echo "==============="
-echo "Environment:"
-echo "------------"
 echo "DSE_BUILDER_IMAGE=${DSE_BUILDER_IMAGE}"
 echo "DSE_REPORT_IMAGE=${DSE_REPORT_IMAGE}"
 echo "DSE_SIMER_IMAGE=${DSE_SIMER_IMAGE}"
-echo "==="
 echo ""
 
 
@@ -50,7 +47,6 @@ run_report() {
     # container in a CI workflow.
     docker run --name report -i --rm \
         --network=host \
-        --user "$(id -u):$(id -g)" \
         -v $ENTRYWORKDIR/out/sim:/sim \
         $DSE_REPORT_IMAGE /sim
 }
