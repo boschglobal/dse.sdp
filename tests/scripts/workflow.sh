@@ -48,7 +48,7 @@ run_report() {
     docker run --name report -i --rm \
         --network=host \
         -v $ENTRYWORKDIR/out/sim:/sim \
-        $DSE_REPORT_IMAGE /sim
+        $DSE_REPORT_IMAGE report /sim
 }
 
 run_simer() {
