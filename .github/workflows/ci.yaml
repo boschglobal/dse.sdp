@@ -93,12 +93,13 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            name=${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            name=${{ env.REGISTRY }}/${{ env. IMAGE_BASE_NAME }}-${{ matrix.name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
             name=${{ matrix.name }},enable=${{ !startsWith(github.ref, 'refs/tags/') }}
+            name=${{ matrix.name }},enable=true
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=test,enable=,enable=${{ !startsWith(github.ref, 'refs/tags/') }}
+            type=raw,value=test
 
       - name: Version
         if: startsWith(github.ref, 'refs/tags/')
@@ -133,13 +134,6 @@ jobs:
       image: ghcr.io/boschglobal/dse-testscript:latest
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
-    services:
-      memgraph:
-        image: memgraph/memgraph-platform
-        ports:
-          - 3000:3000
-          - 7444:7444
-          - 7687:7687
     steps:
       - uses: actions/checkout@v5
         with:
