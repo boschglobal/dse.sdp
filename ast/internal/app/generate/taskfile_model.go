@@ -206,6 +206,15 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 				om.Set("PACKAGE_PATH", md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string))
 			}()
 
+			if model.Vars != nil {
+				for _, v := range *model.Vars {
+					if _, exists := om.Get(v.Name); exists {
+						continue
+					}
+					om.Set(v.Name, v.Value)
+				}
+			}
+
 			return &om
 		}(),
 		Deps:      &deps,

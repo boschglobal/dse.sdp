@@ -12,18 +12,11 @@ interface CustomRegExpExecArray extends RegExpExecArray {
   payload?: any;
 }
 
-function stripInlineComment(line: string): string {
-  const commentStart = line.indexOf("#");
-  if (commentStart !== -1) {
-    return line.substring(0, commentStart).trimEnd();
-  }
-  return line;
-}
 
 function matchSimulation(text: string) {
   const simulationPattern =
     /^[ \t]*simulation([ ]+arch\=\S+)?([ ]+stepsize\=(?:\d*\.?\d+))?([ ]+endtime\=(?:\d*\.?\d+))?\s*(?:\#.*)?$/;
-  const execResult = simulationPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  const execResult = simulationPattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     let simulationArch = defaultArch;
     if (execResult[1] !== undefined) {
@@ -69,14 +62,14 @@ export const Simulation = createToken({
 
 function matchChannel(text: string) {
   const channelPattern = /^[ \t]*channel([ ]+\w+)(?:([ ]+\w+))?\s*(?:\#.*)?$/;
-  const execResult = channelPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  const execResult = channelPattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     const channelName = execResult[1];
     let channelAlias = "";
     if (execResult[2] !== undefined) {
       channelAlias = execResult[2];
     }
-  
+
     execResult.payload = {
       channel_name: {
         value: channelName.trim(),
@@ -99,7 +92,7 @@ export const Channel = createToken({
 
 function matchFile(text: string) {
   const filePattern = /^[ \t]*file([ ]+\S+)([ ]+(?:uses))?([ ]+\S+)?\s*(?:\#.*)?$/;
-  const execResult = filePattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  const execResult = filePattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     const fileName = execResult[1];
     let fileReferenceType = "";
@@ -137,7 +130,7 @@ export const File = createToken({
 
 function matchNetwork(text: string) {
   const networkPattern = /^[ \t]*network([ ]+\S+)([ ]+\'\S+\')\s*(?:\#.*)?$/;
-  const execResult = networkPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  const execResult = networkPattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     const networkName = execResult[1];
     const mimeType = execResult[2];
@@ -163,7 +156,7 @@ export const Network = createToken({
 
 function matchUsesKeyword(text: string) {
   const usesKeywordPattern = /^[ \t]*uses[ \t]*(?:\#.*)?$/;
-  const execResult = usesKeywordPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  const execResult = usesKeywordPattern.exec(text) as CustomRegExpExecArray;
   return execResult;
 }
 
@@ -176,7 +169,7 @@ export const Uses = createToken({
 function matchUseItem(text: string) {
   const useItemPattern =
     /^[ \t]*(\S+)([ ]+(?:(?:https\:\/\/\S+)|(?:\S+\.\S+)|(?:\S+\/\S+)))([ ]+v\d+(?:\.\d+)*)?(?:[ ]+(path\=\S+))?(?:[ ]+(user\=\S+))?(?:[ ]+(token\=\S+))?\s*(?:\#.*)?$/;
-  const execResult = useItemPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  const execResult = useItemPattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     const useItem = execResult[1];
     const link = execResult[2];
@@ -196,7 +189,7 @@ function matchUseItem(text: string) {
     if (execResult[6] !== undefined) {
       token = execResult[6];
     }
-    
+
     execResult.payload = {
       use_item: {
         value: useItem.trim(),
@@ -235,16 +228,27 @@ export const UseItem = createToken({
 
 function matchVar(text: string) {
   const varPattern =
-    /^[ \t]*var([ ]+\S+)([ ]+(?:uses|network|var))?([ ]+(?:\S+|(?:\".*\")|(?:\'.*\')))\s*(?:\#.*)?$/;
-  const execResult = varPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+    /^[ \t]*var([ ]+\S+)([ ]+(?:uses|network|var))?([ ]+(?:\S+([ ]+(?:mimetype|signal))?|(?:\".*\")|(?:\'.*\')))\s*(?:\#.*)?$/;
+  const execResult = varPattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     const varName = execResult[1];
     let varReferenceType = "";
     if (execResult[2] !== undefined) {
       varReferenceType = execResult[2];
     }
-    const varValue = execResult[3];
-    
+    let varValue = execResult[3].trim();
+    let varNetworkType = "";
+    if (execResult[4] !== undefined) {
+      varNetworkType = execResult[4].trim();
+      if (varNetworkType != "") {
+        if (varValue.endsWith("mimetype")) {
+          varValue = varValue.replace(/mimetype$/, "").trim();
+        } else if (varValue.endsWith("signal")) {
+          varValue = varValue.replace(/signal$/, "").trim();
+        }
+      }
+    }
+
     execResult.payload = {
       var_name: {
         value: varName.trim(),
@@ -255,8 +259,12 @@ function matchVar(text: string) {
         token_type: "variable_reference_type",
       },
       var_value: {
-        value: varValue.trim(),
+        value: varValue,
         token_type: "variable_value",
+      },
+      var_network_type: {
+        value: varNetworkType,
+        token_type: "variable_network_type",
       },
     };
   }
@@ -273,7 +281,7 @@ function matchModel(text: string) {
   // model model_name repo_name [arch=linux-x86] [uid=41]
   let modelPattern =
     /^[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=|external=)(\S+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*(?:\#.*)?$/;
-  let execResult = modelPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  let execResult = modelPattern.exec(text) as CustomRegExpExecArray;
 
   let modelName = "";
   let modelRepoValue = "";
@@ -285,7 +293,7 @@ function matchModel(text: string) {
       // model model_name external=true [arch=linux-x86] [uid=41]
       modelPattern =
         /^[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)(?!arch=|uid=)([ ]+external=\w+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*(?:\#.*)?$/;
-      execResult = modelPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+      execResult = modelPattern.exec(text) as CustomRegExpExecArray;
       if (execResult != null) {
         modelName = execResult[1];
         modelRepoValue = "";
@@ -306,7 +314,7 @@ function matchModel(text: string) {
         // model model_name repo_name external=true [arch=linux-x86] [uid=41]
         modelPattern =
           /^[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=)(\S+)([ ]+external=\w+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*(?:\#.*)?$/;
-        execResult = modelPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+        execResult = modelPattern.exec(text) as CustomRegExpExecArray;
         if (execResult != null) {
           modelName = execResult[1];
           modelRepoValue = execResult[2];
@@ -377,7 +385,7 @@ export const Model = createToken({
 
 function matchEnvVar(text: string) {
   const varPattern = /^[ \t]*envar([ ]+\S+)([ ]+\S+)\s*(?:\#.*)?$/;
-  const execResult = varPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  const execResult = varPattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     const varName = execResult[1];
     const varValue = execResult[2];
@@ -401,9 +409,35 @@ export const EnvVar = createToken({
   line_breaks: false,
 });
 
+function matchAnnotation(text: string) {
+  const annotationPattern = /^[ \t]*annotation([ ]+\S+)([ ]+\S+)\s*(?:\#.*)?$/;
+  const execResult = annotationPattern.exec(text) as CustomRegExpExecArray;
+  if (execResult !== null) {
+    const annotationName = execResult[1];
+    const annotationValue = execResult[2];
+    execResult.payload = {
+      annotation_name: {
+        value: annotationName.trim(),
+        token_type: "annotation_name",
+      },
+      annotation_value: {
+        value: annotationValue.trim(),
+        token_type: "annotation_value",
+      },
+    };
+  }
+  return execResult;
+}
+
+export const Annotation = createToken({
+  name: "Annotation",
+  pattern: matchAnnotation,
+  line_breaks: false,
+});
+
 function matchWorkflow(text: string) {
   const workflowPattern = /^[ \t]*workflow([ ]+\S+)(?:([ ]+uses)([ ]+\S+))?\s*(?:\#.*)?$/;
-  const execResult = workflowPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  const execResult = workflowPattern.exec(text) as CustomRegExpExecArray;
   let workflowReferenceType = "";
   let workflowValue = "";
   if (execResult !== null) {
@@ -445,7 +479,7 @@ export const Workflow = createToken({
 function matchStack(text: string) {
   const stackPattern =
     /^[ \t]*stack[ ]+(?!stacked=|sequential=|arch=)(\S+)([ ]+stacked=(?:true|false))?([ ]+sequential=(?:true|false))?([ ]+arch=\S+)?\s*(?:\#.*)?$/;
-  const execResult = stackPattern.exec(stripInlineComment(text)) as CustomRegExpExecArray;
+  const execResult = stackPattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     parsedStackArch = "";
     const stackName = execResult[1];
@@ -519,6 +553,7 @@ export const allTokens = [
   Stack,
   Model,
   EnvVar,
+  Annotation,
   Workflow,
 ];
 

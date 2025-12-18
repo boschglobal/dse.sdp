@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"log/slog"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/tidwall/gjson"
 
@@ -20,6 +22,11 @@ import (
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 )
 
+type NetworkInfo struct {
+	signal   string
+	mimeType string
+}
+
 type ConvertCommand struct {
 	command.Command
 
@@ -27,7 +34,11 @@ type ConvertCommand struct {
 	outputFile string
 	logLevel   int
 
-	dslAst []byte
+	dslAst       []byte
+	networks     map[string]NetworkInfo
+	globalVars   *[]ast.Var
+	modelVars    map[string][]ast.Var
+	workflowVars map[string][]ast.Var
 }
 
 func NewConvertCommand(name string) *ConvertCommand {
@@ -36,6 +47,9 @@ func NewConvertCommand(name string) *ConvertCommand {
 			Name:    name,
 			FlagSet: flag.NewFlagSet(name, flag.ExitOnError),
 		},
+		networks:     map[string]NetworkInfo{},
+		modelVars:    map[string][]ast.Var{},
+		workflowVars: map[string][]ast.Var{},
 	}
 	c.FlagSet().StringVar(&c.inputFile, "input", "", "path to DSL generated AST file")
 	c.FlagSet().StringVar(&c.outputFile, "output", "", "path to write generated AST file")
@@ -103,11 +117,16 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 		}
 		// Networks
 		networkList := buildList(value, "children.networks", func(value gjson.Result) ast.SimulationNetwork {
-			simulationNetwork := ast.SimulationNetwork{
-				Name:     value.Get("object.payload.network_name.value").String(),
-				MimeType: value.Get("object.payload.mime_type.value").String(),
+			name := value.Get("object.payload.network_name.value").String()
+			mime := value.Get("object.payload.mime_type.value").String()
+			c.networks[name] = NetworkInfo{
+				signal:   name,
+				mimeType: mime,
 			}
-			return simulationNetwork
+			return ast.SimulationNetwork{
+				Name:     name,
+				MimeType: mime,
+			}
 		})
 		simulationChannel.Networks = &networkList
 		return simulationChannel
@@ -137,6 +156,7 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 		return vars
 	})
 	simulation.Spec.Vars = &varsList
+	c.globalVars = &varsList
 
 	// Stacks
 	stackList := buildList(root, "stacks", func(value gjson.Result) ast.Stack {
@@ -168,6 +188,17 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 					return nil
 				}
 			}(),
+		}
+		//Annotations
+		annotationList := buildList(value, "annotations", func(value gjson.Result) ast.Annotations {
+			annotations := ast.Annotations{
+				"name":  value.Get("object.payload.annotation_name.value").String(),
+				"value": value.Get("object.payload.annotation_value.value").String(),
+			}
+			return annotations
+		})
+		if len(annotationList) > 0 {
+			stack.Annotations = &annotationList
 		}
 		// Env
 		envList := buildList(value, "env_vars", func(value gjson.Result) ast.Var {
@@ -231,6 +262,45 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 			if len(envList) > 0 {
 				model.Env = &envList
 			}
+			// Vars
+			varList := buildList(value, "children.vars", func(value gjson.Result) ast.Var {
+				vars := ast.Var{
+					Name:  value.Get("object.payload.var_name.value").String(),
+					Value: value.Get("object.payload.var_value.value").String(),
+					Reference: func() *ast.VarReference {
+						v := value.Get("object.payload.var_reference_type.value")
+						if v.Exists() == true {
+							return (*ast.VarReference)(util.StringPtr(v.String()))
+						} else {
+							return nil
+						}
+					}(),
+					Networktype: func() *ast.VarNetworktype {
+						v := value.Get("object.payload.var_network_type.value")
+						if v.Exists() {
+							return (*ast.VarNetworktype)(util.StringPtr(v.String()))
+						}
+						return nil
+					}(),
+				}
+				return vars
+			})
+			if len(varList) > 0 {
+				model.Vars = &varList
+				key := model.Name
+				c.modelVars[key] = append(c.modelVars[key], varList...)
+			}
+			//Annotations
+			annotationList := buildList(value, "children.annotations", func(value gjson.Result) ast.Annotations {
+				annotations := ast.Annotations{
+					"name":  value.Get("object.payload.annotation_name.value").String(),
+					"value": value.Get("object.payload.annotation_value.value").String(),
+				}
+				return annotations
+			})
+			if len(annotationList) > 0 {
+				model.Annotations = &annotationList
+			}
 			// File
 			fileList := buildList(value, "children.files", func(value gjson.Result) ast.File {
 				files := ast.File{
@@ -268,10 +338,19 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 								return nil
 							}
 						}(),
+						Networktype: func() *ast.VarNetworktype {
+							v := value.Get("object.payload.var_network_type.value")
+							if v.Exists() {
+								return (*ast.VarNetworktype)(util.StringPtr(v.String()))
+							}
+							return nil
+						}(),
 					}
 					return vars
 				})
 				workflow.Vars = &varsList
+				key := model.Name + "#" + workflow.Name
+				c.workflowVars[key] = append(c.workflowVars[key], varsList...)
 				return workflow
 			})
 			model.Workflows = &workflowList
@@ -281,11 +360,113 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 		return stack
 	})
 	simulation.Spec.Stacks = stackList
+	c.resolveSimulationVars(&simulation)
 
 	if err := util.WriteYaml(&simulation, file, false); err != nil {
 		return err
 	}
 	return nil
+}
+
+func lookupVar(name string, workflowVars map[string][]ast.Var, modelVars map[string][]ast.Var, globalVars *[]ast.Var, scope string, modelName string, workflowName string) (string, bool) {
+	if scope == "workflow" && workflowName != "" {
+		suffix := "#" + workflowName
+		for key, vars := range workflowVars {
+			if !strings.HasSuffix(key, suffix) {
+				continue
+			}
+
+			for _, v := range vars {
+				if v.Name == name {
+					return v.Value, true
+				}
+			}
+		}
+	}
+
+	if modelName != "" {
+		for key, vars := range modelVars {
+			if key != modelName {
+				continue
+			}
+
+			for _, v := range vars {
+				if v.Name == name {
+					return v.Value, true
+				}
+			}
+		}
+	}
+
+	if globalVars != nil {
+		for _, v := range *globalVars {
+			if v.Name == name {
+				return v.Value, true
+			}
+		}
+	}
+
+	return "", false
+}
+
+var templateVarRegex = regexp.MustCompile(`\{\{\.?(\w+)\}\}`)
+
+// scope: either "workflow" or "model", used to adjust logic
+func (c *ConvertCommand) resolveTemplateValue(vars []ast.Var, scope string, modelName string, workflowName string) {
+	for i := range vars {
+		if vars[i].Reference == nil || *vars[i].Reference != "network" {
+			continue
+		}
+
+		signal := vars[i].Value
+		net, ok := c.networks[signal]
+		if !ok {
+			continue
+		}
+
+		if vars[i].Networktype == nil {
+			continue
+		}
+
+		switch *vars[i].Networktype {
+		case "mimetype":
+			vars[i].Value = templateVarRegex.ReplaceAllStringFunc(net.mimeType, func(match string) string {
+				sub := templateVarRegex.FindStringSubmatch(match)
+				if len(sub) != 2 {
+					return match
+				}
+				varName := sub[1]
+				if val, ok := lookupVar(varName, c.workflowVars, c.modelVars, c.globalVars, scope, modelName, workflowName); ok {
+					return val
+				}
+				return match
+			},
+			)
+		case "signal":
+			vars[i].Value = net.signal
+		}
+	}
+}
+
+func (c *ConvertCommand) resolveSimulationVars(sim *ast.Simulation) {
+	for si := range sim.Spec.Stacks {
+		stack := &sim.Spec.Stacks[si]
+		for mi := range stack.Models {
+			model := &stack.Models[mi]
+			if model.Vars != nil {
+				c.resolveTemplateValue(*model.Vars, "model", model.Name, "")
+			}
+
+			if model.Workflows != nil {
+				for wi := range *model.Workflows {
+					workflow := &(*model.Workflows)[wi]
+					if workflow.Vars != nil {
+						c.resolveTemplateValue(*workflow.Vars, "workflow", "", workflow.Name)
+					}
+				}
+			}
+		}
+	}
 }
 
 func buildList[T any](root gjson.Result, match string, gen func(value gjson.Result) T) []T {

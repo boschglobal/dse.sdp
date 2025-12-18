@@ -245,16 +245,32 @@
           "type": "Option",
           "idx": 2,
           "definition": [{
-            "type": "NonTerminal",
-            "name": "var_uses",
-            "label": "var_uses",
-            "idx": 0
+            "type": "Alternation",
+            "idx": 1,
+            "definition": [{
+                "type": "NonTerminal",
+                "name": "value",
+                "idx": 0
+              }, {
+                "type": "NonTerminal",
+                "name": "var_uses_reference",
+                "label": "var_uses_reference",
+                "idx": 1
+              },
+              {
+                "type": "NonTerminal",
+                "name": "var_reference",
+                "label": "var_reference",
+                "idx": 2
+              },
+              {
+                "type": "NonTerminal",
+                "name": "var_network_reference",
+                "label": "var_network_reference",
+                "idx": 3
+              }
+            ]
           }]
-        },
-        {
-          "type": "NonTerminal",
-          "name": "value",
-          "idx": 3
         }
       ]
     },
@@ -271,6 +287,28 @@
         {
           "type": "NonTerminal",
           "name": "envar_name",
+          "idx": 1
+        },
+        {
+          "type": "NonTerminal",
+          "name": "value",
+          "idx": 2
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "annotation",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "annotation",
+          "label": "annotation",
+          "idx": 0
+        },
+        {
+          "type": "NonTerminal",
+          "name": "annotation_name",
           "idx": 1
         },
         {
@@ -384,6 +422,24 @@
         },
         {
           "type": "Option",
+          "idx": 6,
+          "definition": [{
+            "type": "RepetitionMandatory",
+            "definition": [{
+                "type": "NonTerminal",
+                "name": "NL",
+                "idx": 0
+              },
+              {
+                "type": "NonTerminal",
+                "name": "annotation",
+                "idx": 1
+              }
+            ]
+          }]
+        },
+        {
+          "type": "Option",
           "idx": 7,
           "definition": [{
             "type": "RepetitionMandatory",
@@ -454,6 +510,18 @@
             "definition": [{
               "type": "NonTerminal",
               "name": "envar",
+              "idx": 0
+            }]
+          }]
+        },
+        {
+          "type": "Option",
+          "idx": 5,
+          "definition": [{
+            "type": "RepetitionMandatory",
+            "definition": [{
+              "type": "NonTerminal",
+              "name": "annotation",
               "idx": 0
             }]
           }]
@@ -873,10 +941,10 @@
     },
     {
       "type": "Rule",
-      "name": "stack_name",
+      "name": "annotation_name",
       "orgText": "",
       "definition": [{
-        "type": "Terminal",
+        "type": "NonTerminal",
         "name": "value_str",
         "label": "value_str",
         "idx": 0
@@ -884,12 +952,60 @@
     },
     {
       "type": "Rule",
-      "name": "var_uses",
+      "name": "var_uses_reference",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "uses",
+        "label": "uses",
+        "idx": 0
+      }, {
+        "type": "NonTerminal",
+        "name": "uses_name",
+        "label": "uses_name",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "var_reference",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "var",
+        "label": "var",
+        "idx": 0
+      }, {
+        "type": "NonTerminal",
+        "name": "var_name",
+        "label": "var_name",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "var_network_reference",
+      "orgText": "",
+      "definition": [{
+        "type": "NonTerminal",
+        "name": "network",
+        "label": "network",
+        "idx": 0
+      }, {
+        "type": "NonTerminal",
+        "name": "network_name",
+        "label": "network_name",
+        "idx": 0
+      }]
+    },
+    {
+      "type": "Rule",
+      "name": "stack_name",
       "orgText": "",
       "definition": [{
         "type": "Terminal",
-        "name": "uses",
-        "label": "uses",
+        "name": "value_str",
+        "label": "value_str",
         "idx": 0
       }]
     },

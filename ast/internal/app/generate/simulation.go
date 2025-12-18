@@ -38,16 +38,25 @@ func (c *GenerateCommand) GenerateSimulation() error {
 
 	var simbusModel *kind.ModelInstance
 	for _, astStack := range simSpec.Stacks {
+		annotations := kind.Annotations{
+			"simulation": map[string]interface{}{
+				"stepsize": simSpec.Stepsize,
+				"endtime":  simSpec.Endtime,
+			},
+		}
+
+		if astStack.Annotations != nil && len(*astStack.Annotations) > 0 {
+			for _, v := range *astStack.Annotations {
+				name := v["name"].(string)
+				value := v["value"].(string)
+				annotations[name] = value
+			}
+		}
 		stack := kind.Stack{
 			Kind: "Stack",
 			Metadata: &kind.ObjectMetadata{
-				Name: util.StringPtr(astStack.Name),
-				Annotations: &kind.Annotations{
-					"simulation": map[string]interface{}{
-						"stepsize": simSpec.Stepsize,
-						"endtime":  simSpec.Endtime,
-					},
-				},
+				Name:        util.StringPtr(astStack.Name),
+				Annotations: &annotations,
 			},
 		}
 		configureConnection(&stack)
@@ -108,7 +117,15 @@ func (c *GenerateCommand) GenerateSimulation() error {
 					modelName = astModel.Name
 				}
 			}()
-
+			var annotationMap map[string]interface{}
+			if astModel.Annotations != nil && len(*astModel.Annotations) > 0 {
+				annotationMap = make(map[string]interface{})
+				for _, a := range *astModel.Annotations {
+					name := a["name"].(string)
+					value := a["value"].(string)
+					annotationMap[name] = value
+				}
+			}
 			model := kind.ModelInstance{
 				Name: astModel.Name,
 				Uid: func() int {
@@ -117,19 +134,14 @@ func (c *GenerateCommand) GenerateSimulation() error {
 					}
 					return nextUid()
 				}(),
-				Model: struct {
-					Mcl *struct {
-						Models []struct {
-							Name string `yaml:"name"`
-						} `yaml:"models"`
-						Strategy string `yaml:"strategy"`
-					} `yaml:"mcl,omitempty"`
+				Model: &struct {
 					Name string `yaml:"name"`
 				}{
 					Name: modelName,
 				},
-				Channels: &channels,
-				Runtime:  generateModelRuntime(astModel),
+				Channels:    &channels,
+				Runtime:     generateModelRuntime(astModel),
+				Annotations: (*kind.Annotations)(&annotationMap),
 			}
 			models = append(models, model)
 		}
@@ -234,13 +246,7 @@ func generateSimbusModel(simSpec ast.SimulationSpec) *kind.ModelInstance {
 	}
 	model := kind.ModelInstance{
 		Name: "simbus",
-		Model: struct {
-			Mcl *struct {
-				Models []struct {
-					Name string `yaml:"name"`
-				} `yaml:"models"`
-				Strategy string `yaml:"strategy"`
-			} `yaml:"mcl,omitempty"`
+		Model: &struct {
 			Name string `yaml:"name"`
 		}{
 			Name: "simbus",

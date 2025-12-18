@@ -5,7 +5,7 @@ go 1.23.5
 require (
 	github.com/boschglobal/dse.clib/extra/go/command v1.0.36
 	github.com/boschglobal/dse.clib/extra/go/file v1.0.36
-	github.com/boschglobal/dse.schemas/code/go/dse v1.2.25
+	github.com/boschglobal/dse.schemas/code/go/dse v1.2.34
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/goccy/go-yaml v1.18.0
 	github.com/rogpeppe/go-internal v1.14.1

@@ -1,0 +1,14 @@
+---
+kind: SignalGroup
+metadata:
+  name: binary_channel
+  labels:
+    model: network_can
+    channel: binary_channel
+  annotations:
+    vector_type: binary
+spec:
+  signals:
+    - signal: can
+      annotations:
+        mime_type: 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1;interface_id=3'

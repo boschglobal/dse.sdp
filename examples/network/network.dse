@@ -1,0 +1,26 @@
+simulation
+channel binary_channel
+network can 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id={{BUS_ID}};interface_id={{INTERFACE_ID}}'
+network pdu 'application/x-automotive-bus;interface=stream;type=pdu;schema=fbs;swc_id={{SWC_ID}}'
+
+uses
+dse.sdp https://github.com/boschglobal/dse.sdp v0.8.26
+
+stack network_stack
+model network_can Network_CAN uid=42
+channel binary_channel binary
+var BUS_ID 1
+var INTERFACE_ID 3
+var MIMETYPE network can mimetype
+var SIGNAL network can signal
+file signalgroup.yaml signalgroup_can.yaml
+annotation node_id 24
+
+model network_pdu Network_PDU uid=74
+channel binary_channel binary
+var SWC_ID 47
+var MIMETYPE network pdu mimetype
+var SIGNAL network pdu signal
+file signalgroup.yaml signalgroup_pdu.yaml
+annotation swc_id 47
+annotation ecu_id 4

@@ -27,6 +27,7 @@ export EXAMPLE_VERSION ?= 0.8.26
 export HOST_ENTRYDIR ?= $(shell pwd -P)
 export HOST_DOCKER_WORKSPACE ?= $(shell pwd -P)
 export TESTSCRIPT_E2E_DIR ?= tests/e2e
+export PACKAGE_VERSION ?= 0.0.1
 TESTSCRIPT_E2E_FILES = $(wildcard $(TESTSCRIPT_E2E_DIR)/*/*.txtar)
 
 
@@ -79,8 +80,8 @@ cleanall: clean
 .PHONY: docker
 docker:
 	$(MAKE) -C graph docker
-	docker build -f .devcontainer/Dockerfile-builder --tag dse-builder:test . ;\
-	docker build -f .devcontainer/Dockerfile --tag dse-devcontainer:test --build-arg DSE_BUILDER_IMAGE=dse-builder:test . ;\
+	docker build -f .devcontainer/Dockerfile-builder --tag dse-builder:test .
+	docker build -f .devcontainer/Dockerfile --tag dse-devcontainer:test --build-arg DSE_BUILDER_IMAGE=dse-builder:test .
 
 .PHONY: run_graph
 run_graph:
@@ -125,6 +126,7 @@ do-test_testscript-e2e:
 				-e GHE_PAT=$(GHE_PAT) \
 				-e AR_USER=$(AR_USER) \
 				-e AR_TOKEN=$(AR_TOKEN) \
+				-e PACKAGE_VERSION=$(PACKAGE_VERSION) \
 				-e RELEASE_VERSION=$(EXAMPLE_VERSION) \
 				$$t; \
 	done

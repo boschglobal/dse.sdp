@@ -276,4 +276,3 @@ jobs:
           docker image ls -a
           docker image push ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.container }}:latest
           docker image push ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.container }}:${{ steps.meta.outputs.version }}
-

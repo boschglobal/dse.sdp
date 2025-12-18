@@ -1,0 +1,95 @@
+env NAME_CAN=network_can
+env NAME_PDU=network_pdu
+
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+
+env NW_EXAMPLE_DIR=$REPODIR/examples/network
+exec cp $NW_EXAMPLE_DIR/network.dse $WORKDIR/
+exec cp $NW_EXAMPLE_DIR/signalgroup_can.yaml $WORKDIR/
+exec cp $NW_EXAMPLE_DIR/signalgroup_pdu.yaml $WORKDIR/
+
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh $WORKDIR/network.dse
+
+stdout 'Load YAML File: data/simulation.yaml'
+stdout 'Loading symbol: model_create ... ok'
+stdout 'Loading symbol: model_step ... ok'
+stdout 'Loading symbol: model_destroy ... not found'
+stdout 'Run the Simulation ...'
+stdout 'Controller exit ...'
+
+stdout 'RX \(03e9\): Hello World! from node_id=24'
+stdout 'RX \(03ea\): Hello World! from node_id=24'
+stdout 'RX \(03eb\): Hello World! from node_id=24'
+stdout 'RX \(03ec\): Hello World! from node_id=24'
+
+stdout 'RX \(000003e9\): Hello World! from swc_id=47'
+stdout 'RX \(000003ea\): Hello World! from swc_id=47'
+stdout 'RX \(000003eb\): Hello World! from swc_id=47'
+stdout 'RX \(000003ec\): Hello World! from swc_id=47'
+
+
+# TEST: trace wildcard.
+exec sh -e test_trace_wildcard.sh
+
+stderr 'Using Valgrind'
+stdout '\(network_can\) 0.000000 \[1:24:3\] TX 3e9 1 29 :'
+stdout '48 65 6c 6c 6f 20 57 6f  72 6c 64 21 20 66 72 6f  6d 20 6e 6f 64 65 5f 69  64 3d 32 34 00'
+stdout '\(network_can\) 0.000500 \[1:24:3\] RX 3e9 1 29 :'
+stdout '\(network_can\) 0.000500 \[1:24:3\] TX 3ea 1 29 :'
+stdout '\(network_can\) 0.001000 \[1:24:3\] RX 3ea 1 29 :'
+stdout '\(network_can\) 0.001000 \[1:24:3\] TX 3eb 1 29 :'
+stdout '\(network_can\) 0.001500 \[1:24:3\] RX 3eb 1 29 :'
+stdout '\(network_can\) 0.001500 \[1:24:3\] TX 3ec 1 29 :'
+stdout '\(network_can\) 0.002000 \[1:24:3\] RX 3ec 1 29 :'
+stdout '\(network_can\) 0.002000 \[1:24:3\] TX 3ed 1 29 :'
+
+stdout '\(network_pdu\) 0.000500 \[42:4] RX 3e9 28 :'
+stdout '48 65 6c 6c 6f 20 57 6f  72 6c 64 21 20 66 72 6f  6d 20 73 77 63 5f 69 64  3d 34 37 00'
+stdout 'ETH:    src_mac=0000000087654321  dst_mac=0000000056789abc'
+stdout 'ETH:    ethertype=0001  tci_pcp=02  tci_dei=03  tci_vid=0004'
+stdout 'IP:     src_addr=0001:0002:0003:0004:0005:0006:0007:0008'
+stdout 'IP:     dst_addr=0002:0002:0004:0004:0006:0006:0008:0008'
+stdout 'IP:     src_port=1092  dst_port=0978  proto=17'
+stdout 'DOIP:   protocol_version=1  payload_type=2'
+
+
+# TEST: trace frame list.
+exec sh -e test_trace_framelist.sh
+
+stderr 'Using Valgrind'
+stdout '\(network_can\) 0.000500 \[1:24:3\] TX 3ea 1 29 :'
+stdout '\(network_can\) 0.001000 \[1:24:3\] RX 3ea 1 29 :'
+stdout '\(network_can\) 0.001000 \[1:24:3\] TX 3eb 1 29 :'
+stdout '\(network_can\) 0.001500 \[1:24:3\] RX 3eb 1 29 :'
+
+! stdout '\(network_can\) 0.000000 \[1:24:3\] TX 3e9 1 29 :'
+! stdout '\(network_can\) 0.000500 \[1:24:3\] RX 3e9 1 29 :'
+! stdout '\(network_can\) 0.001500 \[1:24:3\] TX 3ec 1 29 :'
+! stdout '\(network_can\) 0.002000 \[1:24:3\] RX 3ec 1 29 :'
+! stdout '\(network_can\) 0.002000 \[1:24:3\] TX 3ed 1 29 :'
+
+
+-- test_trace_wildcard.sh --
+DSE_SIMER_IMAGE="${DSE_SIMER_IMAGE:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm \
+    -v $ENTRYWORKDIR/out/sim:/sim \
+    --network=host \
+    "${DSE_SIMER_IMAGE}" -valgrind $NAME_CAN \
+        -env $NAME_CAN:SIMBUS_LOGLEVEL=4 \
+        -env $NAME_CAN:NCODEC_TRACE_CAN_1=* \
+        -env $NAME_PDU:NCODEC_TRACE_PDU_47=*
+
+
+-- test_trace_framelist.sh --
+DSE_SIMER_IMAGE="${DSE_SIMER_IMAGE:-ghcr.io/boschglobal/dse-simer:latest}"
+docker run --name simer -i --rm \
+    -v $ENTRYWORKDIR/out/sim:/sim \
+    --network=host \
+    "${DSE_SIMER_IMAGE}" -valgrind $NAME_CAN \
+        -env $NAME_CAN:SIMBUS_LOGLEVEL=4 \
+        -env $NAME_CAN:NCODEC_TRACE_CAN_1=0x3ea,0x3eb

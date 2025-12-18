@@ -76,7 +76,7 @@ title DSE Script Syntax
 simulation = "simulation", [ "arch=", ARCH ], [ "stepsize=", STEP_SIZE ], [ "endtime=", END_TIME ];
 channel = { "channel", CHANNEL_NAME, { "network", NETWORK_NAME, MIMEtype}- }-;
 uses = {USES_NAME, URI, [ VERSION ], [ "path=", PATH ], [ "user=", USER ], [ "token=", TOKEN ]}-;
-var = { "var", VAR_NAME, VALUE}-;
+var = {"var", VAR_NAME, (VALUE | "uses", USES_NAME | "var", VAR_NAME | "network", NETWORK_NAME)}-;
 stack = "stack", STACK_NAME, [ "stacked=", ( "false" | "true" ) ], [ "sequential=", ( "false" | "true" ) ], [ "arch=", ARCH ];
 
 (* Model Construction Elements *)
@@ -92,11 +92,12 @@ model =
 channel = { "channel", CHANNEL_NAME, CHANNEL_ALIAS }-;
 envar = { "envar", ENVAR_NAME, VALUE }-;
 file = { "file", MODEL_FILE, (FILE_SOURCE | "uses", USES_NAME) }-;
+annotation = { "annotation", ANNOTATION_NAME, VALUE }-;
 
 
 workflow =
     "workflow", NAME, [ "uses ", USES_NAME ],
-    {[ "var", VAR_NAME, (VALUE | "uses", USES_NAME | "var", VAR_NAME)]}-;
+    {[ "var", VAR_NAME, (VALUE | "uses", USES_NAME | "var", VAR_NAME | "network", NETWORK_NAME)]}-;
 @endebnf
 
 @enduml

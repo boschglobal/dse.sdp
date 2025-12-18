@@ -14,6 +14,7 @@ import {
   Model,
   Var,
   EnvVar,
+  Annotation,
   Workflow,
   Stack,
 } from "../lexer/lexing";
@@ -24,6 +25,7 @@ class FsilParser extends EmbeddedActionsParser {
   public uses!: () => any;
   public vars!: () => any;
   public envvars!: () => any;
+  public annotations!: () => any;
   public stacked_models!: () => any;
   public networks!: () => any;
   public workflow_vars!: () => any;
@@ -40,7 +42,32 @@ class FsilParser extends EmbeddedActionsParser {
       return rest;
     }
 
+    function mergeByName(global: any[], inner: any[], getName: (item: any) => string): any[] {
+      const mergedMap = new Map<string, any>();
+      // Add all global vars/envars
+      for (const item of global) {
+        const name = getName(item);
+        mergedMap.set(name, item);
+      }
+      // Add all inner vars/envars - overrides added global item if same var/envar name
+      for (const item of inner) {
+        const name = getName(item);
+        mergedMap.set(name, item);
+      }
+      return Array.from(mergedMap.values());
+    }
+
+    interface Network {
+      signal: string;
+      mimetype: string;
+    }
+
+    let global_vars: string[] = [];
     let global_env_vars: string[] = [];
+    let stack_env_vars: string[] = [];
+    let stack_annotations: string[] = [];
+    let model_vars: string[] = [];
+    let channelCollection: Record<string, Network[]>
 
     // The main rule that parses the entire simulation statement.
     $.RULE("simulation", () => {
@@ -54,15 +81,15 @@ class FsilParser extends EmbeddedActionsParser {
       }
       children.uses = uses;
 
-      let vars = [];
       while ($.LA(1).tokenType === Var || $.LA(1).tokenType === EnvVar) {
         if ($.LA(1).tokenType === Var) {
-          vars = $.SUBRULE($.vars);
+          global_vars = $.SUBRULE($.vars);
         } else if ($.LA(1).tokenType === EnvVar) {
           global_env_vars = $.SUBRULE($.envvars);
         }
       }
-      children.vars = vars;
+      children.vars = global_vars;
+      children.env_vars = global_env_vars;
 
       children.stacks = $.SUBRULE($.stacked_models);
       return {
@@ -165,6 +192,20 @@ class FsilParser extends EmbeddedActionsParser {
       return env_vars;
     });
 
+    $.RULE("annotations", () => {
+      const annotations: any[] = [];
+      $.MANY({
+        DEF: () => {
+          const variable = $.CONSUME(Annotation);
+          annotations.push({
+            type: variable.tokenType.name.replace(" ", ""),
+            object: updateTokenObject(variable),
+          });
+        },
+      });
+      return annotations;
+    });
+
     $.RULE("workflow_vars", () => {
       const workflow_vars: any[] = [];
       $.MANY({
@@ -184,7 +225,14 @@ class FsilParser extends EmbeddedActionsParser {
       $.MANY({
         DEF: () => {
           const workflow = $.CONSUME(Workflow);
-          const workflow_vars = $.SUBRULE($.workflow_vars);
+          let workflow_vars = $.SUBRULE($.workflow_vars);
+
+          workflow_vars = Array.isArray(workflow_vars) ? workflow_vars : [workflow_vars];
+          if (model_vars.length > 0) {
+            let merged_vars = mergeByName(model_vars, workflow_vars, env => env.object.payload.var_name.value); // overrides workflow level vars if same var name in model_vars
+            workflow_vars = merged_vars;
+          }
+
           workflows.push({
             type: workflow.tokenType.name.replace(" ", ""),
             object: updateTokenObject(workflow),
@@ -201,18 +249,37 @@ class FsilParser extends EmbeddedActionsParser {
       const models: any[] = [];
 
       $.MANY(() => {
+        let model_files: string[] = [];
+        let model_env_vars: string[] = [];
+        model_vars = [];
+        let model_annotations: string[] = [];
+
         const model = $.CONSUME(Model);
         const model_channels = $.SUBRULE($.channels);
 
-        let model_files = [];
-        let env_vars = [];
         // Read model_files and env_vars in any order
-        while ($.LA(1).tokenType === File || $.LA(1).tokenType === EnvVar) {
+        while ($.LA(1).tokenType === File || $.LA(1).tokenType === EnvVar || $.LA(1).tokenType === Var || $.LA(1).tokenType === Annotation) {
           if ($.LA(1).tokenType === File) {
-            model_files = $.SUBRULE($.files);
+            model_files.push(...$.SUBRULE($.files));
           } else if ($.LA(1).tokenType === EnvVar) {
-            env_vars = $.SUBRULE($.envvars);
+            model_env_vars.push(...$.SUBRULE($.envvars));
+          } else if ($.LA(1).tokenType === Var) {
+            model_vars.push(...$.SUBRULE($.vars));
+          } else if ($.LA(1).tokenType === Annotation) {
+            model_annotations.push(...$.SUBRULE($.annotations));
           }
+        }
+
+        model_env_vars = Array.isArray(model_env_vars) ? model_env_vars : [model_env_vars];
+        if (global_env_vars.length > 0) {
+          let merged_envars = mergeByName(global_env_vars, stack_env_vars, env => env.object.payload.env_var_name.value); // overrides global level envars if same envar name in stack_env_vars
+          model_env_vars = mergeByName(merged_envars, model_env_vars, env => env.object.payload.env_var_name.value); // overrides with modellevel envars if same envar name in merged_envars
+        }
+
+        model_vars = Array.isArray(model_vars) ? model_vars : [model_vars];
+        if (global_vars.length > 0) {
+          let merged_vars = mergeByName(global_vars, model_vars, env => env.object.payload.var_name.value); // overrides global level vars if same envar name in model_vars
+          model_vars = merged_vars;
         }
 
         const workflow = $.SUBRULE($.workflow);
@@ -223,7 +290,9 @@ class FsilParser extends EmbeddedActionsParser {
           children: {
             channels: model_channels,
             files: model_files,
-            env_vars: env_vars,
+            env_vars: model_env_vars,
+            vars: model_vars,
+            annotations: model_annotations,
             workflow: workflow,
           },
         });
@@ -239,6 +308,8 @@ class FsilParser extends EmbeddedActionsParser {
           stack = $.CONSUME(Stack);
         },
       });
+      stack_env_vars = [];
+      stack_annotations = [];
       return stack;
     });
 
@@ -248,11 +319,22 @@ class FsilParser extends EmbeddedActionsParser {
         DEF: () => {
           const stack = $.SUBRULE($.stack);
 
-          let env_vars = $.SUBRULE($.envvars);
-          env_vars = Array.isArray(env_vars) ? env_vars : [env_vars];
-          if (global_env_vars.length > 0) {
-            env_vars = [...global_env_vars, ...env_vars];
+          // Read env_vars and annotations in any order
+          while ($.LA(1).tokenType === EnvVar || $.LA(1).tokenType === Annotation) {
+            if ($.LA(1).tokenType === EnvVar) {
+              stack_env_vars.push(...$.SUBRULE($.envvars));
+            } else if ($.LA(1).tokenType === Annotation) {
+              stack_annotations.push(...$.SUBRULE($.annotations));
+            }
           }
+
+          stack_env_vars = Array.isArray(stack_env_vars) ? stack_env_vars : [stack_env_vars];
+          if (global_env_vars.length > 0) {
+            const merged_envars = mergeByName(global_env_vars, stack_env_vars, env => env.object.payload.env_var_name.value);
+            stack_env_vars = merged_envars;
+          }
+
+          stack_annotations = Array.isArray(stack_annotations) ? stack_annotations : [stack_annotations];
 
           let name = "default";
           if (stack && "tokenType" in stack) {
@@ -277,7 +359,8 @@ class FsilParser extends EmbeddedActionsParser {
               type: "Stack",
               name: name,
               object: updateTokenObject(stack),
-              env_vars: env_vars,
+              env_vars: stack_env_vars,
+              annotations: stack_annotations,
               children: {
                 models: models,
               },
@@ -327,7 +410,7 @@ type DiagnosticLike = {
   source: string;
 };
 export function parse(inputText: string): DiagnosticLike[] | any {
-  const lines = inputText.split(/\r?\n/);
+  const lines = inputText.split(/\r?\n/).map(line => line.replace(/\s*#.*$/, "").trim());
   const diagnostics: DiagnosticLike[] = [];
   let lexingResult = {
     tokens: [] as IToken[],

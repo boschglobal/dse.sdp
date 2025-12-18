@@ -61,9 +61,29 @@ Declares a communication channel.
 </pre>
 
 ### network  
-Defines a network interface.
+The network keyword is used in two related but distinct contexts:
+#### Defining a network interface
+At the channel level, network declares a named network interface and its MIME type.
 <pre>
 <b>network</b> CAN 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+</pre>
+ - CAN is the network or signal name
+ - The string value is the network MIME type
+
+#### Referencing a network from model variables
+At the model level, the network keyword can also be used as a reference type inside var declarations.
+This allows to apply templating to the MIME type using variables.
+The <b>mimetype</b> or <b>signal</b> keyword after the network/signal name in network reference determines which property of the network is assigned to the variable
+<pre>
+<b>simulation</b>
+<b>channel</b> binary_channel
+<b>network</b> can 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id={{BUS_ID}};interface_id={{INTERFACE_ID}}'
+<b>model</b> network_can Network_CAN <b>uid</b>=42
+<b>channel</b> binary_channel binary
+<b>var</b> BUS_ID 1
+<b>var</b> INTERFACE_ID 3
+<b>var</b> MIMETYPE <b>network</b> can <b>mimetype</b>
+<b>var</b> SIGNAL   <b>network</b> can <b>signal</b>
 </pre>
 
 ### uses  

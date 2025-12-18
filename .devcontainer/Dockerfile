@@ -5,7 +5,7 @@
 # DSE Builder
 # ===========
 ARG DSE_BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
-FROM $DSE_BUILDER_IMAGE AS dse-builder
+FROM ${DSE_BUILDER_IMAGE} AS dse-builder
 
 
 # Go Builder

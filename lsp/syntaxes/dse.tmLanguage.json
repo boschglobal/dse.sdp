@@ -26,7 +26,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.dse",
-                    "match": "(?<![\\w./-])(simulation|model|channel|uses|workflow|as|stack|network|var|arch|file|uid|envar|stepsize|endtime|user|token|stacked|sequential|path|external)(?![\\w./-])",
+                    "match": "(?<![\\w./-])(simulation|model|channel|uses|workflow|as|stack|network|var|arch|file|uid|envar|stepsize|endtime|user|token|stacked|sequential|path|external|annotation|mimetype|signal)(?![\\w./-])",
                     "scope": "keyword.control"
                 }
             ]
