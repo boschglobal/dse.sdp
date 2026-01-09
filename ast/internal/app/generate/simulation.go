@@ -170,6 +170,8 @@ func generateChannelSelectors(model ast.Model, channel ast.ModelChannel) *kind.L
 	labels := kind.Labels{"model": model.Name}
 	if strings.HasSuffix(channel.Alias, "_channel") {
 		labels["channel"] = strings.Replace(channel.Alias, "_channel", "_vector", 1)
+	} else if strings.HasSuffix(channel.Alias, "_vector") {
+		labels["channel"] = channel.Alias
 	}
 	return &labels
 }
