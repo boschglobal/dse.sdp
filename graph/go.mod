@@ -4,7 +4,7 @@ go 1.23.5
 
 require (
 	github.com/boschglobal/dse.clib/extra/go/command v1.0.36
-	github.com/boschglobal/dse.schemas/code/go/dse v1.2.37
+	github.com/boschglobal/dse.schemas/code/go/dse v1.2.38
 	github.com/gabriel-vasile/mimetype v1.4.12
 	github.com/jedib0t/go-pretty/v6 v6.7.8
 	github.com/neo4j/neo4j-go-driver/v5 v5.28.4
