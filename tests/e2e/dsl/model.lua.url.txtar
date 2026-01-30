@@ -8,8 +8,8 @@ cd $WORKDIR
 exec sh -e workflow.sh hello.dse
 
 exists out/downloads/hello.lua
-exists out/sim/data/hello.lua
-cmp out/downloads/hello.lua out/sim/data/hello.lua
+exists out/sim/model/simple/hello.lua
+cmp out/downloads/hello.lua out/sim/model/simple/hello.lua
 stdout 'Hello from Lua model'
 
 -- hello.dse --

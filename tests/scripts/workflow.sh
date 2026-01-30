@@ -66,6 +66,11 @@ if echo " $* " | grep -q " BUILD_ONLY "; then
     run_builder
 elif echo " $* " | grep -q " REPORT_ONLY "; then
     run_report
+elif echo " $* " | grep -q " SIMER_ONLY "; then
+    run_simer
+elif echo " $* " | grep -q " BUILD_SIMER "; then
+    run_builder
+    run_simer
 else
     run_builder
     run_report

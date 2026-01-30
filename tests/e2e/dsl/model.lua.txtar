@@ -6,7 +6,7 @@ cd $WORKDIR
 # TEST: operate the simulation
 exec sh -e workflow.sh hello.dse
 
-exists out/sim/data/hello.lua
+exists out/sim/model/simple/hello.lua
 stdout 'Hello from Lua model'
 
 -- hello.dse --

@@ -1,111 +1,42 @@
-skip 'TODO update/check'
+env DEBUG=0
+env EXAMPLE_DSE=openloop.dse
+env EXAMPLE_DIR=$REPODIR/examples/openloop
 
 # SETUP: construct working folder layout
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r $EXAMPLE_DIR/. $WORKDIR
 exec cp -r . $WORKDIR
 cd $WORKDIR
 
-# SETUP: graph reports
-exec mkdir -p $WORKDIR/.local/share/dse-graph
-exec cp -r $REPODIR/graph/cmd/graph/reports $WORKDIR/.local/share/dse-graph/
-env HOME=$WORKDIR
+# TEST: build the simulation
+exec sh -c 'ls -lhR | awk "{print \$1, \$3, \$5, \$9}"'
+exec sh -e workflow.sh $WORKDIR/$EXAMPLE_DSE BUILD_ONLY
+exec sh -c 'if [ -n "$DEBUG" ]; then cd out/sim; ls -lhR | awk "{print \$1, \$3, \$5, \$9}"; fi'
 
-# SETUP: openloop example
-exec mkdir -p $WORKDIR/input
-exec cp -r $REPODIR/examples/vscode/input/. $WORKDIR/input
-exec cp $REPODIR/examples/vscode/openloop.dse $WORKDIR/
+exists out/sim/data/simulation.yaml
+exists out/sim/model/input/lib/libcsv.so
+exists out/sim/model/input/data/input.csv
+exists out/sim/model/input/data/model.yaml
+exists out/sim/model/input/data/signalgroup.yaml
+exists out/sim/model/linear/lib/libfmimcl.so
+exists out/sim/model/linear/linear_fmu/binaries/linux64/fmu2linear.so
+exists out/sim/model/linear/data/model.yaml
+exists out/sim/model/linear/data/signalgroup.yaml
 
-# TEST: run the openloop example
-exec sh -e workflow.sh openloop.dse
+# TEST: run reports
+! exec sh -e workflow.sh $WORKDIR/$EXAMPLE_DSE REPORT_ONLY
+stdout 'Ran 6 Reports | Passed: 5 | Failed: 1'
+stdout '\[PASS\] ModelInstance Name Check'
+stdout '\[PASS\] Model UID Check'
+stdout '\[PASS\] Channel .expectedModelCount.'
+stdout '\[PASS\] Count .ModelInst. in AST and SIM'
+stdout '\[PASS\] Simbus Channel Name Consistency'
+stdout '\[FAIL\] Duplicate Writes Check'
 
+# TEST: run the simulation
+exec sh -e workflow.sh $WORKDIR/$EXAMPLE_DSE SIMER_ONLY
 
-# dse-builder
-
-stdout 'Parameters:'
-stdout '  input_file = openloop.dse'
-stdout '  output_file = openloop.json'
-stdout 'Read from file: openloop.dse'
-stdout 'Parsing ...'
-stdout 'Writing to file: openloop.json'
-
-stderr 'Running command: convert'
-stderr '  input          : openloop.json'
-stderr '  log            : 4'
-stderr '  output         : openloop.yaml'
-stderr 'Reading file: openloop.json'
-stderr 'Writing file: openloop.yaml'
-
-stderr 'Running command: resolve'
-stderr '  cache          : out/cache'
-stderr '  input          : openloop.yaml'
-stderr 'INFO Reading AST file file=openloop.yaml'
-stderr 'INFO Update metadata for repo name=dse.modelc'
-stderr 'INFO Update metadata for repo name=dse.fmi'
-stderr 'INFO Updating model metadata model=dse.modelc.csv name=input'
-stderr 'INFO Repo metadata located repo=dse.modelc model=dse.modelc.csv'
-stderr 'INFO Updating model uses model=dse.modelc.csv name=input'
-stderr 'INFO Updating model metadata model=dse.fmi.mcl name=linear'
-stderr 'INFO Repo metadata located repo=dse.fmi model=dse.fmi.mcl'
-stderr 'INFO Task metadata located repo=dse.fmi taskName=generate-fmimcl'
-stderr 'INFO Updating model uses model=dse.fmi.mcl name=linear'
-
-stderr 'Running command: generate'
-stderr '  input          : openloop.yaml'
-stderr '  log            : 4'
-stderr '  simulation     : false'
-stderr '  taskfile       : false'
-stderr 'Reading file: openloop.yaml'
-stderr 'Writing to folder: .'
-stderr 'Writing taskfile: Taskfile.yml'
-stderr 'Writing simulation: simulation.yaml'
-
-stdout 'SIM Model input -> sim/model/input'
-stdout 'SIM Model linear -> sim/model/linear'
-stderr 'task: "default" started'
-stderr 'task: "build" started'
-stderr 'task: "build-models" started'
-stderr 'task: "model-input" started'
-stderr 'task: "model-linear" started'
-stderr 'task: "download-file" started'
-stderr 'task: "download-file" finished'
-stderr 'task: "model-input" finished'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:generate-fmimcl" started'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-mcl" started'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-mcl" finished'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-signalgroup" started'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-signalgroup" finished'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:generate-fmimcl" finished'
-stderr 'task: "model-linear" finished'
-stderr 'task: "build-models" finished'
-stderr 'task: "build" finished'
-stderr 'task: "default" finished'
-
-# dse-report
-
-stdout 'Name: Duplicate Writes Check'
-stdout 'Query: Duplicate Write Signals'
-stdout 'Evaluation: Report Passed'
-stdout 'Name: ModelInstance Name Check'
-stdout 'Query: Unique ModelInstance Name'
-stdout 'Evaluation: Report Passed'
-stdout 'Name: Model UID Check'
-stdout 'Query: Unique Non-zero Model UID'
-stdout 'Evaluation: Report Passed'
-stdout 'Query: Expected Count'
-stdout 'Evaluation: Report Passed'
-stdout 'Query: Model to Channel Mapping'
-stdout 'Query: Expected Count'
-stdout 'Evaluation: Report Passed'
-stdout 'Name: Simbus Channel Name Consistency'
-stdout 'Query: Channel Name Match'
-stdout 'Evaluation: Report Passed'
-stdout 'Ran 6 Reports | Passed: 6 | Failed: 0'
-
-# dse-simer
-
-stdout 'Load YAML File: data/simulation\.yaml'
-stdout 'Load YAML File: model/input/data/model.yaml'
-stdout 'Loading symbol: model_create \.\.\. ok'
-stdout 'Loading symbol: model_step \.\.\. ok'
-stdout 'Loading symbol: model_destroy \.\.\. ok'
-stdout 'Measurement File: /sim/measurement\.mf4'
+stdout '\[0\] uid=1552937894, val=2.300000, final_val=2.300000, name=factor'
+stdout '\[1\] uid=348705738, val=-3.300000, final_val=-3.300000, name=offset'
+stdout '\[2\] uid=4191711099, val=1.300000, final_val=1.300000, name=input'
+stdout '\[3\] uid=2041138948, val=-0.310000, final_val=-0.310000, name=output'
