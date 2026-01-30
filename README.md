@@ -10,7 +10,13 @@
 
 Simulation Development Platform for the Dynamic Simulation Environment (DSE) Core Platform.
 
-![DSE SDP Overview](doc/static/overview.png)
+### User Guide
+
+* [SDP Setup Guide][ug_sdp]
+* [DSE Script and Simulation Builder][ug_builder]
+* [Simer - Simulation Runner][ug_simer]
+* [Lua Models][ug_lua]
+* [SDP Environment Variables][ug_env]
 
 
 ### Project Structure
@@ -27,6 +33,7 @@ dse.sdp
     └── graph               <-- Graph examples (for Report tool)
     └── models              <-- Model examples, used by E2E tests.
     └── openloop            <-- Open Loop simulation using FMU based Linear Equation model.
+    └── openloop_lua        <-- Open Loop simulation implemented with Lua models.
     └── notebook            <-- Jupyter base simulation example.
     └── vscode              <-- VS Code integration examples.
 └── graph                   <-- Graph tool (including Report tool).
@@ -55,6 +62,7 @@ dse.sdp
 * [VS Code Integration Example](examples/vscode/README.md)
 * [Notebook Based Simulation Example](examples/notebook/README.md)
 * [Open Loop Simulation Example](examples/openloop/README.md)
+* [Open Loop Simulation with Lua models](examples/openloop_lua/README.md)
 
 
 ### Running ModelC Example Simulations
@@ -240,3 +248,12 @@ See the [LICENSE](LICENSE) and [NOTICE](./NOTICE) files for details.
 ### Third Party Licenses
 
 [Third Party Licenses](licenses/)
+
+
+
+<!---  Links --->
+[ug_builder]: https://boschglobal.github.io/dse.doc/docs/user/builder/
+[ug_simer]: https://boschglobal.github.io/dse.doc/docs/user/simer/
+[ug_lua]: https://boschglobal.github.io/dse.doc/docs/user/models/lua/
+[ug_sdp]: https://boschglobal.github.io/dse.doc/docs/user/guides/sdp/
+[ug_env]: https://boschglobal.github.io/dse.doc/docs/user/envars/sdp/

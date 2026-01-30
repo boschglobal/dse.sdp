@@ -1,0 +1,23 @@
+skip 'TODO test'
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh hello.dse
+
+exists out/downloads/hello.lua
+exists out/sim/data/hello.lua
+cmp out/downloads/hello.lua out/sim/data/hello.lua
+stdout 'Hello from Lua model'
+
+-- hello.dse --
+simulation
+channel signal
+
+uses
+Hello https://raw.githubusercontent.com/boschglobal/dse.sdp/main/tests/testdata/e2e/hello.lua
+
+model simple Hello
+channel signal data

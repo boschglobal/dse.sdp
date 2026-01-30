@@ -40,13 +40,20 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 		}
 
 		if u.Scheme == "file" {
-			dir := strings.TrimSuffix(u.Path, "/")
-			taskfile := filepath.Join(dir, "Taskfile.yml")
-
-			includes[fmt.Sprintf("%s", uses.Name)] = Include{
-				Taskfile: taskfile,
-				Dir:      dir,
-				Vars:     &vars,
+			mcl, isDir := resolveMclFromUses(uses)
+			switch mcl.Type {
+			case "": // local Taskfile reference
+				if isDir {
+					dir := strings.TrimSuffix(u.Path, "/")
+					taskfile := filepath.Join(dir, "Taskfile.yml")
+					includes[fmt.Sprintf("%s", uses.Name)] = Include{
+						Taskfile: taskfile,
+						Dir:      dir,
+						Vars:     &vars,
+					}
+				} else {
+					continue
+				}
 			}
 
 		} else {
@@ -98,7 +105,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 	return includes
 }
 
-func createModelDownloadDeps(modelUses ast.Uses) []Dep {
+func createModelDownloadDeps(modelUses ast.Uses, mcl MclInfo) []Dep {
 	deps := []Dep{
 		{
 			Task: "download-file",
@@ -129,32 +136,102 @@ func createModelDownloadDeps(modelUses ast.Uses) []Dep {
 	return deps
 }
 
-func createModelCopyDeps(modelUses ast.Uses) []Dep {
-	deps := []Dep{
-		{
-			Task: "copy-file",
-			Vars: func() *OMap {
-				om := OMap{orderedmap.NewOrderedMap[string, string]()}
-				om.Set("URL", "{{.REPO}}/{{.PACKAGE_URL}}")
-				om.Set("FILE", "downloads/{{base .PACKAGE_URL}}")
-				return &om
-			}(),
-		},
+func createRemoteLuaDeps(modelUses ast.Uses, mcl MclInfo, cmds *[]Cmd) []Dep {
+	deps := []Dep{}
+
+	deps = createModelDownloadDeps(modelUses, mcl)
+	if mcl.Path == "" { // remote standalone lua model url
+		*cmds = append(*cmds,
+			Cmd{Cmd: "cp downloads/{{base .PACKAGE_URL}} {{.SIMDIR}}/{{.PATH}}/{{base .PACKAGE_URL}}"},
+		)
+	} else { // remote archive url with lua model path
+		pathDir := filepath.Dir(mcl.Path)
+		*cmds = append(
+			*cmds,
+			Cmd{Cmd: fmt.Sprintf("unzip -ojq downloads/{{base .PACKAGE_URL}} '%s/*' -d {{.SIMDIR}}/{{.PATH}} 2>/dev/null", pathDir)},
+		)
 	}
 	return deps
 }
 
-func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
-	modelUrl, _ := urlEscapedParse(modelUses.Url)
-	deps := func() []Dep {
-		switch modelUrl.Scheme {
-		case "file":
-			// <repo>/<package:file> -> downloads/base(<package:file>)
-			return createModelCopyDeps(modelUses)
-		default:
-			return createModelDownloadDeps(modelUses)
+func createModelCopyDeps(mcl MclInfo) []Dep {
+	deps := []Dep{}
+	if mcl.Type == "lua" && mcl.Path != "" { // path within zip file
+		deps = []Dep{
+			{
+				Task: "unzip-dir",
+				Vars: func() *OMap {
+					om := OMap{orderedmap.NewOrderedMap[string, string]()}
+					om.Set("ZIP", fmt.Sprintf("{{.ENTRYDIR}}/%s", filepath.Base(mcl.Url)))
+					om.Set("ZIPDIR", func(p *string) string {
+						if filepath.Dir(*p) == "." {
+							return ""
+						}
+						return filepath.Dir(*p)
+					}(&mcl.Path))
+					om.Set("DIR", fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}"))
+					return &om
+				}(),
+			},
 		}
-	}()
+	} else {
+
+		FILE := "downloads/{{base .PACKAGE_URL}}"
+		URL := "{{.REPO}}/{{.PACKAGE_URL}}"
+		if mcl.Type == "lua" {
+			FILE = "{{.SIMDIR}}/{{.PATH}}/{{base .PACKAGE_URL}}" // Lua models are copied to sim/data folder
+		}
+		deps = []Dep{
+			{
+				Task: "copy-file",
+				Vars: func() *OMap {
+					om := OMap{orderedmap.NewOrderedMap[string, string]()}
+					om.Set("URL", URL)
+					om.Set("FILE", FILE)
+					return &om
+				}(),
+			},
+		}
+	}
+	return deps
+}
+
+func resolveMclFromUses(u ast.Uses) (MclInfo, bool) {
+	// Case 1: inner path (inside zip)
+	if u.Path != nil && strings.EqualFold(filepath.Ext(*u.Path), ".lua") {
+		return MclInfo{
+			Type: "lua",
+			Path: *u.Path,
+			Url:  u.Url,
+		}, false
+	}
+
+	abs, err := filepath.Abs(u.Url)
+	if err == nil {
+		info, err := os.Stat(abs)
+		if err == nil {
+			if strings.EqualFold(filepath.Ext(u.Url), ".lua") {
+				return MclInfo{
+					Type: "lua",
+					Url:  u.Url,
+				}, info.IsDir() // if info.IsDir() is true then the uses item is pointing to local repo folder(Taskfile.yaml is loaded from that path).
+			}
+		}
+	}
+
+	// Case 2: direct URL
+	if strings.EqualFold(filepath.Ext(u.Url), ".lua") {
+		return MclInfo{
+			Type: "lua",
+			Url:  u.Url,
+		}, false
+	}
+	return MclInfo{Type: ""}, false
+}
+
+func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
+	mcl, _ := resolveMclFromUses(modelUses)
+	modelUrl, _ := urlEscapedParse(modelUses.Url)
 	cmds := []Cmd{
 		{
 			Cmd: fmt.Sprintf("echo \"SIM Model %s -> {{.SIMDIR}}/{{.PATH}}\"", model.Name),
@@ -163,10 +240,27 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 			Cmd: "mkdir -p {{.SIMDIR}}/{{.PATH}}/data",
 		},
 	}
+	deps := func() []Dep {
+		switch modelUrl.Scheme {
+		case "file":
+			// <repo>/<package:file> -> downloads/base(<package:file>)
+			return createModelCopyDeps(mcl)
+		case "https":
+			if mcl.Type == "lua" {
+				return createRemoteLuaDeps(modelUses, mcl, &cmds)
+			} else {
+				return createModelDownloadDeps(modelUses, mcl)
+			}
+		default:
+			return nil
+		}
+	}()
 	sources := []string{}
-	generates := []string{
-		"downloads/{{base .PACKAGE_URL}}",
-	}
+	generates := func() []string {
+		return []string{
+			"downloads/{{base .PACKAGE_URL}}",
+		}
+	}()
 	md := map[string]interface{}{}
 	if model.Metadata != nil {
 		md = *model.Metadata
@@ -178,10 +272,15 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 		Vars: func() *OMap {
 			pkgUrlKey := "download"
 			repo := modelUses.Url
+			u, _ := url.Parse(repo)
 			if modelUrl.Scheme == "file" {
 				// When the URL is a "file", use the package:file key.
-				pkgUrlKey = "file"
-				repo = strings.TrimSuffix(modelUrl.Path, "/")
+				if mcl.Type == "lua" { // eg u.Path : /mnt/c/Users/hello.lua
+					repo = filepath.Dir(u.Path)
+				} else {
+					pkgUrlKey = "file"
+					repo = strings.TrimSuffix(modelUrl.Path, "/") // eg modelUrl.Path : /mnt/c/Users/dse.sdp/
+				}
 			}
 
 			om := OMap{orderedmap.NewOrderedMap[string, string]()}
@@ -202,8 +301,19 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 					if r := recover(); r != nil {
 					}
 				}()
-				om.Set("PACKAGE_URL", md["package"].(map[string]interface{})[pkgUrlKey].(string))
-				om.Set("PACKAGE_PATH", md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string))
+				switch mcl.Type {
+				case "lua":
+					if modelUrl.Scheme == "file" {
+						om.Set("PACKAGE_URL", filepath.Base(u.Path))
+						om.Set("PACKAGE_PATH", mcl.Path)
+					} else if modelUrl.Scheme == "https" {
+						om.Set("PACKAGE_URL", mcl.Url)
+						om.Set("PACKAGE_PATH", mcl.Path)
+					}
+				case "":
+					om.Set("PACKAGE_URL", md["package"].(map[string]interface{})[pkgUrlKey].(string))
+					om.Set("PACKAGE_PATH", md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string))
+				}
 			}()
 
 			if model.Vars != nil {
@@ -340,6 +450,18 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 						continue
 					}
 					downloadFile := parseUrl(task, fileUses, model.Name)
+					if fileUses.Path != nil && *fileUses.Path != "" { // reference is an archive, file must be extracted from the archive path
+						cmds := []Cmd{
+							{
+								Cmd: fmt.Sprintf("unzip -ojq %s '%s' -d downloads/models/{{.MODEL}}", downloadFile, *fileUses.Path),
+							},
+							{
+								Cmd: fmt.Sprintf("rm -rf %s", downloadFile),
+							},
+						}
+						*task.Cmds = append(*task.Cmds, cmds...)
+						downloadFile = fmt.Sprintf("downloads/models/{{.MODEL}}/%s", filepath.Base(*fileUses.Path))
+					}
 					usesDownloadFilePaths[fileUses.Name] = downloadFile
 					*task.Cmds = append(*task.Cmds, Cmd{
 						Cmd: fmt.Sprintf("cp %s %s", downloadFile, filePath),
@@ -534,7 +656,6 @@ func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 	modelTasks := map[string]Task{}
 
 	simSpec := c.simulationAst
-
 	for _, stack := range simSpec.Stacks {
 		if stack.Name == "external" {
 			continue

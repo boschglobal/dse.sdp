@@ -87,7 +87,7 @@ The <b>mimetype</b> or <b>signal</b> keyword after the network/signal name in ne
 </pre>
 
 ### uses  
-Imports external dependencies such as modules, FMUs, or files.
+Imports external dependencies such as modules, FMUs, files or Lua models.
 The `uses` keyword supports both **remote** and **local** references.
 
 #### Remote references
@@ -106,6 +106,21 @@ Both absolute and relative paths are supported.
 <b>uses</b>
 example1 /home/users/example.zip
 example2 example.zip
+</pre>
+
+#### Lua model references
+Lua-based models can be referenced using the `file://` URI scheme (absolute path).
+A reference may point directly to a Lua file or to an archive (`.zip`) containing one or more Lua models.
+
+<pre>
+<b>uses</b>
+Csv file:///{{.PWD}}/csv.lua
+Linear file:///{{.PWD}}/models.zip path=linear/linear.lua
+...
+<b>model</b> csv Csv
+...
+<b>model</b> linear Linear
+...
 </pre>
 
 ### var  

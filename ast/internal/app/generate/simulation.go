@@ -7,7 +7,9 @@ package generate
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -16,6 +18,44 @@ import (
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 	"github.com/boschglobal/dse.schemas/code/go/dse/kind"
 )
+
+type MclInfo struct {
+	Type string
+	Path string
+	Url  string
+}
+
+func getMclType(name string, uses *[]ast.Uses) MclInfo {
+	if uses == nil {
+		return MclInfo{}
+	}
+
+	for _, u := range *uses {
+		if u.Name != name {
+			continue
+		}
+
+		// Case 1: inner path (inside zip)
+		if u.Path != nil {
+			if strings.EqualFold(filepath.Ext(*u.Path), ".lua") {
+				return MclInfo{
+					Type: "lua",
+					Path: *u.Path,
+				}
+			}
+		}
+
+		// Case 2: direct URL
+		if strings.EqualFold(filepath.Ext(u.Url), ".lua") {
+			return MclInfo{
+				Type: "lua",
+				Path: u.Url,
+			}
+		}
+	}
+
+	return MclInfo{}
+}
 
 func (c *GenerateCommand) GenerateSimulation() error {
 	var simulationPath = filepath.Join(c.outputPath, "simulation.yaml")
@@ -91,6 +131,7 @@ func (c *GenerateCommand) GenerateSimulation() error {
 			models = append(models, *simbusModel)
 		}
 		for _, astModel := range astStack.Models {
+			mcl := getMclType(astModel.Model, simSpec.Uses)
 			channels := []kind.Channel{}
 			for _, c := range astModel.Channels {
 				if slices.Contains(simChannels, c.Name) {
@@ -140,7 +181,7 @@ func (c *GenerateCommand) GenerateSimulation() error {
 					Name: modelName,
 				},
 				Channels:    &channels,
-				Runtime:     generateModelRuntime(astModel),
+				Runtime:     generateModelRuntime(astModel, mcl),
 				Annotations: (*kind.Annotations)(&annotationMap),
 			}
 			models = append(models, model)
@@ -176,7 +217,7 @@ func generateChannelSelectors(model ast.Model, channel ast.ModelChannel) *kind.L
 	return &labels
 }
 
-func generateModelRuntime(model ast.Model) *kind.ModelInstanceRuntime {
+func generateModelRuntime(model ast.Model, mcl MclInfo) *kind.ModelInstanceRuntime {
 	env := map[string]string{}
 	if model.Env != nil {
 		for _, e := range *model.Env {
@@ -184,10 +225,7 @@ func generateModelRuntime(model ast.Model) *kind.ModelInstanceRuntime {
 		}
 	}
 	runtime := kind.ModelInstanceRuntime{
-		Env: &env,
-		Paths: &[]string{
-			fmt.Sprintf("model/%s/data", model.Name),
-		},
+		Env:      &env,
 		External: model.External,
 	}
 	if model.Arch != nil {
@@ -199,6 +237,27 @@ func generateModelRuntime(model ast.Model) *kind.ModelInstanceRuntime {
 			runtime.X32 = &x32
 		}
 	}
+
+	switch mcl.Type {
+	case "lua":
+		files := []string{}
+		runtime.Mcl = &mcl.Type
+		files = append(files, fmt.Sprintf("model/%s/%s", model.Name, path.Base(mcl.Path)))
+		if model.Files != nil {
+			for _, f := range *model.Files {
+				files = append(files, fmt.Sprintf("model/%s/data/%s", model.Name, f.Name))
+			}
+		}
+		runtime.Files = &files
+	case "":
+		paths := &[]string{
+			fmt.Sprintf("model/%s/data", model.Name),
+		}
+		runtime.Paths = paths
+	default:
+		slog.Warn("unknown MCL type", "mcl", mcl.Type)
+	}
+
 	return &runtime
 }
 

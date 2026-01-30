@@ -10,14 +10,14 @@ model input dse.modelc.csv
 channel physical signal_channel
 envar CSV_FILE model/input/data/input.csv
 envar SIMBUS_LOGLEVEL 5
-file input.csv input.csv
+file input.csv data/input.csv
+file signalgroup.yaml data/input_sg.yaml
 
 model linear dse.fmi.mcl
 channel physical signal_channel
 envar MEASUREMENT_FILE /sim/measurement.mf4
-envar SIMBUS_LOGLEVEL 4
+envar SIMBUS_LOGLEVEL 2
 workflow generate-fmimcl
  var FMU_DIR uses linear_fmu
  var OUT_DIR {{.PATH}}/data
  var MCL_PATH {{.PATH}}/lib/libfmimcl.so
- 

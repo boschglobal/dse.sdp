@@ -1,0 +1,33 @@
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh hello.dse
+
+exists out/sim/data/hello.lua
+stdout 'Hello from Lua model'
+
+-- hello.dse --
+simulation
+channel signal
+
+uses
+Simple file:///workdir/hello.lua
+
+model simple Simple
+channel signal data
+
+
+-- hello.lua --
+function model_create()
+    print("Hello from Lua model")
+end
+
+function model_step()
+end
+
+function model_destroy()
+end
+

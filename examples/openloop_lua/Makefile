@@ -18,17 +18,13 @@ build:
 		$(DSE_BUILDER_IMAGE) openloop.dse
 	task -y -v
 
-.PHONY: report
-report:
-	docker run -it --rm \
-		--volume $$(pwd)/out/sim:/sim \
-		$(DSE_REPORT_IMAGE) report /sim
-
 .PHONY: simer
 simer:
 	docker run -it --rm \
 		--volume $$(pwd)/out/sim:/sim \
-		$(DSE_SIMER_IMAGE)
+		$(DSE_SIMER_IMAGE) \
+        	-env SIMBUS_LOGLEVEL=5 \
+        	-env linear:SIMBUS_LOGLEVEL=4
 
 .PHONY: clean
 clean:

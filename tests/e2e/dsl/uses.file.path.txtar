@@ -1,0 +1,22 @@
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh hello.dse
+
+exists out/downloads/models/simple/remote_foo.txt
+exists out/sim/model/simple/data/target_file_name.txt
+
+-- hello.dse --
+simulation
+channel signal
+
+uses
+dse.sdp https://github.com/boschglobal/dse.sdp v$RELEASE_VERSION
+input file:///repo/tests/testdata/e2e/files.zip path=testdata/remote_foo.txt
+
+model simple Simple
+channel signal data
+file target_file_name.txt uses input

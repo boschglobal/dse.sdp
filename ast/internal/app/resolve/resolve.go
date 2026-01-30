@@ -37,6 +37,8 @@ type ResolveCommand struct {
 	yamlMetadata map[string]interface{}
 }
 
+var luaModels []string
+
 func NewResolveCommand(name string) *ResolveCommand {
 	c := &ResolveCommand{
 		Command: command.Command{
@@ -153,13 +155,22 @@ func getYamlPath(root interface{}, keys ...string) interface{} {
 	return node
 }
 
-func parseFilePath(useMap map[string]interface{}) (bool, string) {
-	useUrl, ok := useMap["url"].(string)
-	if !ok {
-		slog.Error("Invalid or missing URL in uses map")
-		return false, ""
+func isLuaReference(useUrl string, useMap map[string]interface{}) bool {
+	var pathPtr *string
+	if p, ok := useMap["path"].(string); ok {
+		pathPtr = &p
 	}
+	// inner path (e.g. inside zip)
+	if pathPtr != nil {
+		if strings.EqualFold(filepath.Ext(*pathPtr), ".lua") {
+			return true
+		}
+	}
+	// direct file URL
+	return strings.EqualFold(filepath.Ext(useUrl), ".lua")
+}
 
+func parseFilePath(useUrl string, useMap map[string]interface{}) (bool, string) {
 	u, err := url.Parse(useUrl)
 	if err != nil {
 		return false, ""
@@ -172,15 +183,34 @@ func parseFilePath(useMap map[string]interface{}) (bool, string) {
 	return false, ""
 }
 
-func resolvePath(path string) (string, error) {
-	if filepath.IsAbs(path) {
-		return path, nil
+func resolvePath(pathOrURL string) (abs string, isDir bool, err error) {
+	// Handle file:// URLs
+	if strings.HasPrefix(pathOrURL, "file://") {
+		u, err := url.Parse(pathOrURL)
+		if err != nil {
+			return "", false, err
+		}
+		pathOrURL = u.Path
 	}
-	return filepath.Abs(path)
+
+	// Resolve to absolute path
+	abs, err = filepath.Abs(pathOrURL)
+	if err != nil {
+		return "", false, err
+	}
+
+	info, err := os.Stat(abs)
+	if err != nil {
+		return "", false, err
+	}
+
+	isDir = info.IsDir() // if info.IsDir() is true then the uses item is pointing to local repo folder(Taskfile.yaml is loaded from that path). eg:dse.sdp file:///mnt/c/Users/dse.sdp
+
+	return abs, isDir, nil
 }
 
 func loadTaskfile(filePath string) (map[string]interface{}, error) {
-	abs, err := resolvePath(filepath.Join(filePath, "Taskfile.yml"))
+	abs, _, err := resolvePath(filepath.Join(filePath, "Taskfile.yml"))
 	if err != nil {
 		return nil, err
 	}
@@ -226,11 +256,19 @@ func (c *ResolveCommand) loadMetadata() error {
 		// Fetch metadata.
 		var yamlData = map[string]interface{}{}
 		slog.Debug("Fetch metadata for uses", "name", use["name"].(string))
-		ok_fileRef, path := parseFilePath(use)
-		if ok_fileRef {
+		useUrl, ok := use["url"].(string)
+		if !ok {
+			slog.Error("Invalid or missing URL in uses map")
+			return nil
+		}
+		ok_fileRef, path := parseFilePath(useUrl, use)
+		isLua := isLuaReference(useUrl, use)
+		if ok_fileRef && !isLua {
+			// file urls can be either pointing to local repo folder having taskfile.yaml or another static file in repo
 			// eg uses block, dse.sdp file:///mnt/c/Users/NUZ2KOR/Desktop/dse.sdp/
-			abs, err := resolvePath(path)
-			if err != nil {
+			//				  input file:///mnt/c/Users/files.zip path=data/filename.txt
+			abs, isDir, err := resolvePath(path)
+			if err != nil || isDir == false {
 				return nil
 			}
 			slog.Info("Loading Taskfile from local path", "path", abs)
@@ -393,8 +431,27 @@ func (c *ResolveCommand) updateAstUsesMetadata() {
 		urlStr, urlOk := use["url"].(string)
 		// Locate the metadata.
 		re := regexp.MustCompile(`\{\{.*?\}\}@`) // for resolving Parse issue with urls like https://{{.GHE_TOKEN}}@github...
-		metadata := getYamlPath(c.yamlMetadata, use["name"].(string), "metadata")
 		parsedUrl, err := url.Parse(re.ReplaceAllString(urlStr, ""))
+		if isLuaReference(urlStr, use) {
+			luaModels = append(luaModels, use["name"].(string))
+			continue
+		}
+
+		if parsedUrl.Scheme == "file" {
+			// file urls can be either pointing to local repo folder having taskfile.yaml or another static file in repo
+			if raw, ok := use["path"]; ok && raw != nil {
+				if path, ok := raw.(string); ok && path != "" {
+					_, isDir, err := resolvePath(path)
+					if err != nil {
+						continue
+					}
+					if !isDir {
+						continue
+					}
+				}
+			}
+		}
+		metadata := getYamlPath(c.yamlMetadata, use["name"].(string), "metadata")
 		if parsedUrl.Scheme != "file" {
 			versionStr, versionOk := use["version"].(string)
 			if !urlOk || !versionOk || !strings.HasPrefix(versionStr, "v") {
@@ -423,7 +480,11 @@ func (c *ResolveCommand) updateAstUsesMetadata() {
 			use["metadata"] = map[string]interface{}{}
 		}
 		mergeKeys := []string{"container", "package", "models"}
-		for k, v := range metadata.(map[string]interface{}) {
+		metaMap, ok := metadata.(map[string]interface{})
+		if !ok || metaMap == nil {
+			continue
+		}
+		for k, v := range metaMap {
 			if slices.Contains(mergeKeys, k) {
 				use["metadata"].(map[string]interface{})[k] = v
 			}
@@ -454,6 +515,11 @@ func (c *ResolveCommand) updateAstModelMetadata() {
 				slog.Info("Repos metadata not present")
 				continue
 			}
+			if slices.Contains(luaModels, model["model"].(string)) { // if the model is Lua the uses should be assigned with the Model name value
+				model["uses"] = model["model"]
+				continue
+			}
+
 			for repoName, _repo := range repos.(map[string]interface{}) {
 				repo := _repo.(map[string]interface{})
 				models := getYamlPath(repo, "metadata", "models")
