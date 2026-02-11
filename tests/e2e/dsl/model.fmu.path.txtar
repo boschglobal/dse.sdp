@@ -1,0 +1,27 @@
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh hello.dse BUILD_ONLY
+
+exists out/downloads/models/simple/fmus.zip
+exists out/sim/model/simple/fmu/binaries/linux64/hello.so
+exists out/sim/model/simple/fmu/modelDescription.xml
+
+-- hello.dse --
+simulation
+channel physical
+
+uses
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.48
+fmu file:///repo/tests/testdata/e2e/fmus.zip path=simple/hello.fmu
+
+model simple dse.fmi.mcl
+channel physical signal_channel
+envar SIMBUS_LOGLEVEL 2
+workflow generate-fmimcl
+var FMU_DIR uses fmu
+var OUT_DIR {{.PATH}}/data
+var MCL_PATH {{.PATH}}/lib/libfmimcl.so

@@ -3,8 +3,8 @@ channel physical
 
 uses
 dse.modelc https://github.com/boschglobal/dse.modelc v2.1.32
-dse.fmi https://github.com/boschglobal/dse.fmi v1.1.37
-linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.37/Fmi-1.1.37-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
+dse.fmi https://github.com/boschglobal/dse.fmi v1.1.48
+linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.48/Fmi-1.1.48-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
 
 model input dse.modelc.csv
 channel physical signal_channel

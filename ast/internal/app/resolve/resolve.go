@@ -210,15 +210,31 @@ func resolvePath(pathOrURL string) (abs string, isDir bool, err error) {
 }
 
 func loadTaskfile(filePath string) (map[string]interface{}, error) {
-	abs, _, err := resolvePath(filepath.Join(filePath, "Taskfile.yml"))
-	if err != nil {
-		return nil, err
+	var data []byte
+	taskfiles := []string{"Taskfile.yml", "Taskfile.yaml"} // for supporting '.yml' or '.yaml' Taskfile extension
+	for _, name := range taskfiles {
+		abs, _, err := resolvePath(filepath.Join(filePath, name))
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, err
+		}
+
+		data, err = os.ReadFile(abs)
+		if err == nil {
+			break
+		}
+
+		if !os.IsNotExist(err) {
+			slog.Error("failed to read taskfile", "path", abs, "error", err)
+			return nil, err
+		}
 	}
 
-	data, err := os.ReadFile(abs)
-	if err != nil {
-		slog.Error("Error : ", err)
-		return nil, err
+	if data == nil {
+		slog.Error("taskfile not found", "path", filePath)
+		return nil, fmt.Errorf("no Taskfile.yml or Taskfile.yaml found in %s", filePath)
 	}
 
 	yamlData := map[string]interface{}{}
@@ -276,36 +292,56 @@ func (c *ResolveCommand) loadMetadata() error {
 
 		} else {
 			// eg uses block, dse.sdp https://github.com/boschglobal/dse.sdp v0.8.26
-			var rawUrl = genGitRawURL(use)
-			if len(rawUrl) == 0 {
+			rawUrls := genGitRawURL(use)
+			if len(rawUrls) == 0 {
 				continue
 			}
-
-			slog.Info("Metadata download", "url", rawUrl)
-			// Search the cache.
-			if c.cacheDir != "" {
-				var cacheFilepath = appendFileName(c.cacheDir, calculateSha256(rawUrl))
-				if !dirExists(c.cacheDir) {
-					createCacheDir(c.cacheDir)
-				}
-				if FileExists(cacheFilepath) {
-					slog.Info("Load from cache", "path", cacheFilepath)
-					data, err := os.ReadFile(cacheFilepath)
-					if err != nil {
-						return fmt.Errorf("Error reading cache file: %v", err)
+			var loaded bool
+			for _, rawUrl := range rawUrls {
+				slog.Info("Metadata download", "url", rawUrl)
+				// Search the cache.
+				if c.cacheDir != "" {
+					var cacheFilepath = appendFileName(c.cacheDir, calculateSha256(rawUrl))
+					if !dirExists(c.cacheDir) {
+						createCacheDir(c.cacheDir)
 					}
-					if err := yaml.Unmarshal(data, &yamlData); err != nil {
-						return fmt.Errorf("Error parsing cache YAML file: %v", err)
+
+					if FileExists(cacheFilepath) {
+						data, err := os.ReadFile(cacheFilepath)
+						if err != nil {
+							continue
+						}
+						if err := yaml.Unmarshal(data, &yamlData); err == nil {
+							loaded = true
+							break
+						}
+					} else {
+						yamlData = fetchMetadata(rawUrl, use)
+						if len(yamlData) != 0 {
+							saveCacheFile(cacheFilepath, yamlData)
+							loaded = true
+							break
+						}
 					}
 				} else {
 					yamlData = fetchMetadata(rawUrl, use)
-					saveCacheFile(cacheFilepath, yamlData)
+					if len(yamlData) != 0 {
+						loaded = true
+						break
+					}
 				}
-			} else {
-				yamlData = fetchMetadata(rawUrl, use)
+			}
+
+			if !loaded {
+				slog.Warn(
+					"404 Not Found: Taskfile.yml / Taskfile.yaml not found",
+					"use", use["name"],
+					"url", use["url"],
+				)
+				continue
 			}
 		}
-		// Update the lookup.
+
 		slog.Info("Update metadata for repo", "name", use["name"].(string))
 		c.yamlMetadata[use["name"].(string)] = yamlData
 	}
@@ -322,11 +358,11 @@ func (c *ResolveCommand) updateMetadata() error {
 	return nil
 }
 
-func genGitRawURL(useMap map[string]interface{}) string {
+func genGitRawURL(useMap map[string]interface{}) []string {
 	useUrl, ok := useMap["url"].(string)
 	if !ok {
 		slog.Error("Invalid or missing URL in uses map")
-		return ""
+		return nil
 	}
 	version, _ := useMap["version"].(string)
 
@@ -339,12 +375,12 @@ func genGitRawURL(useMap map[string]interface{}) string {
 	}()
 	if strings.HasPrefix(u.Host, "github.") == false {
 		slog.Debug("Unsupported metadata url", "url", useUrl)
-		return ""
+		return nil
 	}
 	pathParts := strings.Split(u.Path, string(os.PathSeparator))
 	if len(pathParts) > 3 {
 		// Not a repo path, more likely an asset link (for download).
-		return ""
+		return nil
 	}
 	useUrl = func() string {
 		var finalUrl *url.URL
@@ -367,12 +403,14 @@ func genGitRawURL(useMap map[string]interface{}) string {
 		}()
 	}()
 
-	return useUrl
+	return []string{
+		strings.Replace(useUrl, "Taskfile.yml", "Taskfile.yml", 1),
+		strings.Replace(useUrl, "Taskfile.yml", "Taskfile.yaml", 1),
+	}
 }
 
 func fetchMetadata(url string, use map[string]interface{}) map[string]interface{} {
 	var yamlData = map[string]interface{}{}
-	var git_url = strings.TrimSpace(use["url"].(string))
 	url = strings.ReplaceAll(url, `{{.GHE_TOKEN}}`, os.Getenv("GHE_TOKEN"))
 	resp, err := http.Get(url)
 	if err != nil {
@@ -381,15 +419,12 @@ func fetchMetadata(url string, use map[string]interface{}) map[string]interface{
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
-		var log_msg = fmt.Sprintf("404 Not Found: The repository or Taskfile could not be located. Please check if the URL is correct: %s", git_url)
-		slog.Error(log_msg)
-		os.Exit(1)
-	} else {
-		if resp.StatusCode != http.StatusOK {
-			slog.Error("Bad return code", "code", resp.StatusCode, "url", url)
-			os.Exit(1)
-			return yamlData
-		}
+		return yamlData
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		slog.Error("Bad return code", "code", resp.StatusCode, "url", url)
+		return yamlData
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -567,6 +602,66 @@ func (c *ResolveCommand) updateAstModelMetadata() {
 
 						slog.Info("Updating model uses", "model", model["model"].(string), "name", model["name"].(string))
 						model["uses"] = repoName
+
+						//vars from repo Taskfile - "TAG", "PACKAGE_VERSION"
+						//Collect existing model vars defined in dse (map or []{name,value})
+						existingVars := map[string]interface{}{}
+						if mv, ok := model["vars"]; ok {
+							switch v := mv.(type) {
+							case map[string]interface{}:
+								for k, val := range v {
+									existingVars[k] = val
+								}
+							case []interface{}:
+								for _, item := range v {
+									if m, ok := item.(map[string]interface{}); ok {
+										if name, ok := m["name"].(string); ok {
+											existingVars[name] = m["value"]
+										}
+									}
+								}
+							}
+						}
+
+						//Merge ONLY missing TAG & PACKAGE_VERSION from repo vars
+						if repoVars := getYamlPath(repo, "vars"); repoVars != nil {
+							if varsMap, ok := repoVars.(map[string]interface{}); ok {
+
+								for _, k := range []string{"TAG", "PACKAGE_VERSION"} {
+									// Do not override if already present
+									if _, exists := existingVars[k]; exists {
+										continue
+									}
+
+									v, ok := varsMap[k]
+									if !ok {
+										continue
+									}
+
+									// Resolve simple self-reference: {{.PACKAGE_VERSION}}
+									if s, ok := v.(string); ok {
+										re := regexp.MustCompile(`^\{\{\.(\w+)\}\}$`)
+										if m := re.FindStringSubmatch(s); len(m) == 2 {
+											if refVal, ok := varsMap[m[1]]; ok {
+												v = refVal
+											}
+										}
+									}
+
+									existingVars[k] = v
+								}
+							}
+						}
+
+						// Step 3: Normalize ALL vars back to []{name,value}
+						var out []interface{}
+						for k, v := range existingVars {
+							out = append(out, map[string]interface{}{
+								"name":  k,
+								"value": v,
+							})
+						}
+						model["vars"] = out
 					}
 				}
 

@@ -1,5 +1,5 @@
 function model_create()
-    print("Hello from Lua model")
+print("Hello from Lua model")
 end
 
 function model_step()

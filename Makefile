@@ -18,7 +18,7 @@ SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:$(DSE_MODELC_VERSION)
 
 ###############
 ## Build parameters.
-SUBDIRS = ast graph dsl lsp doc examples/models
+SUBDIRS = ast graph dsl lsp doc examples/models tests/testdata/e2e
 
 
 ###############
@@ -90,6 +90,7 @@ run_graph:
 .PHONY: generate
 generate:
 	$(MAKE) -C doc build
+	$(MAKE) -C tests/testdata/e2e build
 
 
 do-test_testscript-e2e:

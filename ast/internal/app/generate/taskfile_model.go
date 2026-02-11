@@ -6,6 +6,7 @@ package generate
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -21,6 +22,41 @@ func urlEscapedParse(u string) (*url.URL, error) {
 	u = strings.ReplaceAll(u, `{`, `%7B`)
 	u = strings.ReplaceAll(u, `}`, `%7D`)
 	return url.Parse(u)
+}
+
+func resolveRemoteTaskfile(u *url.URL, owner, repo, version string) string {
+	for _, name := range []string{"Taskfile.yml", "Taskfile.yaml"} {
+		resolvedURL := *u
+		var finalUrl *url.URL
+		switch resolvedURL.Host {
+		case "github.com":
+			resolvedURL.Host = "raw.githubusercontent.com"
+			finalUrl, _ = resolvedURL.Parse(fmt.Sprintf("/%s/%s/refs/tags/%s/%s", owner, repo, version, name))
+		case "github.boschdevcloud.com":
+			resolvedURL.Host = "raw.github.boschdevcloud.com"
+			finalUrl, _ = resolvedURL.Parse(fmt.Sprintf("/%s/%s/%s/%s", owner, repo, version, name))
+		default:
+			continue
+		}
+
+		probeUrl := func() string {
+			_u := finalUrl.String()
+			_u = strings.ReplaceAll(_u, `%7B`, `{`)
+			_u = strings.ReplaceAll(_u, `%7D`, `}`)
+			_u = strings.ReplaceAll(_u, "{{.GHE_TOKEN}}", os.Getenv("GHE_TOKEN"))
+			return _u
+		}()
+
+		req, _ := http.NewRequest(http.MethodHead, probeUrl, nil)
+		resp, err := http.DefaultClient.Do(req)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			_u := finalUrl.String()
+			_u = strings.ReplaceAll(_u, `%7B`, `{`)
+			_u = strings.ReplaceAll(_u, `%7D`, `}`)
+			return _u
+		}
+	}
+	return ""
 }
 
 func (c GenerateCommand) buildIncludes() map[string]Include {
@@ -45,7 +81,17 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 			case "": // local Taskfile reference
 				if isDir {
 					dir := strings.TrimSuffix(u.Path, "/")
-					taskfile := filepath.Join(dir, "Taskfile.yml")
+					var taskfile string
+					taskfileYml := filepath.Join(dir, "Taskfile.yml")
+					taskfileYaml := filepath.Join(dir, "Taskfile.yaml")
+					if _, err := os.Stat(taskfileYml); err == nil {
+						taskfile = taskfileYml
+					} else if _, err := os.Stat(taskfileYaml); err == nil {
+						taskfile = taskfileYaml
+					} else {
+						// Neither Taskfile.yml nor Taskfile.yaml exists
+						continue
+					}
 					includes[fmt.Sprintf("%s", uses.Name)] = Include{
 						Taskfile: taskfile,
 						Dir:      dir,
@@ -75,29 +121,21 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 			if strings.HasPrefix(u.Host, "github.") == false {
 				continue
 			}
+			pathParts := strings.Split(u.Path, string(os.PathSeparator))
+			taskfile := resolveRemoteTaskfile(
+				u,
+				pathParts[1],
+				pathParts[2],
+				*uses.Version,
+			)
+
+			if taskfile == "" {
+				continue
+			}
 			includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
-				Taskfile: func() string {
-					var finalUrl *url.URL
-					pathParts := strings.Split(u.Path, string(os.PathSeparator))
-					switch u.Host {
-					case "github.com":
-						u.Host = "raw.githubusercontent.com"
-						finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/refs/tags/%s/Taskfile.yml", pathParts[1], pathParts[2], *uses.Version))
-					case "github.boschdevcloud.com":
-						u.Host = "raw.github.boschdevcloud.com"
-						finalUrl, _ = u.Parse(fmt.Sprintf("/%s/%s/%s/Taskfile.yml", pathParts[1], pathParts[2], *uses.Version))
-					default:
-						panic("unsupported includes URL")
-					}
-					return func() string {
-						_u := finalUrl.String()
-						_u = strings.ReplaceAll(_u, `%7B`, `{`)
-						_u = strings.ReplaceAll(_u, `%7D`, `}`)
-						return _u
-					}()
-				}(),
-				Dir:  "{{.OUTDIR}}/{{.SIMDIR}}",
-				Vars: &vars,
+				Taskfile: taskfile,
+				Dir:      "{{.OUTDIR}}/{{.SIMDIR}}",
+				Vars:     &vars,
 			}
 		}
 	}
@@ -206,15 +244,31 @@ func resolveMclFromUses(u ast.Uses) (MclInfo, bool) {
 		}, false
 	}
 
-	abs, err := filepath.Abs(u.Url)
+	// Handle file:// URLs
+	urlPath := u.Url
+	if strings.HasPrefix(u.Url, "file://") {
+		if parsed, err := url.Parse(u.Url); err == nil {
+			urlPath = parsed.Path
+		}
+	}
+
+	abs, err := filepath.Abs(urlPath)
 	if err == nil {
 		info, err := os.Stat(abs)
 		if err == nil {
-			if strings.EqualFold(filepath.Ext(u.Url), ".lua") {
+			if info.IsDir() {
+				return MclInfo{
+					Type: "",
+					Url:  u.Url,
+				}, true // local repo folder
+			}
+
+			// Lua file case
+			if strings.EqualFold(filepath.Ext(urlPath), ".lua") {
 				return MclInfo{
 					Type: "lua",
 					Url:  u.Url,
-				}, info.IsDir() // if info.IsDir() is true then the uses item is pointing to local repo folder(Taskfile.yaml is loaded from that path).
+				}, false
 			}
 		}
 	}
@@ -284,6 +338,14 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 			}
 
 			om := OMap{orderedmap.NewOrderedMap[string, string]()}
+			if model.Vars != nil {
+				for _, v := range *model.Vars {
+					if _, exists := om.Get(v.Name); exists {
+						continue
+					}
+					om.Set(v.Name, v.Value)
+				}
+			}
 			if modelUses.Name != "" {
 				om.Set("REPO", repo)
 				if modelUses.Version != nil {
@@ -315,15 +377,6 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 					om.Set("PACKAGE_PATH", md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string))
 				}
 			}()
-
-			if model.Vars != nil {
-				for _, v := range *model.Vars {
-					if _, exists := om.Get(v.Name); exists {
-						continue
-					}
-					om.Set(v.Name, v.Value)
-				}
-			}
 
 			return &om
 		}(),
@@ -550,11 +603,27 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					downloadFile := parseUrl(task, varUses, model.Name)
 					usesDownloadFilePaths[varUses.Name] = downloadFile
 
-					// Extract the Uses path.
-					if varUses.Path == nil {
-						continue
-					}
-					if filepath.Ext(*varUses.Path) == ".fmu" {
+					if filepath.Ext(varUses.Url) == ".fmu" {
+						*task.Cmds = append(*task.Cmds, Cmd{
+							Task: "download-file",
+							Vars: &map[string]string{
+								"URL":  varUses.Url,
+								"FILE": downloadFile,
+							},
+						})
+						*task.Cmds = append(*task.Cmds, Cmd{
+							Task: "unzip-rootdir",
+							Vars: &map[string]string{
+								"ZIP": downloadFile,
+								"DIR": fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", varUses.Name),
+							},
+						})
+						*task.Generates = append(
+							*task.Generates,
+							fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", varUses.Name),
+						)
+						usesDownloadFilePaths[varUses.Name] = fmt.Sprintf("{{.PATH}}/%s", varUses.Name)
+					} else if varUses.Path != nil && filepath.Ext(*varUses.Path) == ".fmu" {
 						*task.Cmds = append(*task.Cmds, Cmd{
 							Task: "unzip-extract-fmu",
 							Vars: &map[string]string{
@@ -565,6 +634,8 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 						})
 						*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", varUses.Name))
 						usesDownloadFilePaths[varUses.Name] = fmt.Sprintf("{{.PATH}}/%s", varUses.Name)
+					} else {
+						continue
 					}
 				}
 			}
