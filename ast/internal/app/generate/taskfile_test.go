@@ -5,6 +5,7 @@
 package generate
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,6 +26,53 @@ func generateTaskfile(t *testing.T, input string) string {
 	assert.NoError(t, err)
 
 	return taskfileName
+}
+
+func captureOutput(t *testing.T, fn func() error) (string, string, error) {
+	t.Helper()
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	require.NoError(t, err)
+	stderrReader, stderrWriter, err := os.Pipe()
+	require.NoError(t, err)
+
+	origStdout := os.Stdout
+	origStderr := os.Stderr
+	os.Stdout = stdoutWriter
+	os.Stderr = stderrWriter
+
+	outCh := make(chan string)
+	errCh := make(chan string)
+	go func() {
+		b, _ := io.ReadAll(stdoutReader)
+		outCh <- string(b)
+	}()
+	go func() {
+		b, _ := io.ReadAll(stderrReader)
+		errCh <- string(b)
+	}()
+
+	runErr := fn()
+	stdoutWriter.Close()
+	stderrWriter.Close()
+	os.Stdout = origStdout
+	os.Stderr = origStderr
+
+	stdout := <-outCh
+	stderr := <-errCh
+	return stdout, stderr, runErr
+}
+
+func generateTaskfileWithOutput(t *testing.T, input string) (string, string, string, error) {
+	var outFolder = t.TempDir()
+	var taskfileName = filepath.Join(outFolder, "Taskfile.yml")
+	cmd := NewGenerateCommand("test_generate_taskfile_output")
+	args := []string{"-taskfile", "-input", input, "-output", outFolder}
+
+	err := cmd.Parse(args)
+	require.NoError(t, err)
+
+	stdout, stderr, runErr := captureOutput(t, cmd.Run)
+	return taskfileName, stdout, stderr, runErr
 }
 
 func TestGenerateTaskfile_global_vars(t *testing.T) {
@@ -246,4 +294,24 @@ func TestGenerateTaskfile_model_fmu(t *testing.T) {
 
 	YamlContains(t, f, "$.tasks.model-linear.generates[4]", "{{.SIMDIR}}/{{.PATH}}/data/model.yaml")
 	YamlContains(t, f, "$.tasks.model-linear.generates[5]", "{{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml")
+}
+
+func TestGenerateTaskfile_missing_required_metadata(t *testing.T) {
+	_, stdout, stderr, runErr := generateTaskfileWithOutput(t, "testdata/ast__model_missing_package.yaml")
+	require.Error(t, runErr)
+
+	logOutput := stdout + stderr
+	assert.Contains(t, logOutput, "[Error] Item not found! query=metadata/package/download")
+	assert.Contains(t, logOutput, "uses=dse.modelc")
+}
+
+func TestGenerateTaskfile_missing_optional_generates(t *testing.T) {
+	taskfileName, stdout, stderr, runErr := generateTaskfileWithOutput(t, "testdata/ast__model_fmu_missing_generates.yaml")
+	require.NoError(t, runErr)
+	assert.FileExists(t, taskfileName)
+
+	logOutput := stdout + stderr
+	assert.Contains(t, logOutput, "[Info] Item not found, using default ([])")
+	assert.Contains(t, logOutput, "query=metadata/tasks/generate-fmimcl/generates")
+	assert.Contains(t, logOutput, "uses=dse.fmi")
 }
