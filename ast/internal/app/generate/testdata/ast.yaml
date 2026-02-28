@@ -22,6 +22,7 @@ spec:
               name: network
           model: dse.fmi.mcl
           name: FMU
+          uses: dse.fmi
           workflows:
             - name: generate
               vars:
@@ -30,6 +31,18 @@ spec:
                   value: fmu
                 - name: model_key
                   value: model_val
+          metadata:
+            package:
+              download: '{{.REPO}}/releases/download/v{{.TAG}}/Fmi-{{.TAG}}-{{.PLATFORM_ARCH}}.zip'
+            models:
+              dse.fmi.mcl:
+                path: fmimcl
+                mcl: true
+            tasks:
+              generate:
+                generates:
+                  - data/model.yaml
+                  - data/signalgroup.yaml
       name: default
   uses:
     - name: dse.fmi

@@ -132,6 +132,15 @@ func (c *GenerateCommand) GenerateSimulation() error {
 		}
 		for _, astModel := range astStack.Models {
 			mcl := getMclType(astModel.Model, simSpec.Uses)
+			modelUses := ast.Uses{}
+			if len(astModel.Uses) > 0 && simSpec.Uses != nil {
+				for _, uses := range *simSpec.Uses {
+					if uses.Name == astModel.Uses {
+						modelUses = uses
+						break
+					}
+				}
+			}
 			channels := []kind.Channel{}
 			for _, c := range astModel.Channels {
 				if slices.Contains(simChannels, c.Name) {
@@ -149,15 +158,9 @@ func (c *GenerateCommand) GenerateSimulation() error {
 			if astModel.Metadata != nil {
 				md = *astModel.Metadata
 			}
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-					}
-				}()
-				if md["models"].(map[string]interface{})[astModel.Model].(map[string]interface{})["mcl"].(bool) == true {
-					modelName = astModel.Name
-				}
-			}()
+			if optionalMetadataBool(md, modelUses, false, "models", astModel.Model, "mcl") {
+				modelName = astModel.Name
+			}
 			var annotationMap map[string]interface{}
 			if astModel.Annotations != nil && len(*astModel.Annotations) > 0 {
 				annotationMap = make(map[string]interface{})
