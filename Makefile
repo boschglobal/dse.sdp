@@ -8,12 +8,13 @@
 DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
 DSE_MODELC_VERSION ?= 2.3.7
 export DSE_MODELC_PKG_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
+DSE_FMI_VERSION ?= 1.2.0
 
 
 ###############
 ## Docker Images.
 TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
-SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:$(DSE_MODELC_VERSION)
+DSE_SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:$(DSE_MODELC_VERSION)
 
 
 ###############

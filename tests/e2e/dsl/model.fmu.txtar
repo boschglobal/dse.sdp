@@ -15,7 +15,7 @@ simulation
 channel physical
 
 uses
-dse.fmi https://github.com/boschglobal/dse.fmi v1.1.48
+dse.fmi https://github.com/boschglobal/dse.fmi v1.2.0
 fmu file:///repo/tests/testdata/e2e/hello.fmu
 
 model simple dse.fmi.mcl

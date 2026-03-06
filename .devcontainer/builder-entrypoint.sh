@@ -18,6 +18,7 @@ dse-ast generate -input "${SIM_NAME}.yaml" -output .
 
 # Ensure sim folder is created (required by Task).
 mkdir -p out/sim
+chmod 777 out/sim
 
 # Run Task.
 TASK_X_REMOTE_TASKFILES=1

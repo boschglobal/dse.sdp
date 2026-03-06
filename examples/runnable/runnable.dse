@@ -4,7 +4,7 @@ channel network
 
 uses
 fsil.runnable https://{{.GHE_TOKEN}}@github.boschdevcloud.com/fsil/fsil.runnable v1.2.4 user={{.AR_USER}} token={{.AR_TOKEN}}
-dse.fmi https://github.com/boschglobal/dse.fmi v1.1.37
+dse.fmi https://github.com/boschglobal/dse.fmi v1.2.0
 example https://github.boschdevcloud.com/fsil/fsil.runnable/releases/download/v1.2.4/example.zip token={{.GHE_PAT}}
 
 

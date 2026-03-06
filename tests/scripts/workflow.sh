@@ -55,7 +55,6 @@ run_simer() {
     echo "[INFO] Running simer..."
     docker run --name simer -i --rm \
         --network=host \
-        --user "$(id -u):$(id -g)" \
         -v $ENTRYWORKDIR/out/sim:/sim \
         -p 6379:6379 \
         $DSE_SIMER_IMAGE \
