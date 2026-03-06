@@ -6,7 +6,7 @@
 ################
 ## DSE Projects.
 DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
-DSE_MODELC_VERSION ?= 2.2.12
+DSE_MODELC_VERSION ?= 2.3.7
 export DSE_MODELC_PKG_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
 
 
