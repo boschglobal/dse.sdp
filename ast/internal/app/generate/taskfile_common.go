@@ -26,7 +26,15 @@ func buildBaseTasks() map[string]Task {
 			Cmds: &[]Cmd{
 				{Cmd: "echo \"UNZIP FILE {{.ZIP}}/{{.ZIPFILE}} -> {{.FILE}}\""},
 				{Cmd: "mkdir -p $(dirname {{.FILE}})"},
-				{Cmd: "unzip -o -j {{.ZIP}} $(basename {{.ZIP}} {{ext .ZIP}})/{{.ZIPFILE}} -d $(dirname {{.FILE}})"},
+				{Cmd: `
+if unzip -l {{.ZIP}} $(basename {{.ZIP}} {{ext .ZIP}})/{{.ZIPFILE}} >/dev/null 2>&1; then
+	unzip -o -j {{.ZIP}} $(basename {{.ZIP}} {{ext .ZIP}})/{{.ZIPFILE}} -d $(dirname {{.FILE}})
+elif unzip -l {{.ZIP}} {{.ZIPFILE}} >/dev/null 2>&1; then
+	unzip -o -j {{.ZIP}} {{.ZIPFILE}} -d $(dirname {{.FILE}})
+else
+	echo "Error: {{.FILE}} not found in {{.ZIP}}" >&2
+	exit 1
+fi`},
 				{Cmd: "mv -n $(dirname {{.FILE}})/$(basename {{.ZIPFILE}}) {{.FILE}}"},
 			},
 			Sources:   &[]string{"{{.ZIP}}"},
