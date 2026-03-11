@@ -89,8 +89,11 @@ generate-fmu:
 	cd $(TMPDIR) && zip -q fmus.zip fmus/simple/hello.fmu
 
 
+.PHONY: clean
+clean:
+
 .PHONY: cleanall
-cleanall:
+cleanall: clean
 	rm -rf \
 		remote_foo.txt \
 		hello.lua \
