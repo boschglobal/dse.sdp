@@ -487,6 +487,14 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 				dir, file := filepath.Split(f.Name)
 				if len(dir) == 0 {
 					dir = "data/"
+				} else {
+					dir = "data/" + dir
+					cmds := []Cmd{
+						{
+							Cmd: fmt.Sprintf("mkdir -p {{.SIMDIR}}/{{.PATH}}/%s", dir),
+						},
+					}
+					*task.Cmds = append(*task.Cmds, cmds...)
 				}
 				filePath := fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s%s", dir, file)
 				*task.Generates = append(*task.Generates, fmt.Sprintf("%s", filePath))

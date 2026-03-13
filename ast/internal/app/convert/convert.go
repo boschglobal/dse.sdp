@@ -324,6 +324,7 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 			workflowList := buildList(value, "children.workflow", func(value gjson.Result) ast.Workflow {
 				workflow := ast.Workflow{
 					Name: value.Get("object.payload.workflow_name.value").String(),
+					Uses: util.StringPtr(value.Get("object.payload.workflow_value.value").String()),
 				}
 				// Vars
 				varsList := buildList(value, "children.workflow_vars", func(value gjson.Result) ast.Var {

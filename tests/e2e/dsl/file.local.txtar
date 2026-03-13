@@ -6,8 +6,8 @@ cd $WORKDIR
 # TEST: operate the simulation
 exec sh -e workflow.sh openloop.dse BUILD_ONLY
 
-exists out/sim/model/simple/data/foo.txt
-cmp local_foo.txt out/sim/model/simple/data/foo.txt
+exists out/sim/model/simple/data/local_files/foo.txt
+cmp local_foo.txt out/sim/model/simple/data/local_files/foo.txt
 
 -- openloop.dse --
 simulation
@@ -18,7 +18,7 @@ dse.sdp https://github.com/boschglobal/dse.sdp v$RELEASE_VERSION
 
 model simple Simple
 channel signal signal_vector
-file foo.txt local_foo.txt
+file local_files/foo.txt local_foo.txt
 
 -- local_foo.txt --
 local foo
