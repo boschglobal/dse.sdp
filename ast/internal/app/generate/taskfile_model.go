@@ -25,6 +25,7 @@ func urlEscapedParse(u string) (*url.URL, error) {
 }
 
 func resolveRemoteTaskfile(u *url.URL, owner, repo, version string) string {
+	var fallback string
 	for _, name := range []string{"Taskfile.yml", "Taskfile.yaml"} {
 		resolvedURL := *u
 		var finalUrl *url.URL
@@ -49,14 +50,26 @@ func resolveRemoteTaskfile(u *url.URL, owner, repo, version string) string {
 
 		req, _ := http.NewRequest(http.MethodHead, probeUrl, nil)
 		resp, err := http.DefaultClient.Do(req)
-		if err == nil && resp.StatusCode == http.StatusOK {
-			_u := finalUrl.String()
-			_u = strings.ReplaceAll(_u, `%7B`, `{`)
-			_u = strings.ReplaceAll(_u, `%7D`, `}`)
+		_u := finalUrl.String()
+		_u = strings.ReplaceAll(_u, `%7B`, `{`)
+		_u = strings.ReplaceAll(_u, `%7D`, `}`)
+		if fallback == "" {
+			fallback = _u
+		}
+		if err != nil {
+			return _u
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+		if resp.StatusCode == http.StatusOK {
+			return _u
+		}
+		if resp.StatusCode != http.StatusNotFound {
 			return _u
 		}
 	}
-	return ""
+	return fallback
 }
 
 func (c GenerateCommand) buildIncludes() map[string]Include {
@@ -283,7 +296,7 @@ func resolveMclFromUses(u ast.Uses) (MclInfo, bool) {
 	return MclInfo{Type: ""}, false
 }
 
-func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
+func genericModelTask(model ast.Model, modelUses ast.Uses) (Task, error) {
 	mcl, _ := resolveMclFromUses(modelUses)
 	modelUrl, _ := urlEscapedParse(modelUses.Url)
 	cmds := []Cmd{
@@ -315,16 +328,32 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 			"downloads/{{base .PACKAGE_URL}}",
 		}
 	}()
+	pkgUrlKey := "download"
+	if modelUrl.Scheme == "file" && mcl.Type != "lua" {
+		pkgUrlKey = "file"
+	}
 	md := map[string]interface{}{}
 	if model.Metadata != nil {
 		md = *model.Metadata
+	}
+	var packageURL string
+	var packagePath string
+	if mcl.Type == "" {
+		var err error
+		packageURL, err = requiredMetadataString(md, modelUses, "package", pkgUrlKey)
+		if err != nil {
+			return Task{}, err
+		}
+		packagePath, err = requiredMetadataString(md, modelUses, "models", model.Model, "path")
+		if err != nil {
+			return Task{}, err
+		}
 	}
 
 	modelTask := Task{
 		Dir:   util.StringPtr("{{.OUTDIR}}"),
 		Label: util.StringPtr(fmt.Sprintf("sim:model:%s", model.Name)),
 		Vars: func() *OMap {
-			pkgUrlKey := "download"
 			repo := modelUses.Url
 			u, _ := url.Parse(repo)
 			if modelUrl.Scheme == "file" {
@@ -332,7 +361,6 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 				if mcl.Type == "lua" { // eg u.Path : /mnt/c/Users/hello.lua
 					repo = filepath.Dir(u.Path)
 				} else {
-					pkgUrlKey = "file"
 					repo = strings.TrimSuffix(modelUrl.Path, "/") // eg modelUrl.Path : /mnt/c/Users/dse.sdp/
 				}
 			}
@@ -358,25 +386,19 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 				om.Set("PLATFORM_ARCH", *model.Arch)
 			}
 
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
-					}
-				}()
-				switch mcl.Type {
-				case "lua":
-					if modelUrl.Scheme == "file" {
-						om.Set("PACKAGE_URL", filepath.Base(u.Path))
-						om.Set("PACKAGE_PATH", mcl.Path)
-					} else if modelUrl.Scheme == "https" {
-						om.Set("PACKAGE_URL", mcl.Url)
-						om.Set("PACKAGE_PATH", mcl.Path)
-					}
-				case "":
-					om.Set("PACKAGE_URL", md["package"].(map[string]interface{})[pkgUrlKey].(string))
-					om.Set("PACKAGE_PATH", md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"].(string))
+			switch mcl.Type {
+			case "lua":
+				if modelUrl.Scheme == "file" {
+					om.Set("PACKAGE_URL", filepath.Base(u.Path))
+					om.Set("PACKAGE_PATH", mcl.Path)
+				} else if modelUrl.Scheme == "https" {
+					om.Set("PACKAGE_URL", mcl.Url)
+					om.Set("PACKAGE_PATH", mcl.Path)
 				}
-			}()
+			case "":
+				om.Set("PACKAGE_URL", packageURL)
+				om.Set("PACKAGE_PATH", packagePath)
+			}
 
 			return &om
 		}(),
@@ -385,7 +407,7 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 		Sources:   &sources,
 		Generates: &generates,
 	}
-	return modelTask
+	return modelTask, nil
 }
 
 func parseUrl(task *Task, uses *ast.Uses, modelName string) string {
@@ -471,13 +493,17 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 			return Task{}, fmt.Errorf("Model uses not found in simulation AST (name=%s)", model.Uses)
 		}
 	}
+	mcl, _ := resolveMclFromUses(modelUses)
 	usesDownloadFilePaths := map[string]string{}
 
 	md := map[string]interface{}{}
 	if model.Metadata != nil {
 		md = *model.Metadata
 	}
-	modelTask := genericModelTask(model, modelUses)
+	modelTask, err := genericModelTask(model, modelUses)
+	if err != nil {
+		return Task{}, err
+	}
 
 	// Parse: user files
 	func(task *Task, model ast.Model) {
@@ -539,18 +565,7 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 
 	// Parse: modelc package/model files
 	func(task *Task, model ast.Model) {
-		isModel := func() bool {
-			defer func() {
-				if r := recover(); r != nil {
-				}
-			}()
-			if v := md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"]; v != nil {
-				return true
-			} else {
-				return false
-			}
-		}
-		if isModel() == false {
+		if mcl.Type == "lua" {
 			return
 		}
 		*task.Cmds = append(*task.Cmds, Cmd{
@@ -712,9 +727,9 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					if r := recover(); r != nil {
 					}
 				}()
-				workflowFiles = md["tasks"].(map[string]interface{})[workflow.Name].(map[string]interface{})["generates"].([]interface{})
-			}()
-			for _, file := range workflowFiles {
+			workflowFiles = optionalMetadataSlice(md, modelUses, []interface{}{}, "tasks", workflow.Name, "generates")
+		}()
+		for _, file := range workflowFiles {
 				*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s", file.(string)))
 			}
 		}
