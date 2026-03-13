@@ -146,9 +146,9 @@ $ make build install
 $ make docker
 
 # Optionally use local container images.
-$ DSE_BUILDER_IMAGE=dse-builder:test
-$ DSE_REPORT_IMAGE=dse-report:test
-$ DSE_SIMER_IMAGE=dse-simer:test
+$ export DSE_BUILDER_IMAGE=dse-builder:test
+$ export DSE_REPORT_IMAGE=dse-report:test
+$ export DSE_SIMER_IMAGE=dse-simer:test
 
 # Run tests.
 $ make run_graph
