@@ -94,6 +94,9 @@ clean:
 
 .PHONY: cleanall
 cleanall: clean
+
+.PHONY: cleanex
+cleanex: cleanall clean
 	rm -rf \
 		remote_foo.txt \
 		hello.lua \
