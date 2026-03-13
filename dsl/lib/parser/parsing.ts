@@ -317,8 +317,10 @@ class FsilParser extends EmbeddedActionsParser {
       let stacks: any[] = [];
       $.MANY({
         DEF: () => {
-          const stack = $.SUBRULE($.stack);
-
+          let stack: any = "";
+          if ($.LA(1).tokenType === Stack) {
+            stack = $.CONSUME(Stack);
+          }
           // Read env_vars and annotations in any order
           while ($.LA(1).tokenType === EnvVar || $.LA(1).tokenType === Annotation) {
             if ($.LA(1).tokenType === EnvVar) {
@@ -380,16 +382,18 @@ class FsilParser extends EmbeddedActionsParser {
           }
         },
       });
-      const hasOtherModels = stacks.some(
-        s => s.name !== "default" && s.name !== "external" && Array.isArray(s.children?.models) && s.children.models.length > 0
-      );
       stacks = stacks
         .filter(stack => {
           if (stack.name === "external") return true;
-          if (stack.name === "default") return !hasOtherModels;
+          if (stack.name === "default") {
+            return Array.isArray(stack.children?.models) && stack.children.models.length > 0;
+          }
           return !(Array.isArray(stack.children?.models) && stack.children.models.length === 0);
         }) // keep 'external'; remove 'default' only if other stacks (not 'external') have models
-        .sort((a, b) => (a.name === "external" ? 1 : b.name === "external" ? -1 : 0)); // move 'external' stack to the end (for simbus model to appear correct stack)
+        .sort((a, b) =>
+          a.name === "external" ? 1 :
+          b.name === "external" ? -1 : 0
+        ); // move 'external' stack to the end (for simbus model to appear correct stack)
       return stacks;
     });
 

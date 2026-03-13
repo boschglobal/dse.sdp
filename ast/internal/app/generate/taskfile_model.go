@@ -92,7 +92,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 						// Neither Taskfile.yml nor Taskfile.yaml exists
 						continue
 					}
-					includes[fmt.Sprintf("%s", uses.Name)] = Include{
+					includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
 						Taskfile: taskfile,
 						Dir:      dir,
 						Vars:     &vars,
@@ -508,9 +508,6 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 							{
 								Cmd: fmt.Sprintf("unzip -ojq %s '%s' -d downloads/models/{{.MODEL}}", downloadFile, *fileUses.Path),
 							},
-							{
-								Cmd: fmt.Sprintf("rm -rf %s", downloadFile),
-							},
 						}
 						*task.Cmds = append(*task.Cmds, cmds...)
 						downloadFile = fmt.Sprintf("downloads/models/{{.MODEL}}/%s", filepath.Base(*fileUses.Path))
@@ -561,10 +558,9 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 			},
 		})
 		*task.Cmds = append(*task.Cmds, Cmd{
-			Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | " +
-				"xargs -r -0 yq -i " +
-				"'with(.spec.runtime.dynlib[]; " +
-				".path |= sub(\".*/(.*$)\", \"{{.PATH}}/lib/${1}\"))'"),
+			Cmd: fmt.Sprintf(`find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | ` +
+				`xargs -r -0 yq -i '.spec.runtime.dynlib[].path |= "{{.PATH}}/" + .'`,
+			),
 		})
 		*task.Cmds = append(*task.Cmds, Cmd{
 			Cmd: fmt.Sprintf("rm -rf {{.SIMDIR}}/{{.PATH}}/examples"),
@@ -670,9 +666,10 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 						continue
 					}
 					models := usesMd["models"].(map[string]interface{})
-					for _, model := range models {
-						for _, w := range model.(map[string]interface{})["workflows"].([]interface{}) {
-							if w.(string) == workflow.Name {
+					for _, model_ := range models {
+						modelMap := model_.(map[string]interface{})
+						for _, w := range model_.(map[string]interface{})["workflows"].([]interface{}) {
+							if w.(string) == workflow.Name && modelMap["name"] == model.Name {
 								workflowUses = &uses
 							}
 						}
@@ -731,6 +728,8 @@ func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 		if stack.Name == "external" {
 			continue
 		}
+		stackTaskName := fmt.Sprintf("stack-%s", stack.Name)
+		stackDeps := []Dep{}
 		for _, model := range stack.Models {
 			modelName := fmt.Sprintf("model-%s", model.Name)
 			modelTaskNames = append(modelTaskNames, modelName)
@@ -739,18 +738,15 @@ func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 				return nil, fmt.Errorf("Error building model (name=%s): %w", modelName, err)
 			}
 			modelTasks[modelName] = mt
+			stackDeps = append(stackDeps, Dep{
+				Task: modelName,
+			})
 		}
-	}
 
-	modelTasks["build-models"] = Task{
-		Label: util.StringPtr("build-models"),
-		Deps: func() *[]Dep {
-			deps := []Dep{}
-			for _, modelName := range modelTaskNames {
-				deps = append(deps, Dep{Task: modelName})
-			}
-			return &deps
-		}(),
+		modelTasks[stackTaskName] = Task{
+			Label: util.StringPtr(fmt.Sprintf("stack:%s", stack.Name)),
+			Deps:  &stackDeps,
+		}
 	}
 
 	return modelTasks, nil

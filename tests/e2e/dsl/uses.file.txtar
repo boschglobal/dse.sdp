@@ -15,7 +15,7 @@ simulation
 channel signal
 
 uses
-dse.sdp file:///repo
+dse.sdp file:///repo v$PACKAGE_VERSION
 
 model simple Simple
 channel signal data

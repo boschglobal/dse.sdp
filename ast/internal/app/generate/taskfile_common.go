@@ -5,9 +5,12 @@
 package generate
 
 import (
+	"fmt"
+
 	"github.com/elliotchance/orderedmap/v2"
 
 	"github.com/boschglobal/dse.clib/extra/go/command/util"
+	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 )
 
 func buildBaseTasks() map[string]Task {
@@ -196,7 +199,21 @@ fi`},
 	return baseTasks
 }
 
-func buildSimulationTasks() map[string]Task {
+func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
+	buildCmds := []Cmd{
+		{Cmd: "mkdir -p {{.SIMDIR}}/data"},
+		{Cmd: "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
+	}
+
+	// Sequential stack execution
+	for _, stack := range simSpec.Stacks {
+		if stack.Name == "external" {
+			continue
+		}
+		buildCmds = append(buildCmds, Cmd{
+			Task: fmt.Sprintf("stack-%s", stack.Name),
+		})
+	}
 
 	simulationTasks := map[string]Task{
 		"default": {
@@ -205,13 +222,9 @@ func buildSimulationTasks() map[string]Task {
 			},
 		},
 		"build": {
-			Dir:   util.StringPtr("{{.OUTDIR}}"),
-			Label: util.StringPtr("build"),
-			Cmds: &[]Cmd{
-				{Cmd: "mkdir -p {{.SIMDIR}}/data"},
-				{Cmd: "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
-				{Task: "build-models"},
-			},
+			Dir:       util.StringPtr("{{.OUTDIR}}"),
+			Label:     util.StringPtr("build"),
+			Cmds:      &buildCmds,
 			Sources:   &[]string{"{{.ENTRYDIR}}/simulation.yaml"},
 			Generates: &[]string{"{{.SIMDIR}}/data/simulation.yaml"},
 		},

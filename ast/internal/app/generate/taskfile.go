@@ -117,7 +117,7 @@ func (c GenerateCommand) GenerateTaskfile() error {
 		},
 	}
 	tasks := make(map[string]Task)
-	for k, v := range buildSimulationTasks() {
+	for k, v := range buildSimulationTasks(c.simulationAst) {
 		tasks[k] = v
 	}
 	for k, v := range buildBaseTasks() {
