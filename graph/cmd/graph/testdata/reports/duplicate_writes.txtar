@@ -155,8 +155,8 @@ kind: Model
 metadata:
   name: Input
   annotations:
-    reference: https://github.boschdevcloud.com/bios-emthacks/dse.input.git
-    license: BIOSLv4
+    reference: https://github.com/boschglobal/dse.modelc.git
+    license: Apache2
 spec:
   runtime:
     dynlib:
