@@ -25,7 +25,7 @@ func urlEscapedParse(u string) (*url.URL, error) {
 }
 
 func resolveRemoteTaskfile(u *url.URL, owner, repo, version string) string {
-	for _, name := range []string{"Taskfile.yml", "Taskfile.yaml"} {
+	for _, name := range []string{"Taskfile.sdp.yml", "Taskfile.sdp.yaml", "Taskfile.yml", "Taskfile.yaml"} {
 		resolvedURL := *u
 		var finalUrl *url.URL
 		switch resolvedURL.Host {
@@ -82,14 +82,24 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 				if isDir {
 					dir := strings.TrimSuffix(u.Path, "/")
 					var taskfile string
-					taskfileYml := filepath.Join(dir, "Taskfile.yml")
-					taskfileYaml := filepath.Join(dir, "Taskfile.yaml")
-					if _, err := os.Stat(taskfileYml); err == nil {
-						taskfile = taskfileYml
-					} else if _, err := os.Stat(taskfileYaml); err == nil {
-						taskfile = taskfileYaml
-					} else {
-						// Neither Taskfile.yml nor Taskfile.yaml exists
+
+					taskfiles := []string{
+						"Taskfile.sdp.yml",
+						"Taskfile.sdp.yaml",
+						"Taskfile.yml",
+						"Taskfile.yaml",
+					}
+
+					for _, name := range taskfiles {
+						path := filepath.Join(dir, name)
+						if _, err := os.Stat(path); err == nil {
+							taskfile = path
+							break
+						}
+					}
+
+					if taskfile == "" {
+						// No Taskfile found
 						continue
 					}
 					includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{

@@ -298,7 +298,6 @@ func (c *ResolveCommand) loadMetadata() error {
 			}
 			var loaded bool
 			for _, rawUrl := range rawUrls {
-				slog.Info("Metadata download", "url", rawUrl)
 				// Search the cache.
 				if c.cacheDir != "" {
 					var cacheFilepath = appendFileName(c.cacheDir, calculateSha256(rawUrl))
@@ -312,12 +311,14 @@ func (c *ResolveCommand) loadMetadata() error {
 							continue
 						}
 						if err := yaml.Unmarshal(data, &yamlData); err == nil {
+							slog.Info("Metadata download", "url", rawUrl)
 							loaded = true
 							break
 						}
 					} else {
 						yamlData = fetchMetadata(rawUrl, use)
 						if len(yamlData) != 0 {
+							slog.Info("Metadata download", "url", rawUrl)
 							saveCacheFile(cacheFilepath, yamlData)
 							loaded = true
 							break
@@ -404,6 +405,8 @@ func genGitRawURL(useMap map[string]interface{}) []string {
 	}()
 
 	return []string{
+		strings.Replace(useUrl, "Taskfile.yml", "Taskfile.sdp.yml", 1),
+		strings.Replace(useUrl, "Taskfile.yml", "Taskfile.sdp.yaml", 1),
 		strings.Replace(useUrl, "Taskfile.yml", "Taskfile.yml", 1),
 		strings.Replace(useUrl, "Taskfile.yml", "Taskfile.yaml", 1),
 	}
