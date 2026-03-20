@@ -322,7 +322,7 @@ func genericModelTask(model ast.Model, modelUses ast.Uses) Task {
 	sources := []string{}
 	generates := func() []string {
 		return []string{
-			"downloads/{{base .PACKAGE_URL}}",
+			//"downloads/{{base .PACKAGE_URL}}", // TODO: handled by deps
 		}
 	}()
 	md := map[string]interface{}{}
@@ -532,16 +532,16 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					})
 					*task.Sources = append(*task.Sources, fmt.Sprintf("%s", downloadFile))
 				} else {
+					sourcePath := ""
 					if filepath.IsAbs(f.Value) {
-						*task.Cmds = append(*task.Cmds, Cmd{
-							Cmd: fmt.Sprintf("cp %s %s", f.Value, filePath),
-						})
+						sourcePath = f.Value
 					} else {
-						*task.Cmds = append(*task.Cmds, Cmd{
-							Cmd: fmt.Sprintf("cp {{.ENTRYDIR}}/%s %s", f.Value, filePath),
-						})
+						sourcePath = fmt.Sprintf("{{.ENTRYDIR}}/%s", f.Value)
 					}
-					*task.Sources = append(*task.Sources, fmt.Sprintf("%s", f.Name))
+					*task.Cmds = append(*task.Cmds, Cmd{
+						Cmd: fmt.Sprintf("cp %s %s", sourcePath, filePath),
+					})
+					*task.Sources = append(*task.Sources, sourcePath)
 				}
 			}
 		}

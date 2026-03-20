@@ -200,12 +200,10 @@ fi`},
 }
 
 func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
+	// Build the _sequential_ build commands.
 	buildCmds := []Cmd{
-		{Cmd: "mkdir -p {{.SIMDIR}}/data"},
-		{Cmd: "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
+		{Task: "build-setup-sim"},
 	}
-
-	// Sequential stack execution
 	for _, stack := range simSpec.Stacks {
 		if stack.Name == "external" {
 			continue
@@ -215,6 +213,7 @@ func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
 		})
 	}
 
+	// Construct the simulation tasks.
 	simulationTasks := map[string]Task{
 		"default": {
 			Cmds: &[]Cmd{
@@ -222,9 +221,17 @@ func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
 			},
 		},
 		"build": {
-			Dir:       util.StringPtr("{{.OUTDIR}}"),
-			Label:     util.StringPtr("build"),
-			Cmds:      &buildCmds,
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Label: util.StringPtr("build"),
+			Cmds:  &buildCmds,
+		},
+		"build-setup-sim": {
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Label: util.StringPtr("build-setup-sim"),
+			Cmds: &[]Cmd{
+				{Cmd: "mkdir -p {{.SIMDIR}}/data"},
+				{Cmd: "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
+			},
 			Sources:   &[]string{"{{.ENTRYDIR}}/simulation.yaml"},
 			Generates: &[]string{"{{.SIMDIR}}/data/simulation.yaml"},
 		},
