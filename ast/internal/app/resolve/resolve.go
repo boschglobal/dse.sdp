@@ -211,7 +211,7 @@ func resolvePath(pathOrURL string) (abs string, isDir bool, err error) {
 
 func loadTaskfile(filePath string) (map[string]interface{}, error) {
 	var data []byte
-	taskfiles := []string{"Taskfile.yml", "Taskfile.yaml"} // for supporting '.yml' or '.yaml' Taskfile extension
+	taskfiles := []string{"Taskfile.sdp.yml", "Taskfile.sdp.yaml", "Taskfile.yml", "Taskfile.yaml"} // for supporting '.yml' or '.yaml' Taskfile extension
 	for _, name := range taskfiles {
 		abs, _, err := resolvePath(filepath.Join(filePath, name))
 		if err != nil {
@@ -285,6 +285,7 @@ func (c *ResolveCommand) loadMetadata() error {
 			//				  input file:///mnt/c/Users/files.zip path=data/filename.txt
 			abs, isDir, err := resolvePath(path)
 			if err != nil || isDir == false {
+				slog.Error("Loading Taskfile failed", "error", err)
 				return nil
 			}
 			slog.Info("Loading Taskfile from local path", "path", abs)
