@@ -102,16 +102,23 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 						// No Taskfile found
 						continue
 					}
-					includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
-						Taskfile: taskfile,
-						Dir:      dir,
-						Vars:     &vars,
+					if uses.Version == nil {
+						includes[fmt.Sprintf("%s", uses.Name)] = Include{
+							Taskfile: taskfile,
+							Dir:      dir,
+							Vars:     &vars,
+						}
+					} else {
+						includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
+							Taskfile: taskfile,
+							Dir:      dir,
+							Vars:     &vars,
+						}
 					}
 				} else {
 					continue
 				}
 			}
-
 		} else {
 			if uses.Version == nil {
 				continue
