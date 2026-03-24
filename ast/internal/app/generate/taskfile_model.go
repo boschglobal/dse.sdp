@@ -127,7 +127,8 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 				continue
 			}
 
-			vars["IMAGE_TAG"] = cleanTag(*uses.Version)
+			vars["IMAGE_TAG"] = cleanTag(*uses.Version) // Depreciated, migrate to TAG.
+			vars["TAG"] = cleanTag(*uses.Version)
 
 			if uses.User != nil {
 				vars["DOCKER_USER"] = *uses.User
