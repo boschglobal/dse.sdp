@@ -46,11 +46,10 @@ fi`},
 		"unzip-dir": {
 			Dir:   util.StringPtr("{{.OUTDIR}}"),
 			Run:   util.StringPtr("when_changed"),
-			Label: util.StringPtr("dse:unzip-dir:{{.ZIPDIR}}-{{.DIR}}"),
+			Label: util.StringPtr("dse:unzip-dir:{{.ZIP}}-{{.DIR}}"),
 			Vars: func() *OMap {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("ZIP", "{{.ZIP}}")
-				om.Set("ZIPDIR", "$(basename {{.ZIP}} {{ext .ZIP}})/{{.ZIPDIR}}")
 				om.Set("ZIPDIR", "$(basename {{.ZIP}} {{ext .ZIP}}){{if .ZIPDIR}}/{{.ZIPDIR}}{{end}}")
 				om.Set("DIR", "{{.DIR}}")
 				return &om

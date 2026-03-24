@@ -489,6 +489,47 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 	}
 	modelTask := genericModelTask(model, modelUses)
 
+	// Parse: modelc package/model files
+	func(task *Task, model ast.Model) {
+		isModel := func() bool {
+			defer func() {
+				if r := recover(); r != nil {
+				}
+			}()
+			if v := md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"]; v != nil {
+				return true
+			} else {
+				return false
+			}
+		}
+		if isModel() == false {
+			return
+		}
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Task: "unzip-dir",
+			Vars: &map[string]string{
+				"ZIP":    "downloads/{{base .PACKAGE_URL}}",
+				"ZIPDIR": fmt.Sprintf("{{.PACKAGE_PATH}}"),
+				"DIR":    fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}"),
+			},
+		})
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Cmd: fmt.Sprintf(`find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | ` +
+				`xargs -r -0 yq -i '.spec.runtime.dynlib[].path |= "{{.PATH}}/" + .'`,
+			),
+		})
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Cmd: fmt.Sprintf("rm -rf {{.SIMDIR}}/{{.PATH}}/examples"),
+		})
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f"),
+		})
+		*task.Cmds = append(*task.Cmds, Cmd{
+			Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yml -print0  | xargs -r -0 rm -f"),
+		})
+		*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/**"))
+	}(&modelTask, model)
+
 	// Parse: user files
 	func(task *Task, model ast.Model) {
 		if model.Files != nil {
@@ -545,47 +586,6 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 				}
 			}
 		}
-	}(&modelTask, model)
-
-	// Parse: modelc package/model files
-	func(task *Task, model ast.Model) {
-		isModel := func() bool {
-			defer func() {
-				if r := recover(); r != nil {
-				}
-			}()
-			if v := md["models"].(map[string]interface{})[model.Model].(map[string]interface{})["path"]; v != nil {
-				return true
-			} else {
-				return false
-			}
-		}
-		if isModel() == false {
-			return
-		}
-		*task.Cmds = append(*task.Cmds, Cmd{
-			Task: "unzip-dir",
-			Vars: &map[string]string{
-				"ZIP":    "downloads/{{base .PACKAGE_URL}}",
-				"ZIPDIR": fmt.Sprintf("{{.PACKAGE_PATH}}"),
-				"DIR":    fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}"),
-			},
-		})
-		*task.Cmds = append(*task.Cmds, Cmd{
-			Cmd: fmt.Sprintf(`find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | ` +
-				`xargs -r -0 yq -i '.spec.runtime.dynlib[].path |= "{{.PATH}}/" + .'`,
-			),
-		})
-		*task.Cmds = append(*task.Cmds, Cmd{
-			Cmd: fmt.Sprintf("rm -rf {{.SIMDIR}}/{{.PATH}}/examples"),
-		})
-		*task.Cmds = append(*task.Cmds, Cmd{
-			Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f"),
-		})
-		*task.Cmds = append(*task.Cmds, Cmd{
-			Cmd: fmt.Sprintf("find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yml -print0  | xargs -r -0 rm -f"),
-		})
-		*task.Generates = append(*task.Generates, fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/**"))
 	}(&modelTask, model)
 
 	// Parse: workflow uses items
