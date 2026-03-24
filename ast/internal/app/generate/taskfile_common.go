@@ -46,7 +46,7 @@ fi`},
 		"unzip-dir": {
 			Dir:   util.StringPtr("{{.OUTDIR}}"),
 			Run:   util.StringPtr("when_changed"),
-			Label: util.StringPtr("dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}"),
+			Label: util.StringPtr("dse:unzip-dir:{{.ZIPDIR}}-{{.DIR}}"),
 			Vars: func() *OMap {
 				om := OMap{orderedmap.NewOrderedMap[string, string]()}
 				om.Set("ZIP", "{{.ZIP}}")
