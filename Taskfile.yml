@@ -14,8 +14,9 @@ metadata:
       displayName: Simple
       path: simple
       workflows:
-        - filedownload
+        - printfile
         - message
+        - download
       platforms:
         - linux-amd64
         - linux-x86
@@ -27,7 +28,7 @@ metadata:
       displayName: Gateway
       path: gateway
       workflows:
-        - filedownload
+        - printfile
       platforms:
         - linux-amd64
       channels:
@@ -84,12 +85,34 @@ tasks:
     requires:
       vars: [MSG]
 
-  filedownload:
-    desc: Print contents of downloaded file
+  printfile:
+    desc: Print contents of a file
     run: when_changed
     dir: '{{.USER_WORKING_DIR}}'
-    label: dse:sdp:filedownload
+    label: dse:sdp:printfile
     cmds:
       - cat "{{.USER_WORKING_DIR}}/{{.OUTDIR}}/{{.FILE}}"
     requires:
       vars: [FILE]
+
+  download:
+    desc: downloads remote url file without auth
+    run: when_changed
+    dir: '{{.USER_WORKING_DIR}}'
+    label: dse:sdp:download
+    cmds:
+      - cd {{.OUTDIR}}/downloads && curl -L -O "{{.URL}}"
+    requires:
+      vars: [URL]
+
+  write-message:
+    desc: write message to a file in the specified path
+    run: when_changed
+    dir: '{{.USER_WORKING_DIR}}'
+    label: dse:sdp:write-message
+    cmds:
+      - mkdir -p "{{.PATH}}"
+      - echo "{{.MESSAGE}}" > "{{.PATH}}/{{.FILE}}"
+      - cat "{{.PATH}}/{{.FILE}}"
+    requires:
+      vars: [PATH, FILE, MESSAGE]

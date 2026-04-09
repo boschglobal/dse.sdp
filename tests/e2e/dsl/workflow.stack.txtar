@@ -1,0 +1,36 @@
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh simple.dse BUILD_ONLY
+
+stdout 'Hello from default stack'
+stdout 'Hello from simple_model stack'
+
+
+-- simple.dse --
+simulation
+channel signal
+
+uses
+dse.sdp file:///repo v$PACKAGE_VERSION
+
+workflow message uses dse.sdp
+var MSG 'Hello from default stack'
+
+model simple Simple
+channel signal signal_channel
+
+
+stack simple_model
+
+workflow message uses dse.sdp
+var MSG 'Hello from simple_model stack'
+
+model simple Simple
+channel signal signal_channel
+
+
+

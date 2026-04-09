@@ -1,3 +1,4 @@
+# TODO: update workflow name `filedownload` to `printfile` after RELEASE_VERSION update
 # SETUP: construct working folder layout
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 exec cp -r . $WORKDIR

@@ -59,6 +59,7 @@ const tmpSimRun = "sim_run_completed";
 
 export function activate(context: vscode.ExtensionContext) {
   let diagnosticCollection = vscode.languages.createDiagnosticCollection("dse");
+  diagnosticCollection.clear();
   context.subscriptions.push(diagnosticCollection);
   vscode.workspace.onDidChangeTextDocument((event) => {
     const document = event.document;

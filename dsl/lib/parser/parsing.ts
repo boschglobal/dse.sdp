@@ -30,6 +30,7 @@ class FsilParser extends EmbeddedActionsParser {
   public networks!: () => any;
   public workflow_vars!: () => any;
   public workflow!: () => any;
+  public globalworkflow!: () => any;
   public files!: () => any;
   public stack!: () => any;
   public models!: () => any;
@@ -67,7 +68,7 @@ class FsilParser extends EmbeddedActionsParser {
     let stack_env_vars: string[] = [];
     let stack_annotations: string[] = [];
     let model_vars: string[] = [];
-    let channelCollection: Record<string, Network[]>
+    let default_stack_workflows: string[] = [];
 
     // The main rule that parses the entire simulation statement.
     $.RULE("simulation", () => {
@@ -81,11 +82,13 @@ class FsilParser extends EmbeddedActionsParser {
       }
       children.uses = uses;
 
-      while ($.LA(1).tokenType === Var || $.LA(1).tokenType === EnvVar) {
+      while ($.LA(1).tokenType === Var || $.LA(1).tokenType === EnvVar || $.LA(1).tokenType === Workflow) {
         if ($.LA(1).tokenType === Var) {
           global_vars = $.SUBRULE($.vars);
         } else if ($.LA(1).tokenType === EnvVar) {
           global_env_vars = $.SUBRULE($.envvars);
+        } else if ($.LA(1).tokenType === Workflow) {
+          default_stack_workflows = $.SUBRULE($.globalworkflow);
         }
       }
       children.vars = global_vars;
@@ -220,6 +223,31 @@ class FsilParser extends EmbeddedActionsParser {
       return workflow_vars;
     });
 
+    $.RULE("globalworkflow", () => {
+      const global_workflows: any[] = [];
+      $.MANY({
+        DEF: () => {
+          const global_workflow = $.CONSUME(Workflow);
+          if (this.RECORDING_PHASE !== true) {
+            const payload = global_workflow.payload;
+            if (!payload.workflow_reference_type.value || payload.workflow_reference_type.value !== "uses") {
+              throw new Error("stack workflows must have 'uses'");
+            }
+          }
+
+          let workflow_vars = $.SUBRULE($.workflow_vars);
+          global_workflows.push({
+            type: global_workflow.tokenType.name.replace(" ", ""),
+            object: updateTokenObject(global_workflow),
+            children: {
+              workflow_vars: workflow_vars,
+            },
+          });
+        },
+      });
+      return global_workflows;
+    });
+
     $.RULE("workflow", () => {
       const workflows: any[] = [];
       $.MANY({
@@ -321,12 +349,15 @@ class FsilParser extends EmbeddedActionsParser {
           if ($.LA(1).tokenType === Stack) {
             stack = $.CONSUME(Stack);
           }
+          let stack_workflows: string[] = [];
           // Read env_vars and annotations in any order
-          while ($.LA(1).tokenType === EnvVar || $.LA(1).tokenType === Annotation) {
+          while ($.LA(1).tokenType === EnvVar || $.LA(1).tokenType === Annotation || $.LA(1).tokenType === Workflow) {
             if ($.LA(1).tokenType === EnvVar) {
               stack_env_vars.push(...$.SUBRULE($.envvars));
             } else if ($.LA(1).tokenType === Annotation) {
               stack_annotations.push(...$.SUBRULE($.annotations));
+            } else if ($.LA(1).tokenType === Workflow) {
+              stack_workflows.push(...$.SUBRULE($.globalworkflow));
             }
           }
 
@@ -337,10 +368,14 @@ class FsilParser extends EmbeddedActionsParser {
           }
 
           stack_annotations = Array.isArray(stack_annotations) ? stack_annotations : [stack_annotations];
+          stack_workflows = Array.isArray(stack_workflows) ? stack_workflows : [stack_workflows];
 
-          let name = "default";
+          let name = "";
           if (stack && "tokenType" in stack) {
             name = stack.payload.stack_name.value;
+          } else {
+            name = "default";
+            stack_workflows = default_stack_workflows;
           }
 
           const stacked_models = $.SUBRULE($.models);
@@ -363,6 +398,7 @@ class FsilParser extends EmbeddedActionsParser {
               object: updateTokenObject(stack),
               env_vars: stack_env_vars,
               annotations: stack_annotations,
+              workflows: stack_workflows,
               children: {
                 models: models,
               },

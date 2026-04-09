@@ -741,6 +741,145 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 	return modelTask, nil
 }
 
+func globalWorkflowParseUrl(global_wf_cmds *[]Cmd, uses *ast.Uses) string {
+	u, _ := url.Parse(uses.Url)
+	downloadFile := fmt.Sprintf("downloads/%s", filepath.Base(u.Path))
+	if u.IsAbs() {
+		if strings.HasPrefix(u.Host, "github.boschdevcloud.") {
+
+			pathParts := strings.Split(u.Path, "/")
+			vars := map[string]string{
+				"URL":        uses.Url,
+				"FILE":       downloadFile,
+				"ASSET_NAME": pathParts[len(pathParts)-1],
+				"TAG":        pathParts[len(pathParts)-2],
+			}
+
+			if uses.Token != nil {
+				vars["TOKEN"] = *uses.Token
+			}
+
+			apiURL, _ := u.Parse(fmt.Sprintf("/api/v3/repos/%s/%s", pathParts[1], pathParts[2]))
+			vars["API_URL"] = apiURL.String()
+
+			*global_wf_cmds = append(*global_wf_cmds, Cmd{
+				Task: "download-file-github-asset",
+				Vars: &vars,
+			})
+
+		} else {
+			vars := map[string]string{
+				"URL":  uses.Url,
+				"FILE": downloadFile,
+			}
+
+			if uses.User != nil {
+				userValue := *uses.User
+				if strings.HasPrefix(userValue, "$") {
+					vars["USER"] = fmt.Sprintf("{{.%s}}", userValue[1:])
+				} else {
+					vars["USER"] = userValue
+				}
+			}
+
+			if uses.Token != nil {
+				tokenValue := *uses.Token
+				if strings.HasPrefix(tokenValue, "$") {
+					vars["TOKEN"] = fmt.Sprintf("{{.%s}}", tokenValue[1:])
+				} else {
+					vars["TOKEN"] = tokenValue
+				}
+			}
+
+			*global_wf_cmds = append(*global_wf_cmds, Cmd{
+				Task: "download-file",
+				Vars: &vars,
+			})
+		}
+
+	}
+	return downloadFile
+}
+
+func (c GenerateCommand) buildstackWorkflows(stack ast.Stack, simSpec ast.SimulationSpec) []Cmd {
+	global_wf_cmds := []Cmd{}
+	if stack.Workflows == nil {
+		return global_wf_cmds
+	}
+
+	for _, workflow := range *stack.Workflows {
+
+		var workflowUses *ast.Uses
+
+		if workflow.Uses != nil {
+			for _, uses := range *simSpec.Uses {
+				if uses.Name == *workflow.Uses {
+					workflowUses = &uses
+					break
+				}
+			}
+		}
+
+		if workflowUses == nil {
+			continue
+		}
+
+		vars := map[string]string{}
+
+		if workflow.Vars != nil {
+			for _, f := range *workflow.Vars {
+				dir, _ := filepath.Split(f.Name)
+				if len(dir) != 0 {
+					global_wf_cmds = append(global_wf_cmds, Cmd{
+						Cmd: fmt.Sprintf("mkdir -p downloads/%s", dir),
+					})
+				}
+				if f.Reference != nil && *f.Reference == "uses" {
+					var fileUses *ast.Uses
+					for _, uses := range *simSpec.Uses {
+						if uses.Name == f.Value {
+							fileUses = &uses
+							break
+						}
+					}
+					if fileUses == nil {
+						continue
+					}
+
+					downloadFile := globalWorkflowParseUrl(&global_wf_cmds, fileUses)
+					if fileUses.Path != nil && *fileUses.Path != "" { // reference is an archive, file must be extracted from the archive path
+						cmds := []Cmd{
+							{
+								Cmd: fmt.Sprintf("unzip -ojq %s '%s' -d downloads", downloadFile, *fileUses.Path),
+							},
+						}
+						global_wf_cmds = append(global_wf_cmds, cmds...)
+						downloadFile = fmt.Sprintf("downloads/%s", filepath.Base(*fileUses.Path))
+					}
+					vars[f.Name] = downloadFile
+				} else {
+					vars[f.Name] = f.Value
+				}
+			}
+		}
+
+		var workflowTaskName string
+
+		if workflowUses.Version == nil {
+			workflowTaskName = fmt.Sprintf("%s:%s", workflowUses.Name, workflow.Name)
+		} else {
+			workflowTaskName = fmt.Sprintf("%s-%s:%s", workflowUses.Name, *workflowUses.Version, workflow.Name)
+		}
+
+		global_wf_cmds = append(global_wf_cmds, Cmd{
+			Task: workflowTaskName,
+			Vars: &vars,
+		})
+	}
+
+	return global_wf_cmds
+}
+
 func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 	modelTaskNames := []string{}
 	modelTasks := map[string]Task{}
@@ -765,8 +904,11 @@ func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 			})
 		}
 
+		stackWorkflow := c.buildstackWorkflows(stack, simSpec)
 		modelTasks[stackTaskName] = Task{
 			Label: util.StringPtr(fmt.Sprintf("stack:%s", stack.Name)),
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Cmds:  &stackWorkflow,
 			Deps:  &stackDeps,
 		}
 	}

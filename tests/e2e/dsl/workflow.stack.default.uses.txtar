@@ -1,0 +1,44 @@
+skip 'TODO: test after RELEASE_VERSION update'
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh simple.dse BUILD_ONLY
+
+exists out/downloads/remote_foo.txt
+exists out/downloads/local_file.txt
+stdout 'remote foo'
+stdout 'local foo'
+
+
+
+-- simple.dse --
+simulation
+channel signal
+
+uses
+dse.sdp file:///repo v$PACKAGE_VERSION
+remote_file https://raw.githubusercontent.com/boschglobal/dse.sdp/main/tests/testdata/e2e/remote_foo.txt
+local_file file:///$WORKDIR/local_file.txt
+
+
+workflow printfile uses dse.sdp
+var FILE uses remote_file
+
+model simple Simple
+channel signal signal_channel
+
+
+stack local
+
+workflow printfile uses dse.sdp
+var FILE uses local_file
+
+model simple_local Simple
+channel signal signal_channel
+
+
+-- local_file.txt --
+local foo

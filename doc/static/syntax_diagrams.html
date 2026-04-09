@@ -527,6 +527,24 @@
           }]
         },
         {
+          "type": "Option",
+          "idx": 7,
+          "definition": [{
+            "type": "RepetitionMandatory",
+            "definition": [{
+                "type": "NonTerminal",
+                "name": "NL",
+                "idx": 0
+              },
+              {
+                "type": "NonTerminal",
+                "name": "workflow",
+                "idx": 1
+              }
+            ]
+          }]
+        },
+        {
           "type": "RepetitionMandatory",
           "idx": 6,
           "definition": [{
@@ -601,6 +619,22 @@
           "name": "workflow_name",
           "label": "workflow_name",
           "idx": 1
+        },
+        {
+          "type": "Option",
+          "idx": 2,
+          "definition": [{
+                "type": "Terminal",
+                "name": "uses",
+                "label": "uses",
+                "idx": 0
+              },
+              {
+                "type": "NonTerminal",
+                "name": "repo_name",
+                "idx": 1
+              }
+            ]
         },
         {
           "type": "Option",

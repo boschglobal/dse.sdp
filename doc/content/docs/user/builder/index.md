@@ -237,6 +237,7 @@ workflow =
 * <code><var>VAR_VALUE</var></code>: the variable _value_.
 * <code><var>USES_NAME</var></code> (variable level): sets the variable value to the path of this _uses_ item.
 
+> Note: When a workflow is defined at the stack level (outside the model context), it is executed after the model workflows in the stack.
 
 
 ## Special Variables

@@ -215,6 +215,43 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 		if len(envList) > 0 {
 			stack.Env = &envList
 		}
+
+		// Global Workflows
+		globalWorkflowList := buildList(value, "workflows", func(value gjson.Result) ast.Workflow {
+			workflow := ast.Workflow{
+				Name: value.Get("object.payload.workflow_name.value").String(),
+				Uses: util.StringPtr(value.Get("object.payload.workflow_value.value").String()),
+			}
+			// Vars
+			varsList := buildList(value, "children.workflow_vars", func(value gjson.Result) ast.Var {
+				vars := ast.Var{
+					Name:  value.Get("object.payload.var_name.value").String(),
+					Value: value.Get("object.payload.var_value.value").String(),
+					Reference: func() *ast.VarReference {
+						v := value.Get("object.payload.var_reference_type.value")
+						if v.Exists() == true {
+							return (*ast.VarReference)(util.StringPtr(v.String()))
+						} else {
+							return nil
+						}
+					}(),
+					Networktype: func() *ast.VarNetworktype {
+						v := value.Get("object.payload.var_network_type.value")
+						if v.Exists() {
+							return (*ast.VarNetworktype)(util.StringPtr(v.String()))
+						}
+						return nil
+					}(),
+				}
+				return vars
+			})
+			workflow.Vars = &varsList
+			return workflow
+		})
+		if len(globalWorkflowList) > 0 {
+			stack.Workflows = &globalWorkflowList
+		}
+
 		// Models
 		modelList := buildList(value, "children.models", func(value gjson.Result) ast.Model {
 			model := ast.Model{
