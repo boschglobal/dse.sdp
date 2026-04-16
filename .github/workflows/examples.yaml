@@ -6,6 +6,10 @@ on:  # yamllint disable-line rule:truthy
 #    tags:
 #      - 'v*.*.*'
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   run:
     strategy:
