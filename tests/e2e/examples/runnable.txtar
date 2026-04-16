@@ -1,15 +1,12 @@
-skip 'TODO implement condition to make this optional'
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 
-exec mkdir -p $WORK/.local/share/dse-graph
-exec cp -r $ENTRYDIR/graph/cmd/graph/reports $WORK/.local/share/dse-graph/
-env HOME=$WORK
+env EXAMPLE_DIR=$REPODIR/examples/runnable
+exec cp $EXAMPLE_DIR/runnable.dse $WORKDIR/
+exec cp -r . $WORKDIR
+cd $WORKDIR
 
-env DSE_DIR=$REPODIR/examples/runnable
-
-exec cp $DSE_DIR/runnable.dse $WORK/
-
-exec cp $REPODIR/tests/testscript/scripts/workflow.sh $WORK/workflow.sh
-exec sh -e $WORK/workflow.sh runnable.dse
+# TEST: operate the simulation
+exec sh -e workflow.sh runnable.dse
 
 # dse-builder
 
@@ -53,12 +50,12 @@ stderr 'Writing taskfile: Taskfile.yml'
 stderr 'Writing simulation: simulation.yaml'
 
 stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-modelcfmu-annotations" finished'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-fmu" started'
-stderr 'Running FMI Toolset command: gen-fmu'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-fmu" finished'
+stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-modelcfmu" started'
+stderr 'Running FMI Toolset command: gen-modelcfmu'
+stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-modelcfmu" finished'
 stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:generate-fmimodelc" finished'
 stderr 'task: "model-runnable" finished'
-stderr 'task: "build-models" finished'
+stderr 'task: "stack-default" finished'
 stderr 'task: "build" finished'
 stderr 'task: "default" finished'
 

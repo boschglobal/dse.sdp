@@ -523,7 +523,7 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 		})
 		*task.Cmds = append(*task.Cmds, Cmd{
 			Cmd: fmt.Sprintf(`find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | ` +
-				`xargs -r -0 yq -i '.spec.runtime.dynlib[].path |= "{{.PATH}}/" + .'`,
+				`xargs -r -0 yq -i '.spec.runtime.dynlib[].path |= sub("(^.*/)?(lib|bin)/"; "{{.PATH}}/$2/")'`,
 			),
 		})
 		*task.Cmds = append(*task.Cmds, Cmd{

@@ -34,6 +34,7 @@ target_compile_definitions(gateway
 target_link_libraries(${MODEL_NAME}
     PRIVATE
         modelc
+        m
 )
 install(
     TARGETS

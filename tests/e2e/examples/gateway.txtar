@@ -1,4 +1,4 @@
-skip 'TODO check/update'
+skip 'TODO update RELEASE_VERSION in root Makefile to make use of the gateway model built using the latest DSE_MODELC_VERSION'
 # SETUP: construct working folder layout
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 
@@ -43,7 +43,7 @@ docker run --name simer -i --rm \
     -v $ENTRYWORKDIR/out/sim:/sim \
     --network=host \
     "${DSE_SIMER_IMAGE}" \
-        -env simbus:SIMBUS_LOGLEVEL=4 \
+        -env simbus:SIMBUS_LOGLEVEL=1 \
         -stack model \
         -timeout 5 &
 

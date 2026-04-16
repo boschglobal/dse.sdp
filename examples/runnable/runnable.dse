@@ -32,6 +32,6 @@ workflow generate-runnable
     var OUT_DIR {{.PATH}}/data
     var TARGET_NAME target
 
-workflow generate-fmimodelc
+workflow generate-fmimodelc uses dse.fmi
     var FMU_NAME runnable
     var SIGNAL_GROUPS signal
