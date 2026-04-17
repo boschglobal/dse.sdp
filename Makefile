@@ -24,12 +24,19 @@ SUBDIRS = ast graph dsl lsp doc examples/models tests/testdata/e2e
 
 ###############
 ## Test Parameters.
-export EXAMPLE_VERSION ?= 0.8.26
+export EXAMPLE_VERSION ?= 0.8.48
 export HOST_ENTRYDIR ?= $(shell pwd -P)
 export HOST_DOCKER_WORKSPACE ?= $(shell pwd -P)
 export TESTSCRIPT_E2E_DIR ?= tests/e2e
+export TESTSCRIPT_E2E_INTERNAL_DIR ?= tests/e2e_internal
 export PACKAGE_VERSION ?= 0.0.1
 TESTSCRIPT_E2E_FILES = $(wildcard $(TESTSCRIPT_E2E_DIR)/*/*.txtar)
+# Add auth tests only for local runs since auth tokens are not set in CI/codespace
+ifeq ($(CI),)
+ifeq ($(CODESPACES),)
+TESTSCRIPT_E2E_FILES += $(wildcard $(TESTSCRIPT_E2E_INTERNAL_DIR)/*/*.txtar)
+endif
+endif
 
 
 default: build
