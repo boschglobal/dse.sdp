@@ -18,9 +18,12 @@ func newNetworkSpec() *NetworkSpec {
 
 func (n *NetworkSpec) MergeGraph(ctx context.Context, session neo4j.SessionWithContext, kd *KindDoc) error {
 	networkID := kd.kind_id
+	if n.Messages == nil {
+		return nil
+	}
 
 	// NETWORK -[HAS]-> MESSAGES
-	for _, m := range n.Messages {
+	for _, m := range *n.Messages {
 		matchProps := map[string]string{
 			"message": m.Message,
 		}
@@ -59,8 +62,11 @@ func (n *NetworkSpec) MergeGraph(ctx context.Context, session neo4j.SessionWithC
 
 			if m.Functions.Decode != nil {
 				for _, decodeFunction := range *m.Functions.Decode {
+					if decodeFunction.Function == nil {
+						continue
+					}
 					decodeMatchProps := map[string]string{
-						"function": decodeFunction.Function,
+						"function": *decodeFunction.Function,
 					}
 					decodeNodeProps := map[string]interface{}{
 						"annotations": decodeFunction.Annotations,
@@ -72,8 +78,11 @@ func (n *NetworkSpec) MergeGraph(ctx context.Context, session neo4j.SessionWithC
 
 			if m.Functions.Encode != nil {
 				for _, encodeFunction := range *m.Functions.Encode {
+					if encodeFunction.Function == nil {
+						continue
+					}
 					encodeMatchProps := map[string]string{
-						"function": encodeFunction.Function,
+						"function": *encodeFunction.Function,
 					}
 					encodeNodeProps := map[string]interface{}{
 						"annotations": encodeFunction.Annotations,

@@ -1,10 +1,10 @@
 module github.com/boschglobal/dse.sdp/graph
 
-go 1.23.5
+go 1.24.0
 
 require (
 	github.com/boschglobal/dse.clib/extra/go/command v1.0.36
-	github.com/boschglobal/dse.schemas/code/go/dse v1.2.37
+	github.com/boschglobal/dse.schemas/code/go/dse v1.2.47
 	github.com/gabriel-vasile/mimetype v1.4.12
 	github.com/jedib0t/go-pretty/v6 v6.7.8
 	github.com/neo4j/neo4j-go-driver/v5 v5.28.4
@@ -18,10 +18,10 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/oapi-codegen/runtime v1.1.1 // indirect
+	github.com/oapi-codegen/runtime v1.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
-	golang.org/x/tools v0.26.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/tools v0.39.0 // indirect
 )
