@@ -89,6 +89,9 @@ cleanall: clean
 docker:
 	$(MAKE) -C graph docker
 	docker build -f .devcontainer/Dockerfile-builder --tag dse-builder:test .
+
+.PHONY: devcontainer
+devcontainer: docker
 	docker build -f .devcontainer/Dockerfile --tag dse-devcontainer:test --build-arg DSE_BUILDER_IMAGE=dse-builder:test .
 
 .PHONY: run_graph

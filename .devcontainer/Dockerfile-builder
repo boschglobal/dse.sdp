@@ -6,7 +6,7 @@
 
 # Go Builder
 # ==========
-FROM golang:1.23.5-bookworm AS golang-builder
+FROM golang:bookworm AS golang-builder
 COPY ast /src/ast
 RUN go install github.com/boschglobal/task/v3/cmd/task@latest
 RUN set -eux; \
