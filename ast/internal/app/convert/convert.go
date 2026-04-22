@@ -190,15 +190,19 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 			}(),
 		}
 		//Annotations
-		annotationList := buildList(value, "annotations", func(value gjson.Result) ast.Annotations {
-			annotations := ast.Annotations{
-				"name":  value.Get("object.payload.annotation_name.value").String(),
-				"value": value.Get("object.payload.annotation_value.value").String(),
+		annotations := ast.Annotations{}
+		value.Get("annotations").ForEach(func(_, v gjson.Result) bool {
+			key := v.Get("object.payload.annotation_name.value").String()
+			val := v.Get("object.payload.annotation_value.value").String()
+
+			if key != "" {
+				annotations[key] = val
 			}
-			return annotations
+			return true
 		})
-		if len(annotationList) > 0 {
-			stack.Annotations = &annotationList
+
+		if len(annotations) > 0 {
+			stack.Annotations = &annotations
 		}
 		// Env
 		envList := buildList(value, "env_vars", func(value gjson.Result) ast.Var {
@@ -291,15 +295,17 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 				c.modelVars[key] = append(c.modelVars[key], varList...)
 			}
 			//Annotations
-			annotationList := buildList(value, "children.annotations", func(value gjson.Result) ast.Annotations {
-				annotations := ast.Annotations{
-					"name":  value.Get("object.payload.annotation_name.value").String(),
-					"value": value.Get("object.payload.annotation_value.value").String(),
+			annotations := ast.Annotations{}
+			value.Get("children.annotations").ForEach(func(_, v gjson.Result) bool {
+				key := v.Get("object.payload.annotation_name.value").String()
+				val := v.Get("object.payload.annotation_value.value").String()
+				if key != "" {
+					annotations[key] = val
 				}
-				return annotations
+				return true
 			})
-			if len(annotationList) > 0 {
-				model.Annotations = &annotationList
+			if len(annotations) > 0 {
+				model.Annotations = &annotations
 			}
 			// File
 			fileList := buildList(value, "children.files", func(value gjson.Result) ast.File {

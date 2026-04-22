@@ -1,11 +1,11 @@
 module github.com/boschglobal/dse.sdp/ast
 
-go 1.23.5
+go 1.24.0
 
 require (
 	github.com/boschglobal/dse.clib/extra/go/command v1.0.36
 	github.com/boschglobal/dse.clib/extra/go/file v1.0.47
-	github.com/boschglobal/dse.schemas/code/go/dse v1.2.37
+	github.com/boschglobal/dse.schemas/code/go/dse v1.2.47
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/rogpeppe/go-internal v1.14.1
@@ -17,11 +17,11 @@ require (
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/google/uuid v1.5.0 // indirect
-	github.com/oapi-codegen/runtime v1.1.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+	github.com/oapi-codegen/runtime v1.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 )

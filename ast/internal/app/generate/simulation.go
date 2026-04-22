@@ -86,10 +86,8 @@ func (c *GenerateCommand) GenerateSimulation() error {
 		}
 
 		if astStack.Annotations != nil && len(*astStack.Annotations) > 0 {
-			for _, v := range *astStack.Annotations {
-				name := v["name"].(string)
-				value := v["value"].(string)
-				annotations[name] = value
+			for k, v := range *astStack.Annotations {
+				annotations[k] = v
 			}
 		}
 		stack := kind.Stack{
@@ -161,10 +159,8 @@ func (c *GenerateCommand) GenerateSimulation() error {
 			var annotationMap map[string]interface{}
 			if astModel.Annotations != nil && len(*astModel.Annotations) > 0 {
 				annotationMap = make(map[string]interface{})
-				for _, a := range *astModel.Annotations {
-					name := a["name"].(string)
-					value := a["value"].(string)
-					annotationMap[name] = value
+				for k, v := range *astModel.Annotations {
+					annotationMap[k] = v
 				}
 			}
 			model := kind.ModelInstance{
