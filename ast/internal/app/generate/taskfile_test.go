@@ -48,11 +48,11 @@ func TestGenerateTaskfile_includes(t *testing.T) {
 
 	YamlContains(t, f, "$.version", "3")
 
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.taskfile", "https://raw.githubusercontent.com/boschglobal/dse.modelc/refs/tags/v2.1.15/Taskfile.yml")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.dir", "{{.OUTDIR}}/{{.SIMDIR}}")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.IMAGE_TAG", "2.1.15")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.SIM", "{{.SIMDIR}}")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.1.15'.vars.ENTRYWORKDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/{{.OUTDIR}}{{else}}{{.PWD}}/{{.OUTDIR}}{{end}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.taskfile", "https://raw.githubusercontent.com/boschglobal/dse.modelc/refs/tags/v2.3.12/Taskfile.yml")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.dir", "{{.OUTDIR}}/{{.SIMDIR}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.vars.IMAGE_TAG", "2.3.12")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.vars.SIM", "{{.SIMDIR}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.vars.ENTRYWORKDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/{{.OUTDIR}}{{else}}{{.PWD}}/{{.OUTDIR}}{{end}}")
 
 }
 
@@ -68,11 +68,16 @@ func TestGenerateTaskfile_build_simulation(t *testing.T) {
 
 	YamlContains(t, f, "$.tasks.build.dir", "{{.OUTDIR}}")
 	YamlContains(t, f, "$.tasks.build.label", "build")
-	YamlContains(t, f, "$.tasks.build.cmds[0]", "mkdir -p {{.SIMDIR}}/data")
-	YamlContains(t, f, "$.tasks.build.cmds[1]", "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml")
-	YamlContains(t, f, "$.tasks.build.cmds[2].task", "build-models")
-	YamlContains(t, f, "$.tasks.build.sources[0]", "{{.ENTRYDIR}}/simulation.yaml")
-	YamlContains(t, f, "$.tasks.build.generates[0]", "{{.SIMDIR}}/data/simulation.yaml")
+	YamlContains(t, f, "$.tasks.build.cmds[0].task", "build-setup-sim")
+	YamlContains(t, f, "$.tasks.build.cmds[1].task", "stack-default")
+	YamlContains(t, f, "$.tasks.build-setup-sim.label", "build-setup-sim")
+	YamlContains(t, f, "$.tasks.build-setup-sim.dir", "{{.OUTDIR}}")
+	YamlContains(t, f, "$.tasks.build-setup-sim.cmds[0]", "mkdir -p {{.SIMDIR}}/data")
+	YamlContains(t, f, "$.tasks.build-setup-sim.cmds[1]", "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml")
+	YamlContains(t, f, "$.tasks.build-setup-sim.sources[0]", "{{.ENTRYDIR}}/simulation.yaml")
+	YamlContains(t, f, "$.tasks.build-setup-sim.generates[0]", "{{.SIMDIR}}/data/simulation.yaml")
+	YamlContains(t, f, "$.tasks.stack-default.label", "stack:default")
+	YamlContains(t, f, "$.tasks.stack-default.deps[0].task", "model-FMU")
 
 }
 
@@ -96,7 +101,7 @@ func TestGenerateTaskfile_common_elements(t *testing.T) {
 
 	YamlContains(t, f, "$.tasks.unzip-dir.dir", "{{.OUTDIR}}")
 	YamlContains(t, f, "$.tasks.unzip-dir.run", "when_changed")
-	YamlContains(t, f, "$.tasks.unzip-dir.label", "dse:unzip-dir:{{.ZIPFILE}}-{{.DIR}}")
+	YamlContains(t, f, "$.tasks.unzip-dir.label", "dse:unzip-dir:{{.ZIP}}-{{.DIR}}")
 	YamlContains(t, f, "$.tasks.unzip-dir.vars.ZIP", "{{.ZIP}}")
 	YamlContains(t, f, "$.tasks.unzip-dir.vars.ZIPDIR", "$(basename {{.ZIP}} {{ext .ZIP}}){{if .ZIPDIR}}/{{.ZIPDIR}}{{end}}")
 	YamlContains(t, f, "$.tasks.unzip-dir.vars.DIR", "{{.DIR}}")
@@ -139,8 +144,8 @@ func TestGenerateTaskfile_model_modelc(t *testing.T) {
 	f, _ := os.ReadFile(taskfileName)
 	t.Logf("\n%s\n", f)
 
-	YamlContains(t, f, "$.tasks.build-models.label", "build-models")
-	YamlContains(t, f, "$.tasks.build-models.deps[0].task", "model-input")
+	YamlContains(t, f, "$.tasks.stack-default.label", "stack:default")
+	YamlContains(t, f, "$.tasks.stack-default.deps[0].task", "model-input")
 
 	YamlContains(t, f, "$.tasks.model-input.dir", "{{.OUTDIR}}")
 	YamlContains(t, f, "$.tasks.model-input.label", "sim:model:input")
@@ -161,31 +166,33 @@ func TestGenerateTaskfile_model_modelc(t *testing.T) {
 
 	YamlContains(t, f, "$.tasks.model-input.cmds[0]", "echo \"SIM Model input -> {{.SIMDIR}}/{{.PATH}}\"")
 	YamlContains(t, f, "$.tasks.model-input.cmds[1]", "mkdir -p {{.SIMDIR}}/{{.PATH}}/data")
-	YamlContains(t, f, "$.tasks.model-input.cmds[2]", "cp downloads/models/{{.MODEL}}/input.csv {{.SIMDIR}}/{{.PATH}}/data/input.csv")
-	YamlContains(t, f, "$.tasks.model-input.cmds[3]", "cp {{.ENTRYDIR}}/signalgroup.yaml {{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml")
-	YamlContains(t, f, "$.tasks.model-input.cmds[4]", "mkdir -p $(dirname downloads/models/{{.MODEL}}/output.csv)")
-	YamlContains(t, f, "$.tasks.model-input.cmds[5]", "cp /volume/output.csv downloads/models/{{.MODEL}}/output.csv")
-	YamlContains(t, f, "$.tasks.model-input.cmds[6]", "cp downloads/models/{{.MODEL}}/output.csv {{.SIMDIR}}/{{.PATH}}/trace/output.bmp")
 
-	YamlContains(t, f, "$.tasks.model-input.cmds[7].task", "unzip-dir")
-	YamlContains(t, f, "$.tasks.model-input.cmds[7].vars.ZIP", "downloads/{{base .PACKAGE_URL}}")
-	YamlContains(t, f, "$.tasks.model-input.cmds[7].vars.ZIPDIR", "{{.PACKAGE_PATH}}")
-	YamlContains(t, f, "$.tasks.model-input.cmds[7].vars.DIR", "{{.SIMDIR}}/{{.PATH}}")
+	YamlContains(t, f, "$.tasks.model-input.cmds[2].task", "unzip-dir")
+	YamlContains(t, f, "$.tasks.model-input.cmds[2].vars.ZIP", "downloads/{{base .PACKAGE_URL}}")
+	YamlContains(t, f, "$.tasks.model-input.cmds[2].vars.ZIPDIR", "{{.PACKAGE_PATH}}")
+	YamlContains(t, f, "$.tasks.model-input.cmds[2].vars.DIR", "{{.SIMDIR}}/{{.PATH}}")
 
-	YamlContains(t, f, "$.tasks.model-input.cmds[8]", "find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i 'with(.spec.runtime.dynlib[]; .path |= sub(\".*/(.*$)\", \"{{.PATH}}/lib/${1}\"))'")
-	YamlContains(t, f, "$.tasks.model-input.cmds[9]", "rm -rf {{.SIMDIR}}/{{.PATH}}/examples")
+	YamlContains(t, f, "$.tasks.model-input.cmds[3]", "find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i '.spec.runtime.dynlib[].path |= sub(\"(^.*/)?(lib|bin)/\"; \"{{.PATH}}/$2/\")'")
+	YamlContains(t, f, "$.tasks.model-input.cmds[4]", "rm -rf {{.SIMDIR}}/{{.PATH}}/examples")
+	YamlContains(t, f, "$.tasks.model-input.cmds[5]", "find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f")
+	YamlContains(t, f, "$.tasks.model-input.cmds[6]", "find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yml -print0  | xargs -r -0 rm -f")
+	YamlContains(t, f, "$.tasks.model-input.cmds[7]", "cp downloads/models/{{.MODEL}}/input.csv {{.SIMDIR}}/{{.PATH}}/data/input.csv")
+	YamlContains(t, f, "$.tasks.model-input.cmds[8]", "cp {{.ENTRYDIR}}/signalgroup.yaml {{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml")
+	YamlContains(t, f, "$.tasks.model-input.cmds[9]", "mkdir -p {{.SIMDIR}}/{{.PATH}}/trace/")
+	YamlContains(t, f, "$.tasks.model-input.cmds[10]", "mkdir -p $(dirname downloads/models/{{.MODEL}}/output.csv)")
+	YamlContains(t, f, "$.tasks.model-input.cmds[11]", "cp /volume/output.csv downloads/models/{{.MODEL}}/output.csv")
+	YamlContains(t, f, "$.tasks.model-input.cmds[12]", "cp downloads/models/{{.MODEL}}/output.csv {{.SIMDIR}}/{{.PATH}}/trace/output.bmp")
 
 	YamlContains(t, f, "$.tasks.model-input.sources[0]", "downloads/models/{{.MODEL}}/input.csv")
-	YamlContains(t, f, "$.tasks.model-input.sources[1]", "signalgroup.yaml")
+	YamlContains(t, f, "$.tasks.model-input.sources[1]", "{{.ENTRYDIR}}/signalgroup.yaml")
 	YamlContains(t, f, "$.tasks.model-input.sources[2]", "downloads/models/{{.MODEL}}/output.csv")
 
-	YamlContains(t, f, "$.tasks.model-input.generates[0]", "downloads/{{base .PACKAGE_URL}}")
+	YamlContains(t, f, "$.tasks.model-input.generates[0]", "{{.SIMDIR}}/{{.PATH}}/**")
 	YamlContains(t, f, "$.tasks.model-input.generates[1]", "{{.SIMDIR}}/{{.PATH}}/data/input.csv")
 	YamlContains(t, f, "$.tasks.model-input.generates[2]", "downloads/models/{{.MODEL}}/input.csv")
 	YamlContains(t, f, "$.tasks.model-input.generates[3]", "{{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml")
 	YamlContains(t, f, "$.tasks.model-input.generates[4]", "{{.SIMDIR}}/{{.PATH}}/trace/output.bmp")
 	YamlContains(t, f, "$.tasks.model-input.generates[5]", "downloads/models/{{.MODEL}}/output.csv")
-	YamlContains(t, f, "$.tasks.model-input.generates[6]", "{{.SIMDIR}}/{{.PATH}}/**")
 }
 
 func TestGenerateTaskfile_model_fmu(t *testing.T) {
@@ -194,8 +201,8 @@ func TestGenerateTaskfile_model_fmu(t *testing.T) {
 	f, _ := os.ReadFile(taskfileName)
 	t.Logf("\n%s\n", f)
 
-	YamlContains(t, f, "$.tasks.build-models.label", "build-models")
-	YamlContains(t, f, "$.tasks.build-models.deps[0].task", "model-linear")
+	YamlContains(t, f, "$.tasks.stack-default.label", "stack:default")
+	YamlContains(t, f, "$.tasks.stack-default.deps[0].task", "model-linear")
 
 	YamlContains(t, f, "$.tasks.model-linear.dir", "{{.OUTDIR}}")
 	YamlContains(t, f, "$.tasks.model-linear.label", "sim:model:linear")
@@ -223,7 +230,7 @@ func TestGenerateTaskfile_model_fmu(t *testing.T) {
 	YamlContains(t, f, "$.tasks.model-linear.cmds[2].vars.ZIPDIR", "{{.PACKAGE_PATH}}")
 	YamlContains(t, f, "$.tasks.model-linear.cmds[2].vars.DIR", "{{.SIMDIR}}/{{.PATH}}")
 
-	YamlContains(t, f, "$.tasks.model-linear.cmds[3]", "find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i 'with(.spec.runtime.dynlib[]; .path |= sub(\".*/(.*$)\", \"{{.PATH}}/lib/${1}\"))'")
+	YamlContains(t, f, "$.tasks.model-linear.cmds[3]", "find {{.SIMDIR}}/{{.PATH}}/data -type f -name model.yaml -print0 | xargs -r -0 yq -i '.spec.runtime.dynlib[].path |= sub(\"(^.*/)?(lib|bin)/\"; \"{{.PATH}}/$2/\")'")
 
 	YamlContains(t, f, "$.tasks.model-linear.cmds[4]", "rm -rf {{.SIMDIR}}/{{.PATH}}/examples")
 	YamlContains(t, f, "$.tasks.model-linear.cmds[5]", "find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f")
@@ -239,11 +246,10 @@ func TestGenerateTaskfile_model_fmu(t *testing.T) {
 	YamlContains(t, f, "$.tasks.model-linear.cmds[8].vars.OUT_DIR", "{{.PATH}}/data")
 	YamlContains(t, f, "$.tasks.model-linear.cmds[8].vars.MCL_PATH", "{{.PATH}}/lib/libfmimcl.so")
 
-	YamlContains(t, f, "$.tasks.model-linear.generates[0]", "downloads/{{base .PACKAGE_URL}}")
-	YamlContains(t, f, "$.tasks.model-linear.generates[1]", "{{.SIMDIR}}/{{.PATH}}/**")
-	YamlContains(t, f, "$.tasks.model-linear.generates[2]", "downloads/models/{{.MODEL}}/Fmi-1.1.20-linux-amd64.zip")
-	YamlContains(t, f, "$.tasks.model-linear.generates[3]", "{{.SIMDIR}}/{{.PATH}}/linear_fmu")
+	YamlContains(t, f, "$.tasks.model-linear.generates[0]", "{{.SIMDIR}}/{{.PATH}}/**")
+	YamlContains(t, f, "$.tasks.model-linear.generates[1]", "downloads/models/{{.MODEL}}/Fmi-1.1.20-linux-amd64.zip")
+	YamlContains(t, f, "$.tasks.model-linear.generates[2]", "{{.SIMDIR}}/{{.PATH}}/linear_fmu")
 
-	YamlContains(t, f, "$.tasks.model-linear.generates[4]", "{{.SIMDIR}}/{{.PATH}}/data/model.yaml")
-	YamlContains(t, f, "$.tasks.model-linear.generates[5]", "{{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml")
+	YamlContains(t, f, "$.tasks.model-linear.generates[3]", "{{.SIMDIR}}/{{.PATH}}/data/model.yaml")
+	YamlContains(t, f, "$.tasks.model-linear.generates[4]", "{{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml")
 }

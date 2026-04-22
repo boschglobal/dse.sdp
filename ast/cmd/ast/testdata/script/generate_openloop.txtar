@@ -18,8 +18,11 @@ yamlcontains project/simulation.yaml $.spec.models[0].name simbus
 yamlcontains project/simulation.yaml $.spec.models[1].name input
 yamlcontains project/simulation.yaml $.spec.models[2].name linear
 
-yamlcontains project/Taskfile.yml $.tasks.build-models.deps[0].task model-input
-yamlcontains project/Taskfile.yml $.tasks.build-models.deps[1].task model-linear
+yamlcontains project/Taskfile.yml $.tasks.build.cmds[0].task build-setup-sim
+yamlcontains project/Taskfile.yml $.tasks.build.cmds[1].task stack-default
+yamlcontains project/Taskfile.yml $.tasks.stack-default.label stack:default
+yamlcontains project/Taskfile.yml $.tasks.stack-default.deps[0].task model-input
+yamlcontains project/Taskfile.yml $.tasks.stack-default.deps[1].task model-linear
 yamlcontains project/Taskfile.yml $.tasks.model-input.label sim:model:input
 yamlcontains project/Taskfile.yml $.tasks.model-linear.label sim:model:linear
 

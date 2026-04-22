@@ -6,7 +6,7 @@ spec:
   uses:
     - name: dse.modelc
       url: https://github.com/boschglobal/dse.modelc
-      version: v2.1.15
+      version: v2.3.12
       metadata:
         container:
           repository: ghcr.io/boschglobal/dse-modelc
