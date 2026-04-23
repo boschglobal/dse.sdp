@@ -149,6 +149,7 @@ $ make docker
 $ export DSE_BUILDER_IMAGE=dse-builder:test
 $ export DSE_REPORT_IMAGE=dse-report:test
 $ export DSE_SIMER_IMAGE=dse-simer:test
+$ export DSE_SIMER_IMAGE=simer:test  # (Optional) Alternative name.
 
 # Run tests.
 $ make run_graph

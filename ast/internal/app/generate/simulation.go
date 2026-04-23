@@ -85,7 +85,7 @@ func (c *GenerateCommand) GenerateSimulation() error {
 			},
 		}
 
-		if astStack.Annotations != nil && len(*astStack.Annotations) > 0 {
+		if astStack.Annotations != nil {
 			for k, v := range *astStack.Annotations {
 				annotations[k] = v
 			}
@@ -157,7 +157,7 @@ func (c *GenerateCommand) GenerateSimulation() error {
 				}
 			}()
 			var annotationMap map[string]interface{}
-			if astModel.Annotations != nil && len(*astModel.Annotations) > 0 {
+			if astModel.Annotations != nil {
 				annotationMap = make(map[string]interface{})
 				for k, v := range *astModel.Annotations {
 					annotationMap[k] = v
@@ -225,10 +225,14 @@ func generateModelRuntime(model ast.Model, mcl MclInfo) *kind.ModelInstanceRunti
 		External: model.External,
 	}
 	if model.Arch != nil {
-		if *model.Arch == "linux-i386" {
+		switch *model.Arch {
+		case "linux-i386":
 			i386 := true
 			runtime.I386 = &i386
-		} else if *model.Arch == "linux-x86" {
+		case "linux-x86":
+			x32 := true
+			runtime.X32 = &x32
+		case "windows-x86":
 			x32 := true
 			runtime.X32 = &x32
 		}

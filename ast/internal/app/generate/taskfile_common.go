@@ -6,6 +6,7 @@ package generate
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/elliotchance/orderedmap/v2"
 
@@ -63,6 +64,25 @@ fi`},
 			},
 			Sources:   &[]string{"{{.ZIP}}"},
 			Generates: &[]string{"{{.DIR}}/**"},
+		},
+		"unzip-dir-nopath": {
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Run:   util.StringPtr("when_changed"),
+			Label: util.StringPtr("dse:unzip-dir-nopath:{{.ZIP}}-{{.DIR}}"),
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("ZIP", "{{.ZIP}}")
+				om.Set("ZIPDIR", "{{.ZIPDIR}}")
+				om.Set("DIR", "{{.DIR}}")
+				return &om
+			}(),
+			Cmds: &[]Cmd{
+				{Cmd: "echo \"UNZIP DIR {{.ZIP}}/{{.ZIPDIR}} -> {{.DIR}}\""},
+				{Cmd: "mkdir -p {{.DIR}}"},
+				{Cmd: "unzip -o {{.ZIP}} {{.ZIPDIR}}/* -d {{.DIR}}"},
+			},
+			Sources:   &[]string{"{{.ZIP}}"},
+			Generates: &[]string{"{{.DIR}}/{{.ZIPDIR}}/**"},
 		},
 		"unzip-rootdir": {
 			Dir:   util.StringPtr("{{.OUTDIR}}"),
@@ -199,16 +219,27 @@ fi`},
 }
 
 func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
-	// Build the _sequential_ build commands.
+	// Build the _sequential_ build commands (order is important).
+	// Sim folder setup.
 	buildCmds := []Cmd{
 		{Task: "build-setup-sim"},
 	}
+	// Simer download/deploy.
+	for _, stack := range simSpec.Stacks {
+		if stack.Arch != nil && strings.HasPrefix(*stack.Arch, "windows-") {
+			buildCmds = append(buildCmds, Cmd{
+				Task: "deploy-simer-windows",
+			})
+			break
+		}
+	}
+	// Stacks.
 	for _, stack := range simSpec.Stacks {
 		if stack.Name == "external" {
 			continue
 		}
 		buildCmds = append(buildCmds, Cmd{
-			Task: fmt.Sprintf("stack-%s", stack.Name),
+			Task: fmt.Sprintf("stack-%s", stack.Name), // Stack task is generated elsewhere.
 		})
 	}
 
@@ -235,5 +266,102 @@ func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
 			Generates: &[]string{"{{.SIMDIR}}/data/simulation.yaml"},
 		},
 	}
+	for k, v := range generateSimerWindows(simSpec) {
+		simulationTasks[k] = v
+	}
 	return simulationTasks
+}
+
+func generateSimerWindows(simSpec ast.SimulationSpec) map[string]Task {
+	simerUses := locateSimerUses(simSpec)
+	if simerUses == nil {
+		return map[string]Task{}
+	}
+	simerTasks := map[string]Task{
+		"deploy-simer-windows": {
+			Dir:   util.StringPtr("{{.OUTDIR}}"),
+			Label: util.StringPtr("dse:modelc:deploy-simer-windows"),
+			Vars: func() *OMap {
+				om := OMap{orderedmap.NewOrderedMap[string, string]()}
+				om.Set("REPO", simerUses.Url)
+				if simerUses.Version != nil {
+					om.Set("TAG", cleanTag(*simerUses.Version))
+				}
+				om.Set("PATH", "{{.SIMDIR}}")
+				om.Set("PACKAGE_URL", "{{.REPO}}/releases/download/v{{.TAG}}/Simer-{{.TAG}}-windows.zip")
+				return &om
+			}(),
+			Deps: &[]Dep{
+				{
+					Task: "download-file",
+					Vars: func() *OMap {
+						om := OMap{orderedmap.NewOrderedMap[string, string]()}
+						om.Set("URL", "{{.PACKAGE_URL}}")
+						om.Set("FILE", "downloads/{{base .PACKAGE_URL}}")
+						return &om
+					}(),
+				},
+			},
+			Cmds: &[]Cmd{
+				{Cmd: "echo \"DOWNLOAD SIMER WINDOWS {{.PACKAGE_URL}} -> {{.PATH}}\""},
+				{
+					Task: "unzip-dir-nopath",
+					Vars: &map[string]string{
+						"DIR":    "{{.PATH}}",
+						"ZIP":    "downloads/{{base .PACKAGE_URL}}",
+						"ZIPDIR": "bin",
+					},
+				},
+				{
+					Task: "unzip-dir-nopath",
+					Vars: &map[string]string{
+						"DIR":    "{{.PATH}}",
+						"ZIP":    "downloads/{{base .PACKAGE_URL}}",
+						"ZIPDIR": "licenses",
+					},
+				},
+			},
+			Sources: &[]string{},
+			Generates: &[]string{
+				"downloads/{{base .PACKAGE_URL}}",
+				"{{.PATH}}/bin/**",
+				"{{.PATH}}/licenses/**",
+			},
+		},
+	}
+
+	return simerTasks
+}
+
+func locateSimerUses(simSpec ast.SimulationSpec) *ast.Uses {
+	if simSpec.Uses == nil {
+		return nil
+	}
+	usesName := "dse.modelc"
+	for _, stack := range simSpec.Stacks {
+		if stack.Arch != nil && strings.HasPrefix(*stack.Arch, "windows-") {
+			val := getSimerUsesAnnotation(stack.Annotations)
+			if val != "" {
+				usesName = val
+				break
+			}
+		}
+	}
+	for _, uses := range *simSpec.Uses {
+		if uses.Name == usesName {
+			return &uses
+		}
+	}
+	return nil
+}
+
+func getSimerUsesAnnotation(annotations *ast.Annotations) string {
+	if annotations != nil {
+		if v, ok := (*annotations)["simer-uses-selector"]; ok {
+			if s, ok := v.(string); ok {
+				return s
+			}
+		}
+	}
+	return ""
 }
