@@ -23,7 +23,7 @@ build:
 	docker run -it --rm \
 		-v $$(pwd):/workdir	\
 		$(DSE_BUILDER_IMAGE) /workdir/$(DSE_FILE)
-	task -y -v
+	task -y -t out/Taskfile.yml
 
 
 .PHONY: report
@@ -51,5 +51,3 @@ gateway:
 .PHONY: clean
 clean:
 	rm -rf out
-	rm -rf .task
-	rm -f -- *.yml *.json $(filter-out input_signalgroup.yaml,$(wildcard *.yaml))

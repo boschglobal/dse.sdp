@@ -4,12 +4,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+import path from "path";
 import {
     parse
 } from "../lib/parser/parsing";
 import {
     readFileSync,
-    createWriteStream
+    createWriteStream,
+    mkdirSync,
+    existsSync
 } from 'fs';
 
 const cliName = "parse2ast"
@@ -28,7 +31,15 @@ if (process.argv.length != 4) {
 }
 // console.time("Total execution time");
 const inputFile = process.argv[2];
-const outputFile = process.argv[3];
+const outputFileName  = process.argv[3];
+
+const outDir = "out";
+const outputFile = path.join(outDir, outputFileName);
+
+if (!existsSync(outDir)) {
+    mkdirSync(outDir, { recursive: true });
+}
+
 console.log(`\
 ${cliName}
 ${"-".repeat(cliName.length)}

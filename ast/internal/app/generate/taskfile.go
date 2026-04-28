@@ -68,6 +68,7 @@ type Task struct {
 	Desc      *string   `yaml:"desc,omitempty"`
 	Dir       *string   `yaml:"dir,omitempty"`
 	Label     *string   `yaml:"label,omitempty"`
+	Silent    *bool     `yaml:"silent,omitempty"`
 	Requires  *Requires `yaml:"requires,omitempty"`
 	Run       *string   `yaml:"run,omitempty"`
 	Vars      *OMap     `yaml:"vars,omitempty"`
@@ -86,8 +87,9 @@ type Include struct {
 type Taskfile struct {
 	Version  string              `yaml:"version"`
 	Includes *map[string]Include `yaml:"includes,omitempty"`
-	Vars     *map[string]string  `yaml:"vars,omitempty"`
-	Tasks    *map[string]Task    `yaml:"tasks,omitempty"`
+	//Vars     *map[string]string  `yaml:"vars,omitempty"`
+	Vars  *OMap            `yaml:"vars,omitempty"`
+	Tasks *map[string]Task `yaml:"tasks,omitempty"`
 }
 
 func cleanTag(tag string) string {
@@ -103,18 +105,22 @@ func (c GenerateCommand) GenerateTaskfile() error {
 	// Setup the basic Taskfile structure.
 	taskfile := Taskfile{
 		Version: "3",
-		Vars: &map[string]string{
-			"PLATFORM_ARCH": func() string {
+		Vars: func() *OMap {
+			om := OMap{orderedmap.NewOrderedMap[string, string]()}
+			om.Set("PLATFORM_ARCH", func() string {
 				if c.simulationAst.Arch != "" {
 					return c.simulationAst.Arch
 				} else {
 					return "linux-amd64"
 				}
-			}(),
-			"ENTRYDIR": "{{if .SIM}}{{.ENTRYWORKDIR}}/{{.SIM}}{{else}}{{.PWD}}{{end}}",
-			"OUTDIR":   "out",
-			"SIMDIR":   "sim",
-		},
+			}())
+			om.Set("OUTDIR", "{{.PWD}}/out")
+			om.Set("SIMDIR", "sim")
+			om.Set("PROJDIR", "{{if .SIM}}{{.ENTRYWORKDIR}}{{.SIM}}{{else}}{{.PWD}}{{end}}")
+			om.Set("CONTAINER_WORKDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/out{{else}}{{.OUTDIR}}{{end}}")
+			om.Set("CONTAINER_SIMDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/out{{else}}{{.PWD}}/out{{end}}/{{.SIMDIR}}")
+			return &om
+		}(),
 	}
 	tasks := make(map[string]Task)
 	for k, v := range buildSimulationTasks(c.simulationAst) {

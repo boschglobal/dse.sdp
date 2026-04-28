@@ -38,7 +38,7 @@ run_builder() {
         $DSE_BUILDER_IMAGE "$INPUT_DSE"
     # Run Task to finalize the simulation.
     echo "[INFO] Running task..."
-    task -y -v
+    task -y -v -t out/Taskfile.yml
 }
 
 run_report() {

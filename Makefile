@@ -19,7 +19,8 @@ DSE_SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:$(DSE_MODELC_VERSION)
 
 ###############
 ## Build parameters.
-SUBDIRS = ast graph dsl lsp doc examples/models tests/testdata/e2e
+SUBDIRS = ast graph dsl lsp doc examples/models
+TESTDATA_SUBDIRS = tests/testdata/e2e
 
 
 ###############
@@ -39,35 +40,70 @@ endif
 endif
 
 
-default: build
+default: help
+help:
+	@echo "Available targets:"
+	@echo "  build         Build all project subdirectories and copy example outputs to out/examples."
+	@echo "  docker        Build the graph image and the dse-builder test image."
+	@echo "  test          Run tests in all project subdirectories."
+	@echo "  test_e2e      Run end-to-end tests via testscript."
+	@echo "  examples      Download ModelC if needed, prepare out/examples, and build example models."
+	@echo "  generate      Build documentation and generate e2e test data."
+	@echo "  clean         Clean build artifacts in all subdirectories and remove out/."
+	@echo "  cleanall      Run clean, then also clean all subdirectories and remove build/."
+	@echo "  super-linter  Run super-linter against the repository."
+	@echo "Local development commands:"
+	@echo "  $ export DSE_BUILDER_IMAGE=dse-builder:test"
+	@echo "  $ export DSE_SIMER_IMAGE=dse-simer:test"
+	@echo "  $ export DSE_SIMER_IMAGE=simer:test  (alternate)"
+
+
+.PHONY: build
+build:
+	@for d in $(SUBDIRS); do ($(MAKE) -C $$d build ); done
+
+.PHONY: docker
+docker: build
+	$(MAKE) -C graph docker
+	docker build -f .devcontainer/Dockerfile-builder --tag dse-builder:test .
+
+.PHONY: devcontainer
+devcontainer: docker
+	docker build -f .devcontainer/Dockerfile --tag dse-devcontainer:test --build-arg DSE_BUILDER_IMAGE=dse-builder:test .
 
 
 downloads:
 	mkdir -p build/downloads
 	cd build/downloads; test -s ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip || ( curl -fSLO $(DSE_MODELC_PKG_URL) && unzip -q ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip )
 
-
 .PHONY: examples
-examples: downloads
+examples: downloads build
 	mkdir -p out/examples
 	test -d out/examples/modelc || ( cp -R build/downloads/ModelC-$(DSE_MODELC_VERSION)-linux-amd64/examples out/examples/modelc )
 	$(MAKE) -C examples/models build
 	cp examples/models/build/_dist/* out/examples
 
+.PHONY: generate
+generate:
+	$(MAKE) -C doc build
+	$(MAKE) -C tests/testdata/e2e build
 
-.PHONY: build
-build:
-	@for d in $(SUBDIRS); do ($(MAKE) -C $$d build ); done
-	mkdir -p out/examples
-	cp examples/models/build/_dist/* out/examples
+.PHONY: run_graph
+run_graph:
+	$(MAKE) -C graph graph
 
 
 .PHONY: test
-test:
+test: build
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d test ); done
 
 .PHONY: test_e2e
 test_e2e: do-test_testscript-e2e
+
+.PHONY: test_data
+test_data:
+	@for d in $(TESTDATA_SUBDIRS); do ($(MAKE) -C $$d test_data ); done
+
 
 .PHONY: install
 install:
@@ -79,29 +115,10 @@ clean:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d clean ); done
 	rm -rf out
 
-
 .PHONY: cleanall
 cleanall: clean
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d cleanall ); done
 	rm -rf build
-
-.PHONY: docker
-docker:
-	$(MAKE) -C graph docker
-	docker build -f .devcontainer/Dockerfile-builder --tag dse-builder:test .
-
-.PHONY: devcontainer
-devcontainer: docker
-	docker build -f .devcontainer/Dockerfile --tag dse-devcontainer:test --build-arg DSE_BUILDER_IMAGE=dse-builder:test .
-
-.PHONY: run_graph
-run_graph:
-	$(MAKE) -C graph graph
-
-.PHONY: generate
-generate:
-	$(MAKE) -C doc build
-	$(MAKE) -C tests/testdata/e2e build
 
 
 do-test_testscript-e2e:

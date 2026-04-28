@@ -22,6 +22,6 @@ chmod 777 out/sim
 
 # Run Task.
 TASK_X_REMOTE_TASKFILES=1
-# TODO: task -y -v
+# TODO: task -y -t out/Taskfile.yml
 # TODO: DinD volume mapping etc.
 # TODO: Control by a parameter? Or always run task?

@@ -8,7 +8,7 @@ build:
 	dse-ast convert -input openloop.json -output openloop.yaml
 	dse-ast resolve -input openloop.yaml
 	dse-ast generate -input openloop.yaml -output .
-	task -y -v
+	task -y -t out/Taskfile.yml
 
 .PHONY: report
 report:

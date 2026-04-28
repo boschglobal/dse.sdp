@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 
 	"github.com/boschglobal/dse.clib/extra/go/command"
 	"github.com/boschglobal/dse.clib/extra/go/command/log"
@@ -60,6 +61,12 @@ func (c *GenerateCommand) Parse(args []string) error {
 func (c *GenerateCommand) Run() error {
 	var err error
 	slog.SetDefault(log.NewLogger(c.logLevel))
+
+	outDir := "out"
+	inputPath := filepath.Join("out", c.inputFile)
+	c.inputFile = inputPath
+	outputPath := filepath.Join(outDir, c.outputPath)
+	c.outputPath = outputPath
 
 	fmt.Fprintf(flag.CommandLine.Output(), "Reading file: %s\n", c.inputFile)
 	err = c.loadAst(c.inputFile)

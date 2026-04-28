@@ -206,7 +206,7 @@ fi`},
 		},
 		"clean": {
 			Cmds: &[]Cmd{
-				{Cmd: "find ./out -mindepth 1 -maxdepth 1 ! -name downloads -exec rm -rf {} +"},
+				{Cmd: "find ./out -mindepth 1 -maxdepth 1 ! -name downloads ! -name simulation.json ! -name simulation.yaml ! -name Taskfile.yml -exec rm -rf {} +"},
 			},
 		},
 		"cleanall": {
@@ -222,6 +222,7 @@ func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
 	// Build the _sequential_ build commands (order is important).
 	// Sim folder setup.
 	buildCmds := []Cmd{
+		{Task: "info"},
 		{Task: "build-setup-sim"},
 	}
 	// Simer download/deploy.
@@ -250,6 +251,24 @@ func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
 				{Task: "build"},
 			},
 		},
+		"info": {
+			Run:    util.StringPtr("always"),
+			Label:  util.StringPtr("info"),
+			Silent: func(silent bool) *bool { return &silent }(true),
+			Cmds: &[]Cmd{
+				{Cmd: "echo \"=== Info ===\""},
+				{Cmd: "echo \"CONTAINER_WORKDIR  = {{.CONTAINER_WORKDIR}}\""},
+				{Cmd: "echo \"CONTAINER_SIMDIR   = {{.CONTAINER_SIMDIR}}\""},
+				{Cmd: "echo \"ENTRYWORKDIR       = {{.ENTRYWORKDIR}}\""},
+				{Cmd: "echo \"OUTDIR             = {{.OUTDIR}}\""},
+				{Cmd: "echo \"PLATFORM_ARCH      = {{.PLATFORM_ARCH}}\""},
+				{Cmd: "echo \"PROJDIR            = {{.PROJDIR}}\""},
+				{Cmd: "echo \"PWD                = {{.PWD}}\""},
+				{Cmd: "echo \"SIM                = {{.SIM}}\""},
+				{Cmd: "echo \"SIMDIR             = {{.SIMDIR}}\""},
+				{Cmd: "echo \"============\""},
+			},
+		},
 		"build": {
 			Dir:   util.StringPtr("{{.OUTDIR}}"),
 			Label: util.StringPtr("build"),
@@ -260,9 +279,9 @@ func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
 			Label: util.StringPtr("build-setup-sim"),
 			Cmds: &[]Cmd{
 				{Cmd: "mkdir -p {{.SIMDIR}}/data"},
-				{Cmd: "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
+				{Cmd: "cp {{.PROJDIR}}/out/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
 			},
-			Sources:   &[]string{"{{.ENTRYDIR}}/simulation.yaml"},
+			Sources:   &[]string{"{{.PROJDIR}}/simulation.yaml"},
 			Generates: &[]string{"{{.SIMDIR}}/data/simulation.yaml"},
 		},
 	}

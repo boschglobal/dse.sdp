@@ -85,7 +85,7 @@ All contents under `out/` are generated and used at build or runtime.<br/>
 @startuml simulation_flow_diagram
 :<project>.dse;
 :Run DSE Builder container;
-:Run Task (task -y -v);
+:Run Task (task -y -t out/Taskfile.yml);
 if (Generate simulation validation report?) then (yes)
   :Run DSE Report container;
 endif
@@ -134,11 +134,11 @@ simer path/to/simulation -stepsize 0.0005 -endtime 0.04
 
 ## Taskfile Generation
 
-This section provides a high-level view of the end-to-end Taskfile generation flow.  
+This section provides a high-level view of the end-to-end Taskfile generation flow.
 Starting from the simulation AST, the Builder constructs common tasks, resolves includes, generates model-specific tasks, and assembles the final `Taskfile.yml`.
 
 <!--
-  
+
 ```
 @startuml highlevel_flow_diagram
 :Run dse-ast generate;
@@ -157,11 +157,11 @@ Starting from the simulation AST, the Builder constructs common tasks, resolves 
 
 ### Resolve Includes
 
-This stage resolves all Taskfile includes referenced by the simulation configuration.  
+This stage resolves all Taskfile includes referenced by the simulation configuration.
 Includes may originate from the local filesystem or from remote repositories, depending on the `uses` definition and model characteristics.
 
 <!--
-  
+
 ```
 @startuml build_includes
 if (Uses URL scheme is file?) then (Yes)
@@ -199,11 +199,11 @@ endif
 
 ### Generate Model Tasks
 
-This stage iterates through all stacks and models defined in the simulation.  
+This stage iterates through all stacks and models defined in the simulation.
 For each eligible model, the Builder generates model-specific tasks, prepares runtime artifacts, and resolves associated workflows.
 
 <!--
-  
+
 ```
 @startuml build_model_tasks
 :Iterate Stacks;
@@ -249,11 +249,11 @@ endif
 
 ### Build Model Task
 
-This step determines how an individual model is sourced and prepared.  
+This step determines how an individual model is sourced and prepared.
 Models may be copied from local paths or downloaded from remote locations, depending on the model definition.
 
 <!--
-  
+
 ```
 @startuml model_task
 if (Model URL scheme is file?) then (Yes)
@@ -291,7 +291,7 @@ This stage evaluates the **MCL** type to determine the appropriate handling stra
 - Non-Lua models are handled as packaged release artifacts defined in `Taskfile.yaml`
 
 <!--
-  
+
 ```
 @startuml mcl_type_resolution
 if (MCL type is Lua?) then (Yes)
@@ -302,7 +302,7 @@ else (No)
         Source:
             - File URL
             - Release archive path and model path from `Taskfile.yaml`
-                (metadata -> package -> file, 
+                (metadata -> package -> file,
                 and metadata -> models -> {model_name} -> path)
         Destination:
             - The release archive is copied to `out/downloads`
@@ -331,7 +331,7 @@ endif
 For Lua-based models, this step determines whether the model is packaged within an archive or provided as a standalone file, and processes it accordingly.
 
 <!--
-  
+
 ```
 @startuml lua_model_path_evaluation
 if (MCL has path?) then (Yes)
@@ -371,11 +371,11 @@ endif
 
 ### Parse User Files
 
-This stage processes user-provided files associated with a model.  
+This stage processes user-provided files associated with a model.
 Files may be sourced locally or downloaded remotely, and are copied or extracted into the model’s runtime directory.
 
 <!--
-  
+
 ```
 @startuml parse_user_files
 if (Remote URL (HTTP / HTTPS)?) then (Yes)
@@ -417,11 +417,11 @@ endif
 
 ### Parse Workflow Uses
 
-This step resolves workflow dependencies referenced by a model.  
+This step resolves workflow dependencies referenced by a model.
 Workflow artifacts are fetched or copied as required, and the associated workflow actions are executed in the model context.
 
 <!--
-  
+
 ```
 @startuml parse_workflow_uses
 if (Remote URL (HTTP / HTTPS)?) then (Yes)

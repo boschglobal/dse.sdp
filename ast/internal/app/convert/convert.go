@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -71,6 +72,12 @@ func (c *ConvertCommand) Parse(args []string) error {
 
 func (c *ConvertCommand) Run() error {
 	slog.SetDefault(log.NewLogger(c.logLevel))
+
+	outDir := "out"
+	inputPath := filepath.Join("out", c.inputFile)
+	c.inputFile = inputPath
+	outputPath := filepath.Join(outDir, c.outputFile)
+	c.outputFile = outputPath
 
 	fmt.Fprintf(flag.CommandLine.Output(), "Reading file: %s\n", c.inputFile)
 	fmt.Fprintf(flag.CommandLine.Output(), "Writing file: %s\n", c.outputFile)

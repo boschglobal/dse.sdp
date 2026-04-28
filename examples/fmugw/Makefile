@@ -46,7 +46,7 @@ pull:
 	touch $@
 
 .build_run_task.stamp: $(DSE_SCRIPT) $(MODEL_FILES) $(DATA_FILES)
-	task -y -v
+	task -y -t out/Taskfile.yml
 	touch $@
 
 .PHONY: build
@@ -68,15 +68,9 @@ run:
 
 .PHONY: clean
 clean:
-	@if [ -d out/ ]; then find out/ -mindepth 1 -maxdepth 1 -depth -path 'out/downloads' -o -print0 | xargs -0 rm -rf; fi
-	@rm -f simulation.json
-	@rm -f simulation.yaml
-	@rm -f simulation.linux.json
-	@rm -f simulation.linux.yaml
-	@rm -f Taskfile.yml
+	@if [ -d out/ ]; then find ./out -mindepth 1 -maxdepth 1 ! -name downloads -exec rm -rf {} +; fi
 	@rm -f .*.stamp
 
 .PHONY: cleanall
 cleanall: clean
 	@rm -rf out
-	@rm -rf .task

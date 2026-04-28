@@ -25,7 +25,7 @@ build-dev:
 
 .PHONY: task
 task:
-	task -y -v
+	task -y -t out/Taskfile.yml
 	ls -R out/sim
 	ls -R out/fmu
 

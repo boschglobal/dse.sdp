@@ -16,7 +16,7 @@ build:
 		--user $$(id -u):$$(id -g) \
 		--volume $$(pwd):/workdir \
 		$(DSE_BUILDER_IMAGE) openloop.dse
-	task -y -v
+	task -y -t out/Taskfile.yml
 
 .PHONY: report
 report:
@@ -32,13 +32,8 @@ simer:
 
 .PHONY: clean
 clean:
-	@if [ -d out/ ]; then find out/ -mindepth 1 -maxdepth 1 -depth -path 'out/downloads' -o -print0 | xargs -0 rm -rf; fi
+	@if [ -d out/ ]; then find ./out -mindepth 1 -maxdepth 1 ! -name downloads -exec rm -rf {} +; fi
 
 .PHONY: cleanall
 cleanall: clean
 	@rm -rf out
-	@rm -rf .task
-	@rm -f openloop.json
-	@rm -f openloop.yaml
-	@rm -f simulation.yaml
-	@rm -f Taskfile.yml

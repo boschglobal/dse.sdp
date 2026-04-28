@@ -72,7 +72,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 
 		vars := map[string]string{
 			"SIM":          "{{.SIMDIR}}",
-			"ENTRYWORKDIR": "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/{{.OUTDIR}}{{else}}{{.PWD}}/{{.OUTDIR}}{{end}}",
+			"ENTRYWORKDIR": "{{.CONTAINER_WORKDIR}}",
 		}
 
 		if u.Scheme == "file" {
@@ -152,7 +152,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 			}
 			includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
 				Taskfile: taskfile,
-				Dir:      "{{.OUTDIR}}/{{.SIMDIR}}",
+				Dir:      "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/out{{else}}{{.PWD}}/out{{end}}/{{.SIMDIR}}",
 				Vars:     &vars,
 			}
 		}
@@ -218,7 +218,7 @@ func createModelCopyDeps(mcl MclInfo) []Dep {
 				Task: "unzip-dir",
 				Vars: func() *OMap {
 					om := OMap{orderedmap.NewOrderedMap[string, string]()}
-					om.Set("ZIP", fmt.Sprintf("{{.ENTRYDIR}}/%s", filepath.Base(mcl.Url)))
+					om.Set("ZIP", fmt.Sprintf("{{.PROJDIR}}/%s", filepath.Base(mcl.Url)))
 					om.Set("ZIPDIR", func(p *string) string {
 						if filepath.Dir(*p) == "." {
 							return ""
@@ -468,7 +468,7 @@ func parseUrl(task *Task, uses *ast.Uses, modelName string) string {
 		} else {
 			*task.Cmds = append(*task.Cmds,
 				Cmd{Cmd: fmt.Sprintf("mkdir -p $(dirname %s)", downloadFile)},
-				Cmd{Cmd: fmt.Sprintf("cp {{.ENTRYDIR}}/%s %s", uses.Url, downloadFile)},
+				Cmd{Cmd: fmt.Sprintf("cp {{.PROJDIR}}/%s %s", uses.Url, downloadFile)},
 			)
 		}
 	}
@@ -585,7 +585,7 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					if filepath.IsAbs(f.Value) {
 						sourcePath = f.Value
 					} else {
-						sourcePath = fmt.Sprintf("{{.ENTRYDIR}}/%s", f.Value)
+						sourcePath = fmt.Sprintf("{{.PROJDIR}}/%s", f.Value)
 					}
 					*task.Cmds = append(*task.Cmds, Cmd{
 						Cmd: fmt.Sprintf("cp %s %s", sourcePath, filePath),

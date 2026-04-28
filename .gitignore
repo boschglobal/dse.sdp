@@ -1,11 +1,11 @@
 
-/build
 bin/
-out/
+build/
 node_modules/
+out/
 .task/
 
+.*.stamp
 *.cyp
 package-lock.json
-
 tsconfig.tsbuildinfo

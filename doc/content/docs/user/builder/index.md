@@ -302,7 +302,7 @@ $ builder runnable.dse
 
 # And then use Task to complete the simulation (according to the build plan).
 export TASK_X_REMOTE_TASKFILES=1
-$ task -y -v
+$ task -y -t out/Taskfile.yml
 ls -R out/sim
 ```
 

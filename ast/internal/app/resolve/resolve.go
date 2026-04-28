@@ -70,6 +70,9 @@ func (c *ResolveCommand) Run() error {
 	//slog.SetDefault(log.NewLogger(c.logLevel))
 	c.yamlMetadata = make(map[string]interface{})
 
+	inputPath := filepath.Join("out", c.inputFile)
+	c.inputFile = inputPath
+
 	slog.Info("Reading AST file", "file", c.inputFile)
 	if err := c.loadYamlAST(); err != nil {
 		return err

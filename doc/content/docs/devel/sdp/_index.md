@@ -40,4 +40,4 @@ dse.fmi-v1.1.31:
 
 Run task
 
-task -y -v -f
+task -y -v -f -t out/Taskfile.yml
