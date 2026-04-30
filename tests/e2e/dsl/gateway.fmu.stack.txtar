@@ -6,14 +6,14 @@ cd $WORKDIR
 # TEST: operate the simulation
 exec sh -e workflow.sh openloop.dse BUILD_ONLY
 
-grep 'stack-default:' Taskfile.yml
-grep 'stack-gateway:' Taskfile.yml
+grep 'stack-default:' out/Taskfile.yml
+grep 'stack-gateway:' out/Taskfile.yml
 
-exec yq '.tasks."stack-default".deps[].task' Taskfile.yml
+exec yq '.tasks."stack-default".deps[].task' out/Taskfile.yml
 stdout 'model-input'
 stdout 'model-linear'
 
-exec yq '.tasks."stack-gateway".deps[].task' Taskfile.yml
+exec yq '.tasks."stack-gateway".deps[].task' out/Taskfile.yml
 stdout 'model-gateway_fmu'
 
 -- openloop.dse --
