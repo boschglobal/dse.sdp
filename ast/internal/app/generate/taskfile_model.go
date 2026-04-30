@@ -72,7 +72,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 
 		vars := map[string]string{
 			"SIM":          "out/{{.SIMDIR}}",
-			"ENTRYWORKDIR": "{{if .ENTRYWORKDIR}}{{.WORKDIR}}{{else}}{{.PWD}}{{end}}",
+			"ENTRYWORKDIR": "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}{{else}}{{.PWD}}{{end}}",
 		}
 
 		if u.Scheme == "file" {
