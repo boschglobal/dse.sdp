@@ -71,8 +71,8 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 		u, _ := urlEscapedParse(uses.Url)
 
 		vars := map[string]string{
-			"SIM":          "{{.SIMDIR}}",
-			"ENTRYWORKDIR": "{{if .ENTRYWORKDIR}}{{.WORKDIR}}/out{{else}}{{.PWD}}/out{{end}}",
+			"SIM":          "out/{{.SIMDIR}}",
+			"ENTRYWORKDIR": "{{if .ENTRYWORKDIR}}{{.WORKDIR}}{{else}}{{.PWD}}{{end}}",
 		}
 
 		if u.Scheme == "file" {
