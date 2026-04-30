@@ -116,7 +116,7 @@ func (c GenerateCommand) GenerateTaskfile() error {
 			}())
 			om.Set("OUTDIR", "{{.PWD}}/out")
 			om.Set("SIMDIR", "sim")
-			om.Set("PROJDIR", "{{if .SIM}}{{.ENTRYWORKDIR}}{{.SIM}}{{else}}{{.PWD}}{{end}}")
+			om.Set("PROJDIR", "{{if .SIM}}{{.WORKDIR}}{{else}}{{.PWD}}{{end}}")
 			om.Set("CONTAINER_WORKDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/out{{else}}{{.OUTDIR}}{{end}}")
 			om.Set("CONTAINER_SIMDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/out{{else}}{{.PWD}}/out{{end}}/{{.SIMDIR}}")
 			return &om

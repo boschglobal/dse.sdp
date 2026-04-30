@@ -266,6 +266,7 @@ func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
 				{Cmd: "echo \"PWD                = {{.PWD}}\""},
 				{Cmd: "echo \"SIM                = {{.SIM}}\""},
 				{Cmd: "echo \"SIMDIR             = {{.SIMDIR}}\""},
+				{Cmd: "echo \"WORKDIR            = {{.WORKDIR}}\""},
 				{Cmd: "echo \"============\""},
 			},
 		},

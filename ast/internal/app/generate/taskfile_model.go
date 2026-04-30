@@ -72,7 +72,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 
 		vars := map[string]string{
 			"SIM":          "{{.SIMDIR}}",
-			"ENTRYWORKDIR": "{{.CONTAINER_WORKDIR}}",
+			"ENTRYWORKDIR": "{{if .ENTRYWORKDIR}}{{.WORKDIR}}/out{{else}}{{.PWD}}/out{{end}}",
 		}
 
 		if u.Scheme == "file" {
@@ -152,7 +152,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 			}
 			includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
 				Taskfile: taskfile,
-				Dir:      "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/out{{else}}{{.PWD}}/out{{end}}/{{.SIMDIR}}",
+				Dir:      "{{if .ENTRYWORKDIR}}{{.WORKDIR}}{{else}}{{.PWD}}{{end}}/out/{{.SIMDIR}}",
 				Vars:     &vars,
 			}
 		}
