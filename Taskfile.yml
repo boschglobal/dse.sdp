@@ -62,19 +62,34 @@ vars:
   # Docker commands) must be set to the host relative path.
   SDP_SIMDIR: '{{if .SIM}}{{.ENTRYWORKDIR}}/{{.SIM}}{{else}}{{.PWD}}{{end}}'
   # Container image specification.
-  SDP_IMAGE: '{{.SDP_IMAGE | default "ghcr.io/boschglobal/dse-sdp"}}'
-  SDP_IMAGE_TAG: '{{if .SDP_TAG}}{{.SDP_TAG}}{{else}}{{if .IMAGE_TAG}}{{.IMAGE_TAG}}{{else}}latest{{end}}{{end}}'
+  SDP_REPO: 'https://github.com/boschglobal/dse.sdp'
+  SDP_REGISTRY: ghcr.io/boschglobal
+  SDP_IMAGE: '{{if .SDP_IMAGE}}{{.SDP_IMAGE}}{{else}}{{.SDP_REGISTRY}}/dse-sdp:{{.TAG | default "latest"}}{{end}}'
+  SDP_USER:
+    sh: id -u
+  SDP_GROUP:
+    sh: id -g
 
 tasks:
-
   info:
     run: always
+    silent: true
     dir: '{{.USER_WORKING_DIR}}'
     label: dse:sdp:info
     cmds:
-      - echo "{{.ENTRYDIR}}"
-      - echo "{{.SDP_IMAGE}}"
-      - echo "{{.IMAGE_TAG}}"
+      - echo "=== Taskfile global (SDP Namespace) ==="
+      - echo SDP_SIMDIR={{.SDP_SIMDIR}}
+      - echo SDP_IMAGE={{.SDP_IMAGE}}
+      - echo SDP_USER={{.SDP_USER}}
+      - echo SDP_GROUP={{.SDP_GROUP}}
+      - echo "=== Taskfile Include ==="
+      - echo ENTRYWORKDIR={{.ENTRYWORKDIR}}
+      - echo SIM={{.SIM}}
+      - echo TAG={{.TAG}}
+      - echo "=== Runtime/Other ==="
+      - echo PACKAGE_VERSION={{.PACKAGE_VERSION}}
+      - echo PLATFORM_ARCH={{.PLATFORM_ARCH}}
+      - echo USER_WORKING_DIR={{.USER_WORKING_DIR}}
 
   message:
     run: always
