@@ -15,7 +15,7 @@ exec cp -r . $WORKDIR
 cd $WORKDIR
 
 # TEST: operate the simulation
-exec sh -e workflow.sh $WORKDIR/gateway.dse BUILD_ONLY
+exec sh -e workflow.sh gateway.dse BUILD_ONLY
 exec sh -e download-gateway.sh
 exec sh -e test.sh
 

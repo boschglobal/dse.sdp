@@ -10,7 +10,7 @@ cd $WORKDIR
 
 # TEST: build the simulation
 exec sh -c 'ls -lhR | awk "{print \$1, \$3, \$5, \$9}"'
-exec sh -e workflow.sh $WORKDIR/$EXAMPLE_DSE BUILD_ONLY
+exec sh -e workflow.sh $EXAMPLE_DSE BUILD_ONLY
 exec sh -c 'if [ -n "$DEBUG" ]; then cd out/sim; ls -lhR | awk "{print \$1, \$3, \$5, \$9}"; fi'
 
 exists out/sim/data/simulation.yaml
@@ -24,7 +24,7 @@ exists out/sim/model/linear/data/model.yaml
 exists out/sim/model/linear/data/signalgroup.yaml
 
 # TEST: run reports
-! exec sh -e workflow.sh $WORKDIR/$EXAMPLE_DSE REPORT_ONLY
+! exec sh -e workflow.sh $EXAMPLE_DSE REPORT_ONLY
 stdout 'Ran 6 Reports | Passed: 5 | Failed: 1'
 stdout '\[PASS\] ModelInstance Name Check'
 stdout '\[PASS\] Model UID Check'
@@ -34,7 +34,7 @@ stdout '\[PASS\] Simbus Channel Name Consistency'
 stdout '\[FAIL\] Duplicate Writes Check'
 
 # TEST: run the simulation
-exec sh -e workflow.sh $WORKDIR/$EXAMPLE_DSE SIMER_ONLY
+exec sh -e workflow.sh $EXAMPLE_DSE SIMER_ONLY
 
 stdout '\[0\] uid=1552937894, val=2.300000, final_val=2.300000, name=factor'
 stdout '\[2\] uid=4191711099, val=1.300000, final_val=1.300000, name=input'

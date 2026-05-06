@@ -22,7 +22,7 @@ default: build
 build:
 	docker run -it --rm \
 		-v $$(pwd):/workdir	\
-		$(DSE_BUILDER_IMAGE) /workdir/$(DSE_FILE)
+		$(DSE_BUILDER_IMAGE) $(DSE_FILE)
 	task -y -t out/Taskfile.yml
 
 

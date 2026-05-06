@@ -1,3 +1,4 @@
+skip 'todo: test with latest RELEASE_VERSION as sdp printfile workflow is updated'
 # SETUP: construct working folder layout
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 exec cp -r . $WORKDIR

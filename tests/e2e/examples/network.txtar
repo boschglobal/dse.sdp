@@ -13,7 +13,7 @@ exec cp -r . $WORKDIR
 cd $WORKDIR
 
 # TEST: operate the simulation
-exec sh -e workflow.sh $WORKDIR/network.dse
+exec sh -e workflow.sh network.dse
 
 stdout 'Load YAML File: data/simulation.yaml'
 stdout 'Loading symbol: model_create ... ok'
