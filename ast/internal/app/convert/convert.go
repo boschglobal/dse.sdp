@@ -158,7 +158,7 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 	varsList := buildList(root, "vars", func(value gjson.Result) ast.Var {
 		vars := ast.Var{
 			Name:  value.Get("object.payload.var_name.value").String(),
-			Value: value.Get("object.payload.var_value.value").String(),
+			Value: normalizeVarValue(value.Get("object.payload.var_value.value").String()),
 		}
 		return vars
 	})
@@ -233,7 +233,7 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 			varsList := buildList(value, "children.workflow_vars", func(value gjson.Result) ast.Var {
 				vars := ast.Var{
 					Name:  value.Get("object.payload.var_name.value").String(),
-					Value: value.Get("object.payload.var_value.value").String(),
+					Value: normalizeVarValue(value.Get("object.payload.var_value.value").String()),
 					Reference: func() *ast.VarReference {
 						v := value.Get("object.payload.var_reference_type.value")
 						if v.Exists() == true {
@@ -314,7 +314,7 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 			varList := buildList(value, "children.vars", func(value gjson.Result) ast.Var {
 				vars := ast.Var{
 					Name:  value.Get("object.payload.var_name.value").String(),
-					Value: value.Get("object.payload.var_value.value").String(),
+					Value: normalizeVarValue(value.Get("object.payload.var_value.value").String()),
 					Reference: func() *ast.VarReference {
 						v := value.Get("object.payload.var_reference_type.value")
 						if v.Exists() == true {
@@ -380,7 +380,7 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 				varsList := buildList(value, "children.workflow_vars", func(value gjson.Result) ast.Var {
 					vars := ast.Var{
 						Name:  value.Get("object.payload.var_name.value").String(),
-						Value: value.Get("object.payload.var_value.value").String(),
+						Value: normalizeVarValue(value.Get("object.payload.var_value.value").String()),
 						Reference: func() *ast.VarReference {
 							v := value.Get("object.payload.var_reference_type.value")
 							if v.Exists() == true {
@@ -417,6 +417,23 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 		return err
 	}
 	return nil
+}
+
+func normalizeVarValue(v string) string {
+	// set of special characters that indicate an expression-like value.
+	const specialChars = "()[]{}|="
+	// If the value contains any of the special characters, return it as-is.
+	if strings.ContainsAny(v, specialChars) {
+		return v
+	}
+
+	// Otherwise, apply the standard normalization to trim whitespace and single quotes.
+	v = strings.TrimSpace(v)
+	if strings.HasPrefix(v, "'") && strings.HasSuffix(v, "'") {
+		v = strings.TrimPrefix(v, "'")
+		v = strings.TrimSuffix(v, "'")
+	}
+	return v
 }
 
 func lookupVar(name string, workflowVars map[string][]ast.Var, modelVars map[string][]ast.Var, globalVars *[]ast.Var, scope string, modelName string, workflowName string) (string, bool) {
