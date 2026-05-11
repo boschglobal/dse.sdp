@@ -6,9 +6,9 @@
 ################
 ## DSE Projects.
 export DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
-export DSE_MODELC_VERSION ?= 2.3.9
+export DSE_MODELC_VERSION ?= 2.3.16
 export DSE_MODELC_PKG_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
-export DSE_FMI_VERSION ?= 1.2.1
+export DSE_FMI_VERSION ?= 1.2.5
 
 
 ###############
@@ -161,6 +161,8 @@ do-test_testscript-e2e:
 				-e AR_TOKEN=$(AR_TOKEN) \
 				-e PACKAGE_VERSION=$(PACKAGE_VERSION) \
 				-e RELEASE_VERSION=$(EXAMPLE_VERSION) \
+				-e DSE_MODELC_VERSION=$(DSE_MODELC_VERSION) \
+				-e DSE_FMI_VERSION=$(DSE_FMI_VERSION) \
 				$$t; \
 	done
 

@@ -21,9 +21,9 @@ simulation arch=linux-amd64
 channel physical
 
 uses
-dse.modelc https://github.com/boschglobal/dse.modelc v2.1.32
-dse.fmi https://github.com/boschglobal/dse.fmi v1.1.48
-linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.48/Fmi-1.1.48-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
+dse.modelc https://github.com/boschglobal/dse.modelc v$DSE_MODELC_VERSION
+dse.fmi https://github.com/boschglobal/dse.fmi v$DSE_FMI_VERSION
+linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v$DSE_FMI_VERSION/Fmi-$DSE_FMI_VERSION-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
 
 
 model input dse.modelc.csv
