@@ -38,6 +38,9 @@ ifeq ($(CODESPACES),)
 TESTSCRIPT_E2E_FILES += $(wildcard $(TESTSCRIPT_E2E_INTERNAL_DIR)/*/*.txtar)
 endif
 endif
+ifdef TEST
+TESTSCRIPT_E2E_FILES := $(TEST)
+endif
 
 
 default: help
@@ -53,9 +56,10 @@ help:
 	@echo "  cleanall      Run clean, then also clean all subdirectories and remove build/."
 	@echo "  super-linter  Run super-linter against the repository."
 	@echo "Local development commands:"
-	@echo "  $ export DSE_BUILDER_IMAGE=dse-builder:test"
-	@echo "  $ export DSE_SIMER_IMAGE=dse-simer:test"
-	@echo "  $ export DSE_SIMER_IMAGE=simer:test  (alternate)"
+	@echo "  export DSE_BUILDER_IMAGE=dse-builder:test"
+	@echo "  export DSE_SIMER_IMAGE=dse-simer:test"
+	@echo "  export DSE_SIMER_IMAGE=simer:test  (alternate)"
+	@echo "  make test_e2e TEST=tests/e2e/dsl/uses.file.txtar"
 
 
 .PHONY: build

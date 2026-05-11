@@ -18,12 +18,13 @@ build:
 	$(MAKE) generate-lua   TMPDIR=$(TMPDIR)
 	$(MAKE) generate-fmu   TMPDIR=$(TMPDIR)
 
-	cp $(TMPDIR)/remote_foo.txt $(OUTDIR)/
-	cp $(TMPDIR)/hello.lua      $(OUTDIR)/
-	cp $(TMPDIR)/hello.fmu      $(OUTDIR)/
-	cp $(TMPDIR)/files.zip  $(OUTDIR)/
-	cp $(TMPDIR)/models.zip $(OUTDIR)/
-	cp $(TMPDIR)/fmus.zip   $(OUTDIR)/
+	cp $(TMPDIR)/remote_foo.txt      $(OUTDIR)/
+	cp $(TMPDIR)/hello.lua           $(OUTDIR)/
+	cp $(TMPDIR)/hello.fmu           $(OUTDIR)/
+	cp $(TMPDIR)/files.zip           $(OUTDIR)/
+	cp $(TMPDIR)/files_noprefix.zip  $(OUTDIR)/
+	cp $(TMPDIR)/models.zip          $(OUTDIR)/
+	cp $(TMPDIR)/fmus.zip            $(OUTDIR)/
 
 	rm -rf $(TMPDIR)
 	@echo "Generated e2e test data"
@@ -31,11 +32,14 @@ build:
 
 
 .PHONY: generate-files
+
 generate-files:
 	mkdir -p $(TMPDIR)/testdata
 	printf "remote foo\n" > $(TMPDIR)/remote_foo.txt
 	cp $(TMPDIR)/remote_foo.txt $(TMPDIR)/testdata/remote_foo.txt
 	cd $(TMPDIR) && zip -q files.zip testdata/remote_foo.txt
+	# Create files_noprefix.zip with only remote_foo.txt at the root (no directory prefix)
+	cd $(TMPDIR) && zip -q files_noprefix.zip remote_foo.txt
 
 
 .PHONY: generate-lua
@@ -102,5 +106,6 @@ cleanex: cleanall clean
 		hello.lua \
 		hello.fmu \
 		files.zip \
+		files_noprefix.zip \
 		models.zip \
 		fmus.zip

@@ -5,10 +5,9 @@
 <br/>
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/boschglobal/dse.sdp?quickstart=1)
 
-
 ## Introduction
 
-Simulation Development Platform for the Dynamic Simulation Environment (DSE) Core Platform.
+Simulation Development Platform (SDP) for the Dynamic Simulation Environment (DSE) Core Platform.
 
 ### User Guide
 
@@ -18,56 +17,52 @@ Simulation Development Platform for the Dynamic Simulation Environment (DSE) Cor
 * [Lua Models][ug_lua]
 * [SDP Environment Variables][ug_env]
 
-
 ### Project Structure
 
 ```text
 dse.sdp
-└── .devcontainer/          <-- Devcontainer definition.
-    └── Dockerfile-builder  <-- Builder tool container appliance (Dockerfile).
-└── actions                 <-- GitHub actions (for Builder, Report and Simer containers).
-└── ast                     <-- AST tools.
-└── doc                     <-- Project documentation.
-└── dsl                     <-- DSL parser (using Chevrotain).
-└── examples
-    └── graph               <-- Graph examples (for Report tool)
-    └── models              <-- Model examples, used by E2E tests.
-    └── openloop            <-- Open Loop simulation using FMU based Linear Equation model.
-    └── openloop_lua        <-- Open Loop simulation implemented with Lua models.
-    └── notebook            <-- Jupyter base simulation example.
-    └── vscode              <-- VS Code integration examples.
-└── graph                   <-- Graph tool (including Report tool).
-    └── build/package/
-        └── report/         <-- Report tool container appliance (Dockerfile).
-    └── cmd/graph/
-        └── reports/        <-- Reports, packaged with Report container.
-└── licenses                <-- Third Party Licenses.
-└── lsp                     <-- VS Code Language Server.
-└── tests
-    └── e2e                 <-- End-to-end (E2E) tests.
-    └── scripts             <-- Scripts used by E2E tests.
-    └── testdata            <-- Testdata, used by E2E tests.
-└── Makefile                <-- Repo level Makefile.
+├── .devcontainer/          <-- Dev Container definition.
+│   └── Dockerfile-builder  <-- Builder tool container appliance (Dockerfile).
+├── actions                 <-- GitHub Actions (for Builder, Report, and Simer containers).
+├── ast                     <-- AST tools.
+├── doc                     <-- Project documentation.
+├── dsl                     <-- DSL parser (using Chevrotain).
+├── examples
+│   ├── graph               <-- Graph examples (for the Report tool).
+│   ├── models              <-- Model examples, used by E2E tests.
+│   ├── openloop            <-- Open Loop simulation using an FMU-based linear equation model.
+│   ├── openloop_lua        <-- Open Loop simulation implemented with Lua models.
+│   ├── notebook            <-- Jupyter-based simulation example.
+│   └── vscode              <-- VS Code integration examples.
+├── graph                   <-- Graph tool (including the Report tool).
+│   ├── build/package/
+│   │   └── report/         <-- Report tool container appliance (Dockerfile).
+│   └── cmd/graph/
+│       └── reports/        <-- Reports, packaged with the Report container.
+├── licenses                <-- Third-party licenses.
+├── lsp                     <-- VS Code Language Server.
+├── tests
+│   ├── e2e                 <-- End-to-end (E2E) tests.
+│   ├── scripts             <-- Scripts used by E2E tests.
+│   └── testdata            <-- Test data used by E2E tests.
+├── Makefile                <-- Repo-level Makefile.
 └── Taskfile.yml            <-- Taskfile containing supporting automation for E2E tests.
 ```
 
-
 ## Usage
 
-> Hint: Codespaces is known to work with Chrome and Edge browsers. Firefox may prevention operation via Firefox's Setting "Enhanced Tracking Protection" (try setting to Standard to resolve the issue).
-
+> Hint: GitHub Codespaces is known to work with Chrome and Edge browsers. Firefox may prevent normal operation because of Firefox’s "Enhanced Tracking Protection" setting. Try setting it to **Standard** to resolve the issue.
 
 ### Examples
 
 * [VS Code Integration Example](examples/vscode/README.md)
-* [Notebook Based Simulation Example](examples/notebook/README.md)
+* [Notebook-Based Simulation Example](examples/notebook/README.md)
 * [Open Loop Simulation Example](examples/openloop/README.md)
-* [Open Loop Simulation with Lua models](examples/openloop_lua/README.md)
-
+* [Open Loop Simulation with Lua Models](examples/openloop_lua/README.md)
 
 ### Running ModelC Example Simulations
 
-Start a Codespace, then type the following commands in the terminal window.
+Start a Codespace, then run the following commands in the terminal.
 
 ```bash
 # Check your environment.
@@ -98,7 +93,6 @@ $ dse-simer out/examples/modelc/minimal
 2) Run the Simulation ...
 2) Controller exit ...
 
-
 # Build and run a simulation using the DSL.
 $ cd examples/vscode
 $ make build
@@ -113,14 +107,12 @@ $ make run
 
 > Hint: Find more information about the Report [command options here](https://boschglobal.github.io/dse.doc/docs/user/report/#options).
 
-
-
 ## Build
 
 ### WSL Linux (local development)
 
 ```bash
-# Install NVM, and node, if necessary.
+# Install NVM and Node.js, if necessary.
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 $ nvm ls-remote
 $ nvm install v22.15.0
@@ -130,7 +122,7 @@ $ sudo npm install -g vsce
 $ sudo npm install -g http-server
 $ sudo npm install -g typescript
 
-# Set your path to include ~/.local/bin if necessary. Permanent alterations
+# Set your path to include ~/.local/bin if necessary. Permanent changes
 # can be made to your '~/.bashrc' or '~/.profile' file.
 $ export PATH="$HOME/.local/bin:$PATH"
 
@@ -138,11 +130,11 @@ $ export PATH="$HOME/.local/bin:$PATH"
 $ git clone https://github.boschdevcloud.com/fsil/dse.sdp.git
 $ cd dse.sdp
 
-# Setup the SDP (local install).
+# Set up the SDP (local install).
 $ make
 $ make build install
 
-# Build containerised tools (container/docker install).
+# Build containerised tools.
 $ make docker
 
 # Optionally use local container images.
@@ -159,47 +151,42 @@ $ make test_e2e
 # Generate documentation.
 $ make generate
 
-# Remove (clean) temporary build artifacts.
+# Remove temporary build artifacts.
 $ make clean
 $ make cleanall
 ```
-
 
 ## Developer Notes
 
 ### Dev Containers Extension for VS Code and WSL
 
-> Note: Dev Containers is not supported by VS Codium (workarounds may still exist).
+> Note: Dev Containers is not supported by VSCodium, although workarounds may still exist.
 
 #### Install VS Code Extensions
 
-1. Install the Dev Containers extension (Ctrl-Shift-X, then search "Dev Containers").
+1. Install the Dev Containers extension (Ctrl-Shift-X, then search for "Dev Containers").
+2. Install the WSL extension (Ctrl-Shift-X, then search for "WSL").
+3. Install the Codespaces extension (Ctrl-Shift-X, then search for "Codespaces").
+4. From the Remote Explorer, select a WSL target and then click `Connect in New Window`. A new VS Code editor will open.
+5. Press `F1` to bring up the Command Palette and type `Dev Containers: Reopen in Container`.
 
-2. Install the WSL extension (Ctrl-Shift-X, then search "WSL").
+You may be prompted to install Docker in WSL. If prompted, follow the installation steps in WSL.
 
-3. Install the Codespaces extension (Ctrl-Shift-X, then search "Codespace").
+The WSL indicator appears in the bottom-left corner of the VS Code window.
+The Remote Explorer, added by the WSL extension, will show available WSL targets.
 
-4. From the Remote Explorer, select a WSL Target and then click `Connect in New Window`. A new VS Code editor will open.
+#### Start VS Code with a WSL Target (and Dev Container)
 
-5. Press `F1` to bring up the Command Palette and type `Dev Containers reopen`. You may be prompted to install docker into WSL. Even if already installed, proceed to install Docker again (in your WSL)
-
-
-WSL indicator shows in the bottom left corner of the VS Code window.
-The Remote Explorer, added by the WSL extension, will show available WSL Targets.
-
-
-#### Start VS Code with a WSL Target (and DevContainer)
-
-**Using WSL Bash Terminal:**
+**Using a WSL Bash terminal:**
 
 ```bash
 # Open a new VS Code editor connected to this repo.
 cd ~/git/workspace/dse.sdp
-code.
+code .
 
-# In VS Code, press `F1` and type `Dev Containers reopen`.
+# In VS Code, press `F1` and type `Dev Containers: Reopen in Container`.
 
-# Open a bash terminal to access the DevContainer (i.e. local Codespace).
+# Open a Bash terminal to access the Dev Container environment.
 codespace ➜ /workspaces/dse.sdp (main) $ which task
 /usr/local/bin/task
 codespace ➜ /workspaces/dse.sdp (main) $
@@ -207,24 +194,21 @@ codespace ➜ /workspaces/dse.sdp (main) $
 
 **Using VS Code:**
 
-1. Click (bottom left) `Open a Remote Window`, then command `Connect to WSL`.
+1. Click `Open a Remote Window` in the bottom-left corner, then choose `Connect to WSL`.
+2. From the _Remote Explorer_, select a _WSL target_ and then click `Connect in Current Window`. A new VS Code editor will open.
+3. Select `Open Folder` and navigate to your `dse.sdp` repository. Previously opened repositories will be listed in the _Remote Explorer_.
 
-2. From the _Remote Explorer_, select a _WSL Target_ and then click `Connect in Current Window`.<br/>
-  A new VS Code editor will open.
+After that, the container will build, and the environment will eventually be available in your terminal window.
 
-3. Select `Open Folder` and naviage to your dse.sdp repo. Previouly opened repos will be listed in the _Remote Explorer_.
+### Proxy Setup When Running Inside a Dev Container
 
+For Docker CLI proxy configuration, see the [Docker proxy setup documentation](https://docs.docker.com/engine/cli/proxy/).
 
-After that, the container will build ... and eventually you will have the Codespace avaiable in your Terminal Window.
+Example:
 
-
-### Proxy Setup when running _inside_ a DevContainer
-
-[proxy setup](https://docs.docker.com/engine/cli/proxy/)
-
-~/git/working/dse.sdp$ cat ~/.docker/config.json
-
-
+```bash
+$ cat ~/.docker/config.json
+```
 
 ## Additional Resources
 
@@ -232,25 +216,18 @@ After that, the container will build ... and eventually you will have the Codesp
 * [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) for VS Code
 * [Simer](https://boschglobal.github.io/dse.doc/docs/user/simer/) (and [source code](https://github.com/boschglobal/dse.modelc/tree/main/extra/tools/simer))
 
-
-
 ## Contribute
 
 Please refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) file.
 
-
-
 ## License
 
-Dynamic Simulation Environment FMI Library is open-sourced under the Apache-2.0 license.
+This project is open-sourced under the Apache-2.0 license.
 See the [LICENSE](LICENSE) and [NOTICE](./NOTICE) files for details.
 
+### Third-Party Licenses
 
-### Third Party Licenses
-
-[Third Party Licenses](licenses/)
-
-
+[Third-Party Licenses](licenses/)
 
 <!---  Links --->
 [ug_builder]: https://boschglobal.github.io/dse.doc/docs/user/builder/
