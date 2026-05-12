@@ -5,12 +5,12 @@ go 1.24.0
 require (
 	github.com/boschglobal/dse.clib/extra/go/command v1.0.36
 	github.com/boschglobal/dse.clib/extra/go/file v1.0.48
-	github.com/boschglobal/dse.schemas/code/go/dse v1.2.48
+	github.com/boschglobal/dse.schemas/code/go/dse v1.3.0
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/rogpeppe/go-internal v1.14.1
 	github.com/stretchr/testify v1.11.1
-	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/gjson v1.19.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

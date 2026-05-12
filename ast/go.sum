@@ -6,8 +6,8 @@ github.com/boschglobal/dse.clib/extra/go/command v1.0.36 h1:4XbJLorCUk0BEB22KTE+
 github.com/boschglobal/dse.clib/extra/go/command v1.0.36/go.mod h1:g11DkMVJRVo+FP+vLJcTkJpLHpm27Xfizk8WzWDs17c=
 github.com/boschglobal/dse.clib/extra/go/file v1.0.48 h1:IY7zDlCK+XE8RABE89tHusv7EF1RK7PwamSHHnQ03V8=
 github.com/boschglobal/dse.clib/extra/go/file v1.0.48/go.mod h1:2jSOjLXC0QhLz/OPUcnJ+WA727YWv0nNrYIShdHB5m4=
-github.com/boschglobal/dse.schemas/code/go/dse v1.2.48 h1:xkivZ9IPWtYHUSvbypYhjbFYTb6X/ctxvoY6D0ZxJko=
-github.com/boschglobal/dse.schemas/code/go/dse v1.2.48/go.mod h1:uED31AxkE3HObS0ByOV13cBM63NrkfLz1KCaTeXZwek=
+github.com/boschglobal/dse.schemas/code/go/dse v1.3.0 h1:I5lcIYwdo2Tka3DhNGkv7eYyub11l2py8D7prs9XyZw=
+github.com/boschglobal/dse.schemas/code/go/dse v1.3.0/go.mod h1:uED31AxkE3HObS0ByOV13cBM63NrkfLz1KCaTeXZwek=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -29,8 +29,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/tidwall/gjson v1.18.0 h1:FIDeeyB800efLX89e5a8Y0BNH+LOngJyGrIWxG2FKQY=
-github.com/tidwall/gjson v1.18.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
+github.com/tidwall/gjson v1.19.0 h1:xwxm7n691Uf3u5OFjzngavjGTh55KX5q/9w9xHW88JU=
+github.com/tidwall/gjson v1.19.0/go.mod h1:V37/opeE/JbLUOfH0QTXiNez2l0RUjYUhpT4szFQAfc=
 github.com/tidwall/match v1.1.1 h1:+Ho715JplO36QYgwN9PGYNhgZvoUSc9X2c80KVTi+GA=
 github.com/tidwall/match v1.1.1/go.mod h1:eRSPERbgtNPcGhD8UCthc6PmLEQXEWd3PRB5JTxsfmM=
 github.com/tidwall/pretty v1.2.0 h1:RWIZEg2iJ8/g6fDDYzMpobmaoGh5OLl4AXtGUGPcqCs=
