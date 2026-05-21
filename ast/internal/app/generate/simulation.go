@@ -147,15 +147,19 @@ func (c *GenerateCommand) GenerateSimulation() error {
 			if astModel.Metadata != nil {
 				md = *astModel.Metadata
 			}
-			func() {
-				defer func() {
-					if r := recover(); r != nil {
+			if astModel.External != nil && *astModel.External == true {
+				modelName = astModel.Name
+			} else {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+						}
+					}()
+					if md["models"].(map[string]interface{})[astModel.Model].(map[string]interface{})["mcl"].(bool) == true {
+						modelName = astModel.Name
 					}
 				}()
-				if md["models"].(map[string]interface{})[astModel.Model].(map[string]interface{})["mcl"].(bool) == true {
-					modelName = astModel.Name
-				}
-			}()
+			}
 			var annotationMap map[string]interface{}
 			if astModel.Annotations != nil {
 				annotationMap = make(map[string]interface{})

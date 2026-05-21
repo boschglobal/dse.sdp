@@ -59,6 +59,7 @@ help:
 	@echo "  export DSE_BUILDER_IMAGE=dse-builder:test"
 	@echo "  export DSE_SIMER_IMAGE=dse-simer:test"
 	@echo "  export DSE_SIMER_IMAGE=simer:test  (alternate)"
+	@echo "  make test_e2e CI=true"
 	@echo "  make test_e2e TEST=tests/e2e/dsl/uses.file.txtar"
 
 
