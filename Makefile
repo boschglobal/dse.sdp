@@ -43,7 +43,7 @@ TESTSCRIPT_E2E_FILES := $(TEST)
 endif
 
 
-default: help
+default: build
 help:
 	@echo "Available targets:"
 	@echo "  build         Build all project subdirectories and copy example outputs to out/examples."

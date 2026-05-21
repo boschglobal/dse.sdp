@@ -82,10 +82,26 @@ func (c *ConvertCommand) Run() error {
 	fmt.Fprintf(flag.CommandLine.Output(), "Reading file: %s\n", c.inputFile)
 	fmt.Fprintf(flag.CommandLine.Output(), "Writing file: %s\n", c.outputFile)
 
-	c.loadDslAST(c.inputFile)
-	c.generateSimulationAST(c.outputFile, ast.Labels{"generator": "ast convert", "input_file": c.inputFile})
+	if err := c.loadDslAST(c.inputFile); err != nil {
+		return err
+	}
 
-	return nil
+	labels := ast.Labels{"generator": "ast convert", "input_file": c.inputFile}
+
+	if originalDSE := strings.TrimSuffix(c.inputFile, ".json"); originalDSE != c.inputFile {
+		originalDSE = originalDSE + ".dse"
+		absOriginalDSE, err := filepath.Abs(originalDSE)
+		if err == nil {
+			if _, err := os.Stat(absOriginalDSE); err == nil {
+				labels["original_dse_script"] = absOriginalDSE
+				slog.Info(fmt.Sprintf("Detected original DSE script: %s", absOriginalDSE))
+			} else {
+				slog.Info(fmt.Sprintf("Original DSE script not found at: %s", absOriginalDSE))
+			}
+		}
+	}
+
+	return c.generateSimulationAST(c.outputFile, labels)
 }
 
 func (c *ConvertCommand) loadDslAST(file string) error {

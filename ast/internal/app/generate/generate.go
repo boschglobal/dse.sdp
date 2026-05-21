@@ -22,13 +22,16 @@ import (
 type GenerateCommand struct {
 	command.Command
 
-	inputFile     string
-	outputPath    string
-	genTaskfile   bool
-	genSimulation bool
-	logLevel      int
+	inputFile      string
+	outputPath     string
+	genTaskfile    bool
+	genSimulation  bool
+	overwriteFiles bool
+	dseScriptPath  string
+	logLevel       int
 
 	simulationAst ast.SimulationSpec
+	simulationDoc *kind.KindDoc
 }
 
 func NewGenerateCommand(name string) *GenerateCommand {
@@ -42,6 +45,8 @@ func NewGenerateCommand(name string) *GenerateCommand {
 	c.FlagSet().StringVar(&c.outputPath, "output", "", "path to write generated files (Simer layout)")
 	c.FlagSet().BoolVar(&c.genTaskfile, "taskfile", false, "Generate a Taskfile (only)")
 	c.FlagSet().BoolVar(&c.genSimulation, "simulation", false, "Generate a Simulation (only)")
+	c.FlagSet().BoolVar(&c.overwriteFiles, "overwrite", false, "Overwrite existing embedded files")
+	c.FlagSet().StringVar(&c.dseScriptPath, "script", "", "Path to DSE Script file (txtar expansion)")
 	c.FlagSet().IntVar(&c.logLevel, "log", 4, "Loglevel")
 	return c
 }
@@ -76,18 +81,23 @@ func (c *GenerateCommand) Run() error {
 
 	fmt.Fprintf(flag.CommandLine.Output(), "Writing to folder: %s\n", c.outputPath)
 
-	if c.genTaskfile == false && c.genSimulation == false {
+	if err = c.expandDseScriptFiles(); err != nil {
+		return err
+	}
+
+	if !c.genTaskfile && !c.genSimulation {
 		c.genTaskfile = true
 		c.genSimulation = true
 	}
-	if c.genTaskfile == true {
-		err = c.GenerateTaskfile()
-		if err != nil {
+	if c.genTaskfile {
+		if err = c.GenerateTaskfile(); err != nil {
 			return err
 		}
 	}
-	if c.genSimulation == true {
-		c.GenerateSimulation()
+	if c.genSimulation {
+		if err = c.GenerateSimulation(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -103,8 +113,32 @@ func (c *GenerateCommand) loadAst(file string) error {
 		if doc.Kind == "Simulation" {
 			ast := doc.Spec.(*ast.SimulationSpec)
 			c.simulationAst = *ast
+			c.simulationDoc = &doc
 			return nil
 		}
 	}
-	return fmt.Errorf("Simulation AST not found in file: %s", file)
+	return fmt.Errorf("simulation AST not found in file: %s", file)
+}
+
+func (c *GenerateCommand) expandDseScriptFiles() error {
+	dseScriptPath := c.dseScriptPath
+	if dseScriptPath == "" {
+		if c.simulationDoc != nil && c.simulationDoc.Metadata.Labels != nil {
+			if p, ok := c.simulationDoc.Metadata.Labels["original_dse_script"]; ok {
+				dseScriptPath = p
+			}
+		}
+	}
+	if dseScriptPath == "" {
+		slog.Info("No DSE script path available, skipping txtar expansion")
+		return nil
+	}
+
+	outputDir := c.outputPath
+	if outputDir == "" {
+		outputDir = "."
+	}
+
+	slog.Info(fmt.Sprintf("Expanding txtar files from %s into %s", dseScriptPath, outputDir))
+	return ExpandTxtar(dseScriptPath, outputDir, c.overwriteFiles)
 }

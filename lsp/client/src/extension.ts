@@ -502,8 +502,11 @@ function build(
   const genFilesPath = isCodespace
     ? activeFileDirPath
     : convertToMntPath(activeFileDirPath.replace(/\\/g, "/"));
+  const dseScriptPath = isCodespace
+    ? filePath
+    : convertToMntPath(filePath.replace(/\\/g, "/"));
   terminal?.sendText(
-    `if [ -f /tmp/dse_resolve_done ]; then ${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath}; fi\n`,
+    `if [ -f /tmp/dse_resolve_done ]; then ${astExecPath} generate -input ${astYamlPath} -output ${genFilesPath} --dse-script ${dseScriptPath} --overwrite; fi\n`,
   );
   simulationYamlPath = path.join(activeFileDirPath, "simulation.yaml");
 
@@ -530,7 +533,8 @@ function build(
 }
 
 function run(astYamlPath: string, activeFileDirPath: string) {
-  terminal?.sendText(`dse-ast generate -input ${astYamlPath} -output .`);
+  const dseScriptPath = astYamlPath.replace(/\.yaml$/, ".dse");
+  terminal?.sendText(`dse-ast generate -input ${astYamlPath} -output . --dse-script ${dseScriptPath} --overwrite`);
   terminal?.sendText(`task -y -v`);
 
   const tmpPath = path.join(tmpdir(), tmpSimRun);

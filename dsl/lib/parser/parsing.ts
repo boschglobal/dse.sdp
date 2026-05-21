@@ -17,6 +17,8 @@ import {
   Annotation,
   Workflow,
   Stack,
+  FileDelimiter,
+  FileContent,
 } from "../lexer/lexing";
 import { EmbeddedActionsParser, IToken, ILexingError } from "chevrotain";
 class FsilParser extends EmbeddedActionsParser {
@@ -34,6 +36,8 @@ class FsilParser extends EmbeddedActionsParser {
   public files!: () => any;
   public stack!: () => any;
   public models!: () => any;
+  public dynamic_files!: () => any;
+  public filecontent!: () => any;
   constructor() {
     super(allTokens);
     const $ = this;
@@ -95,12 +99,53 @@ class FsilParser extends EmbeddedActionsParser {
       children.env_vars = global_env_vars;
 
       children.stacks = $.SUBRULE($.stacked_models);
+
+      const generated_files = $.SUBRULE($.dynamic_files);
+      children.generated_files = generated_files
+
       return {
         type: simulation.tokenType.name,
         simulation: simulation.image.replace("\n", ""),
         object: updateTokenObject(simulation),
         children: children,
       };
+    });
+
+    $.RULE("dynamic_files", () => {
+      const dynamic_files: any[] = [];
+      let fileContent : any[] = [];
+      $.MANY({
+        DEF: () => {
+          const fileDelimiter = $.CONSUME(FileDelimiter);
+          while ($.LA(1).tokenType === FileContent) {
+              fileContent = $.SUBRULE($.filecontent);
+          }
+          $.ACTION(() => {
+            fileDelimiter.payload ??= {};
+            fileDelimiter.payload.file_content = {
+              value: fileContent.join("\n"),
+              token_type: "file_content",
+            };
+
+            dynamic_files.push({
+              type: "File",
+              object: updateTokenObject(fileDelimiter),
+            });
+          });
+        },
+      });
+      return dynamic_files;
+    });
+
+    $.RULE("filecontent", () => {
+      let fileContent : any[] = [];
+       $.MANY({
+        DEF: () => {
+          const lineObj = $.CONSUME(FileContent);
+          fileContent.push(lineObj.image)
+        },
+      });
+      return fileContent
     });
 
     // Rule for parsing the channels.
@@ -449,8 +494,10 @@ type DiagnosticLike = {
   };
   source: string;
 };
+
+
 export function parse(inputText: string): DiagnosticLike[] | any {
-  const lines = inputText.split(/\r?\n/).map(line => line.replace(/\s*#.*$/, "").trim());
+  const lines = inputText.split(/\r?\n/).map(line => line.replace(/\s*#.*$/, ""));
   const diagnostics: DiagnosticLike[] = [];
   let lexingResult = {
     tokens: [] as IToken[],

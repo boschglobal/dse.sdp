@@ -539,6 +539,53 @@ const Comment = createToken({
   group: Lexer.SKIPPED,
 });
 
+function matchFileDeclare(text: string) {
+  const filePattern = /^\-\-[ \t]*(\S+)(\.\S+)[ \t]*\-\-\s*(?:\#.*)?$/;
+  const execResult = filePattern.exec(text) as CustomRegExpExecArray;
+  if (execResult !== null) {
+    const fileName = execResult[1];
+    const fileExtension = execResult[2];
+    execResult.payload = {
+      file_name: {
+        value: fileName.trim(),
+        token_type: "file_name",
+      },
+      file_extension: {
+        value: fileExtension.trim(),
+        token_type: "file_extension",
+      },
+    };
+  }
+  return execResult;
+}
+
+export const FileDelimiter = createToken({
+  name: "FileDelimiter",
+  pattern: matchFileDeclare,
+  line_breaks: false,
+});
+
+function matchFileContent(text: string) {
+  const contentPattern = /^(.*)\s*(?:\#.*)?$/;
+  const execResult = contentPattern.exec(text) as CustomRegExpExecArray;
+  if (execResult !== null) {
+    const filecontent = execResult[1];
+    execResult.payload = {
+      file_content: {
+        value: filecontent.trim(),
+        token_type: "file_content",
+      },
+    };
+  }
+  return execResult;
+}
+
+export const FileContent = createToken({
+  name: "FileContent",
+  pattern: matchFileContent,
+  line_breaks: false,
+});
+
 // Define the lexer with tokens in the proper order.
 export const allTokens = [
   WhiteSpace,
@@ -555,6 +602,8 @@ export const allTokens = [
   EnvVar,
   Annotation,
   Workflow,
+  FileDelimiter,
+  FileContent,
 ];
 
 export const fsilLexer = new Lexer(allTokens);
