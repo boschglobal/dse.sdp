@@ -33,7 +33,6 @@ _dse_simer() {
   fi
 
   docker run -it --rm \
-    --user "$(id -u):$(id -g)" \
     -v "$(pwd)/${sim_dir}:/sim" \
     "${DSE_SIMER_IMAGE}" \
     "$@"
