@@ -280,6 +280,7 @@ func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
 			Label: util.StringPtr("build-setup-sim"),
 			Cmds: &[]Cmd{
 				{Cmd: "mkdir -p {{.SIMDIR}}/data"},
+				{Cmd: "mkdir -p {{.SIMDIR}}/trace"},
 				{Cmd: "cp {{.PROJDIR}}/out/simulation.yaml {{.SIMDIR}}/data/simulation.yaml"},
 			},
 			Sources:   &[]string{"{{.PROJDIR}}/simulation.yaml"},
