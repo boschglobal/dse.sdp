@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/elliotchance/orderedmap/v2"
@@ -17,6 +18,36 @@ import (
 	"github.com/boschglobal/dse.clib/extra/go/command/util"
 	"github.com/boschglobal/dse.schemas/code/go/dse/ast"
 )
+
+var templateVarRegex = regexp.MustCompile(`\{\{\s*\.(\w+)\s*\}\}`)
+var envVarRegex = regexp.MustCompile(`\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))`)
+var simpleDollarVarRegex = regexp.MustCompile(`^\$[A-Za-z_][A-Za-z0-9_]*$`)
+
+func expandEnvVars(s string) string {
+	s = envVarRegex.ReplaceAllStringFunc(s, func(match string) string {
+		parts := envVarRegex.FindStringSubmatch(match)
+		if len(parts) != 2 {
+			return match
+		}
+		if value, ok := os.LookupEnv(parts[1]); ok {
+			return value
+		}
+		return match
+	})
+
+	s = templateVarRegex.ReplaceAllStringFunc(s, func(match string) string {
+		parts := templateVarRegex.FindStringSubmatch(match)
+		if len(parts) != 2 {
+			return match
+		}
+		if value, ok := os.LookupEnv(parts[1]); ok {
+			return value
+		}
+		return match
+	})
+
+	return s
+}
 
 func urlEscapedParse(u string) (*url.URL, error) {
 	u = strings.ReplaceAll(u, `{`, `%7B`)
@@ -567,13 +598,14 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					}
 					downloadFile := parseUrl(task, fileUses, model.Name)
 					if fileUses.Path != nil && *fileUses.Path != "" { // reference is an archive, file must be extracted from the archive path
+						resolvedPath := expandEnvVars(*fileUses.Path)
 						cmds := []Cmd{
 							{
-								Cmd: fmt.Sprintf("unzip -ojq %s '%s' -d downloads/models/{{.MODEL}}", downloadFile, *fileUses.Path),
+								Cmd: fmt.Sprintf("unzip -ojq %s '%s' -d downloads/models/{{.MODEL}}", downloadFile, resolvedPath),
 							},
 						}
 						*task.Cmds = append(*task.Cmds, cmds...)
-						downloadFile = fmt.Sprintf("downloads/models/{{.MODEL}}/%s", filepath.Base(*fileUses.Path))
+						downloadFile = fmt.Sprintf("downloads/models/{{.MODEL}}/%s", filepath.Base(resolvedPath))
 					}
 					usesDownloadFilePaths[fileUses.Name] = downloadFile
 					*task.Cmds = append(*task.Cmds, Cmd{
@@ -708,10 +740,19 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 				continue
 			}
 			for _, v := range *workflow.Vars {
-				if v.Reference != nil && *v.Reference == "uses" {
-					vars[v.Name] = usesDownloadFilePaths[v.Value]
+				if v.Reference != nil {
+					if *v.Reference == "uses" {
+						vars[v.Name] = usesDownloadFilePaths[v.Value]
+					} else if *v.Reference == "var" {
+						vars[v.Name] = fmt.Sprintf("{{.%s}}", v.Value)
+					}
 				} else {
-					vars[v.Name] = v.Value
+					if simpleDollarVarRegex.MatchString(v.Value) { // simpleDollarVarRegex matches a bare $VAR reference (e.g. $MY_VAR)
+						// //but not shell parameter expansions such as ${VAR:-default}.
+						vars[v.Name] = fmt.Sprintf("{{.%s}}", v.Value[1:])
+					} else {
+						vars[v.Name] = v.Value
+					}
 				}
 			}
 			var workflowTaskName string

@@ -186,6 +186,18 @@ func parseFilePath(useUrl string, useMap map[string]interface{}) (bool, string) 
 	return false, ""
 }
 
+func isStaticFileReference(useUrl string, useMap map[string]interface{}) bool {
+	if path, ok := useMap["path"].(string); ok && path != "" {
+		return true
+	}
+
+	u, err := url.Parse(useUrl)
+	if err != nil {
+		return false
+	}
+	return filepath.Ext(u.Path) != ""
+}
+
 func resolvePath(pathOrURL string) (abs string, isDir bool, err error) {
 	// Handle file:// URLs
 	if strings.HasPrefix(pathOrURL, "file://") {
@@ -286,6 +298,9 @@ func (c *ResolveCommand) loadMetadata() error {
 			// file urls can be either pointing to local repo folder having taskfile.yaml or another static file in repo
 			// eg uses block, dse.sdp file:///mnt/c/Users/NUZ2KOR/Desktop/dse.sdp/
 			//				  input file:///mnt/c/Users/files.zip path=data/filename.txt
+			if isStaticFileReference(useUrl, use) {
+				continue
+			}
 			abs, isDir, err := resolvePath(path)
 			if err != nil || isDir == false {
 				slog.Error("Loading Taskfile failed", "error", err)

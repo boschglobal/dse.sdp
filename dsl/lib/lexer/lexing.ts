@@ -384,7 +384,7 @@ export const Model = createToken({
 });
 
 function matchEnvVar(text: string) {
-  const varPattern = /^[ \t]*envar([ ]+\S+)([ ]+\S+)\s*(?:\#.*)?$/;
+  const varPattern = /^[ \t]*envar([ ]+\S+)([ ]+(?:\S+|(?:\".*\")|(?:\'.*\')))\s*(?:\#.*)?$/;
   const execResult = varPattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     const varName = execResult[1];
