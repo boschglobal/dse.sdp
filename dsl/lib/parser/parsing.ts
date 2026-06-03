@@ -344,10 +344,6 @@ class FsilParser extends EmbeddedActionsParser {
         }
 
         model_env_vars = Array.isArray(model_env_vars) ? model_env_vars : [model_env_vars];
-        if (global_env_vars.length > 0) {
-          let merged_envars = mergeByName(global_env_vars, stack_env_vars, env => env.object.payload.env_var_name.value); // overrides global level envars if same envar name in stack_env_vars
-          model_env_vars = mergeByName(merged_envars, model_env_vars, env => env.object.payload.env_var_name.value); // overrides with modellevel envars if same envar name in merged_envars
-        }
 
         model_vars = Array.isArray(model_vars) ? model_vars : [model_vars];
         if (global_vars.length > 0) {
@@ -391,6 +387,8 @@ class FsilParser extends EmbeddedActionsParser {
       $.MANY({
         DEF: () => {
           let stack: any = "";
+          stack_env_vars = [];
+          stack_annotations = [];
           if ($.LA(1).tokenType === Stack) {
             stack = $.CONSUME(Stack);
           }

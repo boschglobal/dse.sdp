@@ -1,0 +1,41 @@
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh localfile.dse
+
+stdout -count=2 'Message: hello'
+
+
+-- localfile.dse --
+simulation
+channel signal
+
+uses
+dse.sdp https://github.com/boschglobal/dse.sdp v$RELEASE_VERSION
+
+envar MESSAGE hello
+
+model simple Simple
+channel signal data
+
+stack second_stack
+
+model second Simple
+channel signal data
+file signalgroup.yaml signalgroup.yaml
+
+
+-- signalgroup.yaml --
+---
+kind: SignalGroup
+metadata:
+  name: data
+  labels:
+    model: simple
+    signal: data
+spec:
+  signals:
+    - signal: counter
