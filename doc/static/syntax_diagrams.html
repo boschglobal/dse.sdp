@@ -599,7 +599,17 @@
                   "idx": 1
                 }
               ]
-            }
+            },
+            {
+              "type": "Option",
+              "idx": 3,
+              "definition": [{
+                "type": "NonTerminal",
+                "name": "zip_path",
+                "label": "zip_path",
+                "idx": 0
+              }]
+            },
           ]
         },
       ]
@@ -827,6 +837,30 @@
           "type": "NonTerminal",
           "name": "value_num",
           "idx": 2
+        }
+      ]
+    },
+    {
+      "type": "Rule",
+      "name": "zip_path",
+      "orgText": "",
+      "definition": [{
+          "type": "Terminal",
+          "name": "path",
+          "label": "path",
+          "idx": 0
+        },
+        {
+          "type": "Terminal",
+          "name": "Equals",
+          "label": "=",
+          "idx": 1
+        },
+        {
+          "type": "NonTerminal",
+          "name": "value_str",
+          "label": "value_str",
+          "idx": 1
         }
       ]
     },

@@ -608,9 +608,16 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 						downloadFile = fmt.Sprintf("downloads/models/{{.MODEL}}/%s", filepath.Base(resolvedPath))
 					}
 					usesDownloadFilePaths[fileUses.Name] = downloadFile
-					*task.Cmds = append(*task.Cmds, Cmd{
-						Cmd: fmt.Sprintf("cp %s %s", downloadFile, filePath),
-					})
+					if strings.EqualFold(filepath.Ext(downloadFile), ".zip") && f.Path != nil && *f.Path != "" { // within zip archive, eg : file file.txt uses use_ref path=data/sample.txt
+						resolvedPath := expandEnvVars(*f.Path)
+						*task.Cmds = append(*task.Cmds, Cmd{
+							Cmd: fmt.Sprintf("unzip -p %s '%s' > %s", downloadFile, resolvedPath, filePath),
+						})
+					} else {
+						*task.Cmds = append(*task.Cmds, Cmd{
+							Cmd: fmt.Sprintf("cp %s %s", downloadFile, filePath),
+						})
+					}
 					*task.Sources = append(*task.Sources, fmt.Sprintf("%s", downloadFile))
 				} else {
 					sourcePath := ""

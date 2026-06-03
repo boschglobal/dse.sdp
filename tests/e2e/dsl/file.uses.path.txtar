@@ -1,0 +1,28 @@
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh openloop.dse BUILD_ONLY
+
+exists out/downloads/models/simple/files.zip
+exists out/sim/model/simple/remote_files/foo.txt
+exists out/sim/model/simple/data/remote_foo.txt
+
+exec sh -c 'unzip -p out/downloads/models/simple/files.zip testdata/remote_foo.txt > remote_foo.txt'
+cmp remote_foo.txt out/sim/model/simple/remote_files/foo.txt
+cmp remote_foo.txt out/sim/model/simple/data/remote_foo.txt
+
+-- openloop.dse --
+simulation
+channel signal
+
+uses
+dse.sdp https://github.com/boschglobal/dse.sdp v$RELEASE_VERSION
+zip_files https://raw.githubusercontent.com/boschglobal/dse.sdp/main/tests/testdata/e2e/files.zip
+
+model simple Simple
+channel signal signal_vector
+file remote_files/foo.txt uses zip_files path=testdata/remote_foo.txt
+file remote_foo.txt uses zip_files path=testdata/remote_foo.txt

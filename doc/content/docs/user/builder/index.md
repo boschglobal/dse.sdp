@@ -91,7 +91,7 @@ model =
     [ "uid=", UID ];
 channel = { "channel", CHANNEL_NAME, CHANNEL_ALIAS }-;
 envar = { "envar", ENVAR_NAME, VALUE }-;
-file = { "file", MODEL_FILE, (FILE_SOURCE | "uses", USES_NAME) }-;
+file = { "file", MODEL_FILE, (FILE_SOURCE | "uses", USES_NAME, [ "path=", ZIP_ENTRY_PATH ] )}-;
 annotation = { "annotation", ANNOTATION_NAME, VALUE }-;
 
 
@@ -145,12 +145,14 @@ workflow =
 
 <pre>
 <b>file</b> <var>MODEL_FILE</var> [FILE_SOURCE]
-<b>file</b> <var>MODEL_FILE</var> [use USES_NAME]
+<b>file</b> <var>MODEL_FILE</var> [use USES_NAME] [path=ZIP_ENTRY_PATH]
+
 </pre>
 
 * <code><var>MODEL_FILE</var></code>: the _name_ by which the model refers to the file.
 * <code><var>FILE_SOURCE</var></code>: the actual _path_ of the file.
 * <code><var>USES_NAME</var></code>: the name of a dependency that this file entry imports.
+* <code><var>ZIP_ENTRY_PATH</var></code>: the path to the file within the ZIP archive.
 
 
 ### Model

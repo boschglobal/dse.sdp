@@ -9,7 +9,7 @@ DSE_PLANTUML_IMAGE ?= ghcr.io/boschglobal/dse-plantuml:latest
 SUBDIRS := html2img
 PWD := $(shell pwd)
 STATIC_DIR := static
-OUTPUT_IMG := content/docs/tools/dsl/syntax_diagrams.png
+OUTPUT_IMG := content/docs/devel/sdp/tools/dsl/syntax_diagrams.png
 MD_DOCS := $(shell find content/docs -name "*.md")
 
 export DOCKER_IMAGE := html2img

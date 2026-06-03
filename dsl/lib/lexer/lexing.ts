@@ -91,7 +91,7 @@ export const Channel = createToken({
 });
 
 function matchFile(text: string) {
-  const filePattern = /^[ \t]*file([ ]+\S+)([ ]+(?:uses))?([ ]+\S+)?\s*(?:\#.*)?$/;
+  const filePattern = /^[ \t]*file([ ]+\S+)([ ]+(?:uses))?([ ]+\S+)?(?:[ ]+(path\=\S+))?\s*(?:\#.*)?$/;
   const execResult = filePattern.exec(text) as CustomRegExpExecArray;
   if (execResult !== null) {
     const fileName = execResult[1];
@@ -102,6 +102,10 @@ function matchFile(text: string) {
     let fileValue = "";
     if (execResult[3] !== undefined) {
       fileValue = execResult[3];
+    }
+    let pathInZip = "";
+    if (execResult[4] !== undefined) {
+      pathInZip = execResult[4];
     }
 
     execResult.payload = {
@@ -116,6 +120,10 @@ function matchFile(text: string) {
       file_value: {
         value: fileValue.trim(),
         token_type: "file_value",
+      },
+      path_in_zip: {
+        value: pathInZip.replace("path=", "").trim(),
+        token_type: "path_in_zip",
       },
     };
   }

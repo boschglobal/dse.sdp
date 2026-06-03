@@ -380,6 +380,13 @@ func (c *ConvertCommand) generateSimulationAST(file string, labels ast.Labels) e
 							return nil
 						}
 					}(),
+					Path: func() *string {
+						v := value.Get("object.payload.path_in_zip.value")
+						if v.Exists() {
+							return util.StringPtr(v.String())
+						}
+						return nil
+					}(),
 				}
 				return files
 			})
