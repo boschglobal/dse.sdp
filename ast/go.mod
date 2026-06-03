@@ -8,7 +8,7 @@ require (
 	github.com/boschglobal/dse.schemas/code/go/dse v1.3.3
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/goccy/go-yaml v1.19.2
-	github.com/rogpeppe/go-internal v1.14.1
+	github.com/rogpeppe/go-internal v1.15.0
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.19.0
 	golang.org/x/tools v0.45.0
