@@ -29,6 +29,8 @@ RUN set -eux; \
     apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade; \
     apt-get -y install --no-install-recommends \
         jupyter-notebook \
+        liblua5.4-dev \
+        lua5.4 \
     && \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*;

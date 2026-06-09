@@ -1,0 +1,7 @@
+# TEST: verify lua 5.4 is available
+exec sh -c 'docker run --rm --entrypoint sh dse-builder:test -c "command -v lua5.4"'
+stdout '/usr/bin/lua5.4'
+
+# TEST: verify lua interpreter works
+exec sh -c 'docker run --rm --entrypoint sh dse-builder:test -c "lua5.4 -e \"print(\\\"Hello World\\\")\""'
+stdout 'Hello World'

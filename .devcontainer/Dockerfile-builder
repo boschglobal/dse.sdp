@@ -46,6 +46,8 @@ RUN set -eux; \
         git \
         jq \
         less \
+        liblua5.4-dev \
+        lua5.4 \
         make \
         rsync \
         tar \
