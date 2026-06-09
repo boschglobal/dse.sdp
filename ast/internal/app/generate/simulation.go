@@ -249,7 +249,34 @@ func generateModelRuntime(model ast.Model, mcl MclInfo) *kind.ModelInstanceRunti
 		files = append(files, fmt.Sprintf("model/%s/%s", model.Name, path.Base(mcl.Path)))
 		if model.Files != nil {
 			for _, f := range *model.Files {
-				files = append(files, fmt.Sprintf("model/%s/data/%s", model.Name, f.Name))
+				fDir, fName := path.Split(f.Name)
+				switch {
+				case len(fDir) == 0 && strings.EqualFold(path.Ext(fName), ".lua"):
+					files = append(files, fmt.Sprintf("model/%s/lua/%s", model.Name, fName))
+				case len(fDir) == 0:
+					files = append(files, fmt.Sprintf("model/%s/data/%s", model.Name, fName))
+				case strings.HasPrefix(fDir, "./"):
+					// Strip leading ./ and keep any real subdirectory that follows.
+					// e.g : file ./plant.lua plant.lua      -> fDir=""          -> model/{name}/{fName}
+					// e.g : file ./sub_dir/plant.lua plant.lua  -> fDir="sub_dir" -> model/{name}/sub_dir/{fName}
+					strippedDir := strings.TrimRight(strings.TrimPrefix(fDir, "./"), "/")
+					if len(strippedDir) == 0 {
+						files = append(files, fmt.Sprintf("model/%s/%s", model.Name, fName))
+					} else {
+						files = append(files, fmt.Sprintf("model/%s/%s/%s", model.Name, strippedDir, fName))
+					}
+				case strings.EqualFold(path.Ext(fName), ".lua"):
+					// plain subdir (no ./) + lua -> under lua/ folder
+					files = append(files, fmt.Sprintf("model/%s/lua/%s/%s", model.Name, strings.TrimRight(fDir, "/"), fName))
+				default:
+					// plain subdir + non-lua -> model root relative
+					cleanDir := strings.TrimRight(strings.TrimPrefix(fDir, "./"), "/")
+					if len(cleanDir) == 0 {
+						files = append(files, fmt.Sprintf("model/%s/%s", model.Name, fName))
+					} else {
+						files = append(files, fmt.Sprintf("model/%s/%s/%s", model.Name, cleanDir, fName))
+					}
+				}
 			}
 		}
 		runtime.Files = &files

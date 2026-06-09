@@ -1,0 +1,53 @@
+# SETUP: construct working folder layout
+exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
+exec cp -r . $WORKDIR
+cd $WORKDIR
+
+# TEST: operate the simulation
+exec sh -e workflow.sh hello.dse
+
+exists out/sim/model/simple/hello.lua
+exists out/sim/model/simple/lua/controller.lua
+exists out/sim/model/simple/plant.lua
+exists out/sim/model/simple/sub_dir1/plant.lua
+exists out/sim/model/simple/lua/sub_dir2/plant.lua
+exists out/sim/model/simple/sub_dir3/dir1/plant.lua
+stdout 'Hello from Lua model'
+
+
+-- hello.dse --
+simulation
+channel signal
+
+uses
+Hello https://raw.githubusercontent.com/boschglobal/dse.sdp/main/tests/testdata/e2e/models.zip path=testdata/hello.lua
+
+model simple Hello
+channel signal data
+file controller.lua controller.lua
+file ./plant.lua plant.lua
+file ./sub_dir1/plant.lua plant.lua
+file sub_dir2/plant.lua plant.lua
+file ./sub_dir3/dir1/plant.lua plant.lua
+
+-- controller.lua --
+function model_create()
+    print("Lua model controller")
+end
+
+function model_step()
+end
+
+function model_destroy()
+end
+
+-- plant.lua --
+function model_create()
+    print("Lua model helper")
+end
+
+function model_step()
+end
+
+function model_destroy()
+end

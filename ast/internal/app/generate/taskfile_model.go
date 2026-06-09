@@ -575,11 +575,31 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 			for _, f := range *model.Files {
 				// Calculate the model relative path (i.e. generates).
 				dir, file := filepath.Split(f.Name)
-				if len(dir) == 0 {
+				switch {
+				case len(dir) == 0 && strings.EqualFold(filepath.Ext(file), ".lua"):
+					dir = "lua/"
+				case len(dir) == 0:
 					dir = "data/"
-				} else {
+				case strings.HasPrefix(dir, "./"):
+					// ./ prefix -> relative to model root (any file type)
+					cleanDir := strings.TrimRight(strings.TrimPrefix(dir, "./"), "/")
+					if len(cleanDir) == 0 {
+						dir = ""
+					} else {
+						dir = cleanDir + "/"
+					}
+				case strings.EqualFold(filepath.Ext(file), ".lua"):
+					// plain subdir + lua -> under lua/ folder
+					cleanDir := strings.TrimRight(dir, "/")
+					dir = fmt.Sprintf("lua/%s/", cleanDir)
+				default:
+					// plain subdir + non-lua -> model root relative (dir unchanged)
+				}
+				// Emit mkdir once, after dir is resolved.
+				// Skip "" (model root already exists) and "data/" (created by genericModelTask).
+				if dir != "" && dir != "data/" {
 					*task.Cmds = append(*task.Cmds, Cmd{
-						Cmd: fmt.Sprintf("mkdir -p {{.SIMDIR}}/{{.PATH}}/%s", dir),
+						Cmd: fmt.Sprintf("mkdir -p {{.SIMDIR}}/{{.PATH}}/%s", strings.TrimRight(dir, "/")),
 					})
 				}
 				filePath := fmt.Sprintf("{{.SIMDIR}}/{{.PATH}}/%s%s", dir, file)
