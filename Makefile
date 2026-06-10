@@ -15,6 +15,7 @@ export DSE_FMI_VERSION ?= 1.2.5
 ## Docker Images.
 TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 DSE_SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:$(DSE_MODELC_VERSION)
+DSE_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-builder:latest
 
 
 ###############
