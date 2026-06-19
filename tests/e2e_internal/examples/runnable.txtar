@@ -1,4 +1,4 @@
-skip TODO
+skip 'TODO: test with latest DSE_FMI_VERSION'
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 
 env EXAMPLE_DIR=$REPODIR/examples/runnable
