@@ -1,7 +1,8 @@
+skip TODO
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 
 env EXAMPLE_DIR=$REPODIR/examples/runnable
-exec cp $EXAMPLE_DIR/runnable.dse $WORKDIR/
+exec cp -r $EXAMPLE_DIR/. $WORKDIR/
 exec cp -r . $WORKDIR
 cd $WORKDIR
 

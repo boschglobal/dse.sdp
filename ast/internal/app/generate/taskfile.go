@@ -114,9 +114,10 @@ func (c GenerateCommand) GenerateTaskfile() error {
 					return "linux-amd64"
 				}
 			}())
+			om.Set("OUT", "out")
 			om.Set("OUTDIR", "{{.PWD}}/out")
 			om.Set("SIMDIR", "sim")
-			om.Set("PROJDIR", "{{if .SIM}}{{.WORKDIR}}{{else}}{{.PWD}}{{end}}")
+			om.Set("PROJDIR", "{{if .PROJDIR}}{{.PROJDIR}}{{else}}{{.PWD}}{{end}}")
 			om.Set("CONTAINER_WORKDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}{{else}}{{.PWD}}{{end}}")
 			om.Set("CONTAINER_SIMDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}{{else}}{{.PWD}}{{end}}/out/{{.SIMDIR}}")
 			return &om

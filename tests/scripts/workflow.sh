@@ -7,7 +7,6 @@ INPUT_DSE="$1"
 : "${DSE_REPORT_IMAGE:=ghcr.io/boschglobal/dse-report:latest}"
 : "${DSE_SIMER_IMAGE:=ghcr.io/boschglobal/dse-simer:latest}"
 
-
 echo "Workflow Script"
 echo "==============="
 echo "DSE_BUILDER_IMAGE=${DSE_BUILDER_IMAGE}"
@@ -16,10 +15,11 @@ echo "DSE_SIMER_IMAGE=${DSE_SIMER_IMAGE}"
 echo ""
 
 
-export TASK_X_REMOTE_TASKFILES=1
 export DSE_BUILDER_IMAGE
 export DSE_REPORT_IMAGE
 export DSE_SIMER_IMAGE
+
+PROJDIR=/workdir
 
 
 run_builder() {
@@ -31,14 +31,18 @@ run_builder() {
     docker run --name builder -i --rm \
         --network=host \
         --user "$(id -u):$(id -g)" \
+        --group-add "$(stat -c '%g' /var/run/docker.sock)" \
+        -v /var/run/docker.sock:/var/run/docker.sock \
         -v $ENTRYWORKDIR:/workdir \
         -v $ENTRYHOSTDIR:/repo \
+        --workdir "$PROJDIR" \
+        -e ENTRYWORKDIR="$ENTRYWORKDIR" \
+        -e PROJDIR="$PROJDIR" \
+        -e HOME=/workdir \
         -e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
         -e http_proxy -e https_proxy -e no_proxy \
+        -e DSE_BUILDER_IMAGE -e PACKAGE_VERSION  -e EV_MSG \
         $DSE_BUILDER_IMAGE "$INPUT_DSE"
-    # Run Task to finalize the simulation.
-    echo "[INFO] Running task..."
-    task -y -v -t out/Taskfile.yml
 }
 
 run_report() {
@@ -55,6 +59,7 @@ run_simer() {
     echo "[INFO] Running simer..."
     docker run --name simer -i --rm \
         --network=host \
+        --user "$(id -u):$(id -g)" \
         -v $ENTRYWORKDIR/out/sim:/sim \
         -p 6379:6379 \
         $DSE_SIMER_IMAGE \

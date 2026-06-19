@@ -195,6 +195,13 @@ func isStaticFileReference(useUrl string, useMap map[string]interface{}) bool {
 	if err != nil {
 		return false
 	}
+	if u.Scheme == "file" {
+		info, statErr := os.Stat(u.Path)
+		if statErr == nil {
+			return !info.IsDir()
+		}
+		return false
+	}
 	return filepath.Ext(u.Path) != ""
 }
 
@@ -254,6 +261,13 @@ func loadTaskfile(filePath string) (map[string]interface{}, error) {
 
 	yamlData := map[string]interface{}{}
 	if err := yaml.Unmarshal(data, &yamlData); err != nil {
+		slog.Error(
+			fmt.Sprintf(
+				"failed to unmarshal taskfile yaml\nrepo=%s\n%s",
+				filepath.Base(filePath),
+				err,
+			),
+		)
 		return nil, err
 	}
 
@@ -456,6 +470,13 @@ func fetchMetadata(url string, use map[string]interface{}) map[string]interface{
 	}
 	if err := yaml.Unmarshal(data, &yamlData); err != nil {
 		slog.Error("Error parsing YAML", "err", err)
+		slog.Error(
+			fmt.Sprintf(
+				"failed to unmarshal taskfile yaml\nrepo=%s\n%s",
+				url,
+				err,
+			),
+		)
 		return yamlData
 	}
 	return yamlData

@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-export TASK_X_REMOTE_TASKFILES=1
 export DSE_BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
 export DSE_REPORT_IMAGE=ghcr.io/boschglobal/dse-report:latest
 export DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
@@ -10,14 +9,25 @@ export DSE_SIMER_IMAGE=ghcr.io/boschglobal/dse-simer:latest
 export NAME_CAN=network_can
 export NAME_PDU=network_pdu
 
+REPO_ROOT := $(shell git rev-parse --show-toplevel)
+PROJDIR := /repo/$(shell git rev-parse --show-prefix)
+
 default: build
 
 .PHONY: build
 build:
 	docker run -it --rm \
-		-v $$(pwd):/workdir \
+		--user $$(id -u):$$(id -g) \
+		--group-add $$(stat -c '%g' /var/run/docker.sock) \
+		--volume $$(pwd):/workdir \
+		--volume $(REPO_ROOT):/repo \
+		--workdir $(PROJDIR) \
+		-e HOME=/workdir \
+		-e PROJDIR=$(PROJDIR) \
+		-e ENTRYWORKDIR=$$(pwd) \
+		-e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
+		-v /var/run/docker.sock:/var/run/docker.sock \
 		$(DSE_BUILDER_IMAGE) network.dse
-	task -y -t out/Taskfile.yml
 
 
 .PHONY: simer
