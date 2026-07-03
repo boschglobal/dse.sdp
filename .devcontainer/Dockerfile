@@ -26,7 +26,7 @@ RUN GOBIN=/usr/local/bin go install github.com/boschglobal/task/v3/cmd/task@late
 
 # Construct Final Image
 # =====================
-FROM mcr.microsoft.com/devcontainers/base:ubuntu
+FROM mcr.microsoft.com/devcontainers/base:bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -37,8 +37,12 @@ RUN set -eux; \
 RUN set -eux; \
     apt-get -y update; \
     apt-get -y install --no-install-recommends \
+        ca-certificates \
+        curl \
         liblua5.4-dev \
         lua5.4 \
+        gnupg \
+        lsb-release\
     && \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*;
