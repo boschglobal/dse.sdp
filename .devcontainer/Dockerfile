@@ -7,6 +7,15 @@
 ARG DSE_BUILDER_IMAGE=ghcr.io/boschglobal/dse-builder:latest
 FROM ${DSE_BUILDER_IMAGE} AS dse-builder
 
+# Prune build-only DSL dependencies before copying into final image.
+FROM dse-builder AS dse-builder-pruned
+RUN rm -rf \
+    /opt/dse-dsl/node_modules/typescript \
+    /opt/dse-dsl/node_modules/tsx \
+    /opt/dse-dsl/node_modules/@types \
+    /opt/dse-dsl/node_modules/@esbuild \
+    /opt/dse-dsl/node_modules/esbuild
+
 
 # Go Builder
 # ==========
@@ -17,7 +26,7 @@ RUN GOBIN=/usr/local/bin go install github.com/boschglobal/task/v3/cmd/task@late
 
 # Construct Final Image
 # =====================
-FROM mcr.microsoft.com/devcontainers/universal:2
+FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -26,23 +35,13 @@ RUN set -eux; \
     chmod +x /usr/bin/yq;
 
 RUN set -eux; \
-    apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade; \
+    apt-get -y update; \
     apt-get -y install --no-install-recommends \
-        jupyter-notebook \
         liblua5.4-dev \
         lua5.4 \
     && \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*;
-
-RUN pip install asammdf[gui]
-
-
-# Install VS Code Server Environment
-# ==================================
-RUN npm install -g vsce
-RUN npm install -g typescript
-RUN npm install -g http-server
 
 
 # Install Go Binaries
@@ -54,11 +53,11 @@ COPY --from=go /usr/local/bin/task /usr/local/bin/task
 
 # Install Builder Binaries
 # ========================
-COPY --from=dse-builder /usr/local/bin/dse-ast /usr/local/bin/dse-ast
-COPY --from=dse-builder /usr/local/bin/dse-lsp /usr/local/bin/dse-lsp
-COPY --from=dse-builder /opt/dse-dsl/out /opt/dse-dsl/out
-COPY --from=dse-builder /opt/dse-dsl/node_modules /opt/dse-dsl/node_modules
-COPY --from=dse-builder /opt/dse-dsl/package.json /opt/dse-dsl/package.json
+COPY --from=dse-builder-pruned /usr/local/bin/dse-ast /usr/local/bin/dse-ast
+COPY --from=dse-builder-pruned /usr/local/bin/dse-lsp /usr/local/bin/dse-lsp
+COPY --from=dse-builder-pruned /opt/dse-dsl/out /opt/dse-dsl/out
+COPY --from=dse-builder-pruned /opt/dse-dsl/node_modules /opt/dse-dsl/node_modules
+COPY --from=dse-builder-pruned /opt/dse-dsl/package.json /opt/dse-dsl/package.json
 
 
 # DSL Launch Wrapper

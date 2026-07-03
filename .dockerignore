@@ -1,0 +1,12 @@
+# Git tracking files
+.git
+.github
+
+# Local VS Code configurations
+.vscode/
+
+# Local Node / TypeScript dependencies and build caches
+**/node_modules
+**/dist
+**/out
+.npm

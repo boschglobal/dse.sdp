@@ -3,19 +3,44 @@
         "dockerfile": "Dockerfile",
         "context": ".."
     },
-    "extensions": [
-        "streetsidesoftware.code-spell-checker",
-        "janisdd.vscode-edit-csv",
-        "rafaelarvelo.vsplotter",
-        "ms-azuretools.vscode-docker"
-    ],
-    "features": {},
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.go",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "streetsidesoftware.code-spell-checker",
+                "janisdd.vscode-edit-csv",
+                "rafaelarvelo.vsplotter",
+                "ms-azuretools.vscode-docker"
+            ]
+        }
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/go:1": {
+            "version": "latest"
+        },
+        "ghcr.io/devcontainers/features/python:1": {
+            "version": "3.12",
+            "installTools": true
+        },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "latest"
+        },
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+            "version": "latest",
+            "enableNonRootDocker": true
+        }
+    },
+    "remoteUser": "vscode",
     "runArgs": [
         "--env-file", ".devcontainer/devcontainer.env"
     ],
     "remoteEnv": {},
     "onCreateCommand": [],
-//    "postCreateCommand": "make && make install",
+    "postCreateCommand": "pipx install --force uv && sudo npm install -g http-server && python3 -m pip install --no-cache-dir notebook asammdf",
     "forwardPorts": [3001],
     "portsAttributes": {
         "2159": {
