@@ -6,9 +6,9 @@
 ################
 ## DSE Projects.
 export DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
-export DSE_MODELC_VERSION ?= 2.3.16
+export DSE_MODELC_VERSION ?= 2.3.30
 export DSE_MODELC_PKG_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
-export DSE_FMI_VERSION ?= 1.2.5
+export DSE_FMI_VERSION ?= 1.2.11
 
 
 ###############
