@@ -140,6 +140,7 @@ func (c GenerateCommand) buildIncludes() map[string]Include {
 							Vars:     &vars,
 						}
 					} else {
+						vars["TAG"] = cleanTag(*uses.Version)
 						includes[fmt.Sprintf("%s-%s", uses.Name, *uses.Version)] = Include{
 							Taskfile: taskfile,
 							Dir:      dir,
@@ -954,9 +955,6 @@ func (c GenerateCommand) buildModelTasks() (map[string]Task, error) {
 
 	simSpec := c.simulationAst
 	for _, stack := range simSpec.Stacks {
-		if stack.Name == "external" {
-			continue
-		}
 		stackTaskName := fmt.Sprintf("stack-%s", stack.Name)
 		stackDeps := []Dep{}
 		for _, model := range stack.Models {

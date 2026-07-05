@@ -236,9 +236,6 @@ func buildSimulationTasks(simSpec ast.SimulationSpec) map[string]Task {
 	}
 	// Stacks.
 	for _, stack := range simSpec.Stacks {
-		if stack.Name == "external" {
-			continue
-		}
 		buildCmds = append(buildCmds, Cmd{
 			Task: fmt.Sprintf("stack-%s", stack.Name), // Stack task is generated elsewhere.
 		})

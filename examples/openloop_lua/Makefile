@@ -21,6 +21,7 @@ build:
 		--workdir $(PROJDIR) \
 		-e HOME=/workdir \
 		-e PROJDIR=$(PROJDIR) \
+		-e WORKDIR=$(PROJDIR) \
 		-e ENTRYWORKDIR=$$(pwd) \
 		-e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
 		-v /var/run/docker.sock:/var/run/docker.sock \
