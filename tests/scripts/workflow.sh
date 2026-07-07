@@ -34,9 +34,11 @@ run_builder() {
         --group-add "$(stat -c '%g' /var/run/docker.sock)" \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v $ENTRYWORKDIR:/workdir \
+        -v $ENTRYWORKDIR:$ENTRYWORKDIR \
         -v $ENTRYHOSTDIR:/repo \
         --workdir "$PROJDIR" \
         -e ENTRYWORKDIR="$ENTRYWORKDIR" \
+        -e WORKDIR="$PROJDIR" \
         -e PROJDIR="$PROJDIR" \
         -e HOME=/workdir \
         -e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \

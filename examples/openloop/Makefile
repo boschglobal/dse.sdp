@@ -22,6 +22,7 @@ build:
 		-e HOME=/workdir \
 		-e PROJDIR=$(PROJDIR) \
 		-e ENTRYWORKDIR=$$(pwd) \
+		-e WORKDIR=$(PROJDIR) \
 		-e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		$(DSE_BUILDER_IMAGE) openloop.dse

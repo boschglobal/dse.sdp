@@ -19,6 +19,7 @@ build:
 		--workdir $(PROJDIR) \
 		-e HOME=/workdir \
 		-e PROJDIR=$(PROJDIR) \
+		-e WORKDIR=$(PROJDIR) \
 		-e ENTRYWORKDIR=$$(pwd) \
 		-e AR_USER -e AR_TOKEN -e GHE_USER -e GHE_TOKEN -e GHE_PAT \
 		-v /var/run/docker.sock:/var/run/docker.sock \
@@ -31,11 +32,6 @@ build-dev:
 	dse-ast resolve -input runnable.yaml
 	dse-ast generate -input runnable.yaml -output .
 
-.PHONY: task
-task:
-	task -y -t out/Taskfile.yml
-	ls -R out/sim
-	ls -R out/fmu
 
 .PHONY: report
 report:

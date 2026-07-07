@@ -41,12 +41,15 @@ pull:
 .build_dse_script.stamp: $(DSE_SCRIPT)
 	docker run -it --rm \
 		--user $$(id -u):$$(id -g) \
+		--group-add $$(stat -c '%g' /var/run/docker.sock) \
 		--volume $$(pwd):/workdir \
+		-e ENTRYWORKDIR=$$(pwd) \
+		-e WORKDIR=/workdir \
+		-v /var/run/docker.sock:/var/run/docker.sock \
 		$(DSE_BUILDER_IMAGE) $(DSE_SCRIPT)
 	touch $@
 
 .build_run_task.stamp: $(DSE_SCRIPT) $(MODEL_FILES) $(DATA_FILES)
-	task -y -t out/Taskfile.yml
 	touch $@
 
 .PHONY: build
