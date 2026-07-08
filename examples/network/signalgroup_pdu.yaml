@@ -4,7 +4,7 @@ metadata:
   name: binary_channel
   labels:
     model: network_pdu
-    channel: binary_channel
+    channel: binary
   annotations:
     vector_type: binary
 spec:

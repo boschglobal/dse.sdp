@@ -92,7 +92,7 @@ metadata:
   name: data
   labels:
     model: simple
-    signal: data
+    channel: data
 spec:
   signals:
     - signal: counter
