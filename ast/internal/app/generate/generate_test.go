@@ -5,6 +5,7 @@
 package generate
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -36,19 +37,33 @@ func TestLoadInputFile_ast(t *testing.T) {
 }
 
 func TestGenerateTaskfile(t *testing.T) {
-	var astFile = "testdata/ast.yaml"
-	var outFolder = t.TempDir()
-	var taskfileName = filepath.Join(outFolder, "Taskfile.yml")
+	astFile := "testdata/ast.yaml"
+	data, err := os.ReadFile(astFile)
+	assert.NoError(t, err)
+	// Generate command resolves relative paths under out/, so test input must be staged there.
+	stagedInput := filepath.Join("out", astFile)
+	err = os.MkdirAll(filepath.Dir(stagedInput), 0755)
+	assert.NoError(t, err)
+	err = os.WriteFile(stagedInput, data, 0644)
+	assert.NoError(t, err)
+
+	// Output must also be relative for the same out/ prefixing behavior.
+	outFolder := filepath.Join("tmp", t.Name())
+	err = os.RemoveAll(filepath.Join("out", outFolder))
+	assert.NoError(t, err)
+	err = os.MkdirAll(filepath.Join("out", outFolder), 0755)
+	assert.NoError(t, err)
+	taskfileName := filepath.Join("out", outFolder, "Taskfile.yml")
 	cmd := NewGenerateCommand("test_generate_taskfile")
 	args := []string{"-taskfile", "-input", astFile, "-output", outFolder}
 
 	// Run the command.
-	err := cmd.Parse(args)
+	err = cmd.Parse(args)
 	assert.NoError(t, err)
 	err = cmd.Run()
 	assert.NoError(t, err)
 
 	// Check the generated file.
-	assert.DirExists(t, outFolder)
+	assert.DirExists(t, filepath.Join("out", outFolder))
 	assert.FileExists(t, taskfileName)
 }

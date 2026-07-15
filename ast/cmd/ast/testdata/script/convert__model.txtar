@@ -1,51 +1,52 @@
 env
-exec ast convert -input $WORK/ast.json -output $WORK/ast.yaml
+exec mkdir -p out
+exec ast convert -input ast.json -output ast.yaml
 exec ls -R $WORK
-exec cat ast.yaml
+exec cat out/ast.yaml
 
-yamlcontains ast.yaml $.kind Simulation
-yamlcontains ast.yaml $.metadata.labels.generator 'ast convert'
-yamlcontains ast.yaml $.metadata.labels.input_file $WORK/ast.json
+yamlcontains out/ast.yaml $.kind Simulation
+yamlcontains out/ast.yaml $.metadata.labels.generator 'ast convert'
+yamlcontains out/ast.yaml $.metadata.labels.input_file out/ast.json
 
-yamlcontains ast.yaml $.spec.arch linux-amd64
+yamlcontains out/ast.yaml $.spec.arch linux-amd64
 
-yamlcontains ast.yaml $.spec.channels[0].name physical
-yamlcontains ast.yaml $.spec.channels[1].name network
-yamlcontains ast.yaml $.spec.channels[1].networks[0].name CAN
-yamlcontains ast.yaml $.spec.channels[1].networks[0].mime_type 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
+yamlcontains out/ast.yaml $.spec.channels[0].name physical
+yamlcontains out/ast.yaml $.spec.channels[1].name network
+yamlcontains out/ast.yaml $.spec.channels[1].networks[0].name CAN
+yamlcontains out/ast.yaml $.spec.channels[1].networks[0].mime_type 'application/x-automotive-bus;interface=stream;type=frame;bus=can;schema=fbs;bus_id=1'
 
-yamlcontains ast.yaml $.spec.uses[0].name dse.fmi
-yamlcontains ast.yaml $.spec.uses[0].url https://github.com/boschglobal/dse.fmi
-yamlcontains ast.yaml $.spec.uses[0].version v1.1.8
-yamlcontains ast.yaml $.spec.uses[1].name fmu
-yamlcontains ast.yaml $.spec.uses[1].url https://artifactory.bosch/examples/fmu.zip
-yamlcontains ast.yaml $.spec.uses[1].version v1.0.0
+yamlcontains out/ast.yaml $.spec.uses[0].name dse.fmi
+yamlcontains out/ast.yaml $.spec.uses[0].url https://github.com/boschglobal/dse.fmi
+yamlcontains out/ast.yaml $.spec.uses[0].version v1.1.8
+yamlcontains out/ast.yaml $.spec.uses[1].name fmu
+yamlcontains out/ast.yaml $.spec.uses[1].url https://artifactory.bosch/examples/fmu.zip
+yamlcontains out/ast.yaml $.spec.uses[1].version v1.0.0
 
-yamlcontains ast.yaml $.spec.vars[0].name sim_key
-yamlcontains ast.yaml $.spec.vars[0].value sim_value
+yamlcontains out/ast.yaml $.spec.vars[0].name sim_key
+yamlcontains out/ast.yaml $.spec.vars[0].value sim_value
 
-yamlcontains ast.yaml $.spec.stacks[0].name default
-! yamlcontains ast.yaml $.spec.stacks[0].arch
-! yamlcontains ast.yaml $.spec.stacks[0].stacked
-! yamlcontains ast.yaml $.spec.stacks[0].env
+yamlcontains out/ast.yaml $.spec.stacks[0].name default
+! yamlcontains out/ast.yaml $.spec.stacks[0].arch
+! yamlcontains out/ast.yaml $.spec.stacks[0].stacked
+! yamlcontains out/ast.yaml $.spec.stacks[0].env
 
-yamlcontains ast.yaml $.spec.stacks[0].models[0].name FMU
-yamlcontains ast.yaml $.spec.stacks[0].models[0].model dse.fmi.mcl
-! yamlcontains ast.yaml $.spec.stacks[0].models[0].arch
-! yamlcontains ast.yaml $.spec.stacks[0].models[0].env
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].name FMU
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].model dse.fmi.mcl
+! yamlcontains out/ast.yaml $.spec.stacks[0].models[0].arch
+! yamlcontains out/ast.yaml $.spec.stacks[0].models[0].env
 
-yamlcontains ast.yaml $.spec.stacks[0].models[0].channels[0].name physical
-yamlcontains ast.yaml $.spec.stacks[0].models[0].channels[0].alias scalar_vector
-yamlcontains ast.yaml $.spec.stacks[0].models[0].channels[1].name network
-yamlcontains ast.yaml $.spec.stacks[0].models[0].channels[1].alias network_vector
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].channels[0].name physical
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].channels[0].alias scalar_vector
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].channels[1].name network
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].channels[1].alias network_vector
 
-yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].name generate
-yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].name model_uses
-! yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].uses fmu
-yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].value fmu
-yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].name model_key
-! yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].uses
-yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].value model_val
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].workflows[0].name generate
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].name model_uses
+! yamlcontains out/ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].uses fmu
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].value fmu
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].name model_key
+! yamlcontains out/ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].uses
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].value model_val
 
 
 # Generate AST.JSON:
@@ -53,7 +54,7 @@ yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[1].value mode
 #  make
 #  parse2ast ../ast/cmd/ast/testdata/dsl/single_model.dse ../ast/cmd/ast/testdata/dsl/single_model.ast.json
 
--- ast.json --
+-- out/ast.json --
 {
   "type": "Simulation",
   "simulation": "simulation arch=linux-amd64",

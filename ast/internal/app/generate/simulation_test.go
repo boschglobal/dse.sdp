@@ -5,20 +5,37 @@
 package generate
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func generateSimulation(t *testing.T, input string) string {
-	var outFolder = t.TempDir()
-	var simulationPath = filepath.Join(outFolder, "simulation.yaml")
+	data, err := os.ReadFile(input)
+	assert.NoError(t, err)
+	// Generate command resolves relative input paths under out/, so stage testdata there.
+	stagedInput := filepath.Join("out", input)
+	err = os.MkdirAll(filepath.Dir(stagedInput), 0755)
+	assert.NoError(t, err)
+	err = os.WriteFile(stagedInput, data, 0644)
+	assert.NoError(t, err)
+
+	// Keep output relative because the command prepends out/ internally.
+	outFolder := filepath.Join("tmp", t.Name())
+	err = os.RemoveAll(filepath.Join("out", outFolder))
+	assert.NoError(t, err)
+	err = os.MkdirAll(filepath.Join("out", outFolder), 0755)
+	assert.NoError(t, err)
+	simulationPath := filepath.Join("out", outFolder, "simulation.yaml")
 	cmd := NewGenerateCommand("test_generate_simulation")
 	args := []string{"-simulation", "-input", input, "-output", outFolder}
 
-	err := cmd.Parse(args)
+	err = cmd.Parse(args)
 	assert.NoError(t, err)
 	err = cmd.Run()
 	assert.NoError(t, err)
@@ -41,10 +58,23 @@ func TestGenerateSimulation(t *testing.T) {
 	YamlContains(t, f, "$.spec.models[0].name", "simbus")
 	YamlContains(t, f, "$.spec.models[0].uid", "0")
 	YamlContains(t, f, "$.spec.models[0].model.name", "simbus")
-	YamlContains(t, f, "$.spec.models[0].channels[0].name", "physical")
-	YamlContains(t, f, "$.spec.models[0].channels[0].expectedModelCount", "2")
-	YamlContains(t, f, "$.spec.models[0].channels[1].name", "network")
-	YamlContains(t, f, "$.spec.models[0].channels[1].expectedModelCount", "1")
+
+	// The generated simulation YAML does not guarantee channel order.
+	// Build a lookup by channel name to avoid index-based test failures.
+	var doc map[string]interface{}
+	require.NoError(t, yaml.Unmarshal(f, &doc))
+
+	models := doc["spec"].(map[string]interface{})["models"].([]interface{})
+	channels := models[0].(map[string]interface{})["channels"].([]interface{})
+
+	counts := make(map[string]string)
+	for _, c := range channels {
+		ch := c.(map[string]interface{})
+		counts[ch["name"].(string)] = fmt.Sprintf("%v", ch["expectedModelCount"])
+	}
+
+	assert.Equal(t, "2", counts["physical"])
+	assert.Equal(t, "1", counts["network"])
 
 	YamlContains(t, f, "$.spec.models[1].name", "input")
 	YamlContains(t, f, "$.spec.models[1].uid", "1")

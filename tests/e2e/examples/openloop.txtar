@@ -1,4 +1,3 @@
-skip 'TODO: test with latest DSE_FMI_VERSION'
 env DEBUG=0
 env EXAMPLE_DSE=openloop.dse
 env EXAMPLE_DIR=$REPODIR/examples/openloop

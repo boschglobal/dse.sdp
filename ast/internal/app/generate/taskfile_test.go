@@ -14,12 +14,26 @@ import (
 )
 
 func generateTaskfile(t *testing.T, input string) string {
-	var outFolder = t.TempDir()
-	var taskfileName = filepath.Join(outFolder, "Taskfile.yml")
+	data, err := os.ReadFile(input)
+	assert.NoError(t, err)
+	// Generate command resolves relative input paths under out/, so stage testdata there.
+	stagedInput := filepath.Join("out", input)
+	err = os.MkdirAll(filepath.Dir(stagedInput), 0755)
+	assert.NoError(t, err)
+	err = os.WriteFile(stagedInput, data, 0644)
+	assert.NoError(t, err)
+
+	// Keep output relative because the command prepends out/ internally.
+	outFolder := filepath.Join("tmp", t.Name())
+	err = os.RemoveAll(filepath.Join("out", outFolder))
+	assert.NoError(t, err)
+	err = os.MkdirAll(filepath.Join("out", outFolder), 0755)
+	assert.NoError(t, err)
+	taskfileName := filepath.Join("out", outFolder, "Taskfile.yml")
 	cmd := NewGenerateCommand("test_generate_taskfile")
 	args := []string{"-taskfile", "-input", input, "-output", outFolder}
 
-	err := cmd.Parse(args)
+	err = cmd.Parse(args)
 	assert.NoError(t, err)
 	err = cmd.Run()
 	assert.NoError(t, err)
@@ -36,7 +50,7 @@ func TestGenerateTaskfile_global_vars(t *testing.T) {
 	YamlContains(t, f, "$.version", "3")
 
 	YamlContains(t, f, "$.vars.PLATFORM_ARCH", "linux-amd86")
-	YamlContains(t, f, "$.vars.OUTDIR", "out")
+	YamlContains(t, f, "$.vars.OUTDIR", "{{.PWD}}/out")
 	YamlContains(t, f, "$.vars.SIMDIR", "sim")
 }
 
@@ -49,10 +63,10 @@ func TestGenerateTaskfile_includes(t *testing.T) {
 	YamlContains(t, f, "$.version", "3")
 
 	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.taskfile", "https://raw.githubusercontent.com/boschglobal/dse.modelc/refs/tags/v2.3.12/Taskfile.yml")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.dir", "{{.OUTDIR}}/{{.SIMDIR}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.dir", "{{if .ENTRYWORKDIR}}{{.WORKDIR}}{{else}}{{.PWD}}{{end}}/out/{{.SIMDIR}}")
 	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.vars.IMAGE_TAG", "2.3.12")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.vars.SIM", "{{.SIMDIR}}")
-	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.vars.ENTRYWORKDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}/{{.OUTDIR}}{{else}}{{.PWD}}/{{.OUTDIR}}{{end}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.vars.SIM", "out/{{.SIMDIR}}")
+	YamlContains(t, f, "$.includes.'dse.modelc-v2.3.12'.vars.ENTRYWORKDIR", "{{if .ENTRYWORKDIR}}{{.ENTRYWORKDIR}}{{else}}{{.PWD}}{{end}}")
 
 }
 
@@ -68,13 +82,15 @@ func TestGenerateTaskfile_build_simulation(t *testing.T) {
 
 	YamlContains(t, f, "$.tasks.build.dir", "{{.OUTDIR}}")
 	YamlContains(t, f, "$.tasks.build.label", "build")
-	YamlContains(t, f, "$.tasks.build.cmds[0].task", "build-setup-sim")
-	YamlContains(t, f, "$.tasks.build.cmds[1].task", "stack-default")
+	YamlContains(t, f, "$.tasks.build.cmds[0].task", "info")
+	YamlContains(t, f, "$.tasks.build.cmds[1].task", "build-setup-sim")
+	YamlContains(t, f, "$.tasks.build.cmds[2].task", "stack-default")
 	YamlContains(t, f, "$.tasks.build-setup-sim.label", "build-setup-sim")
 	YamlContains(t, f, "$.tasks.build-setup-sim.dir", "{{.OUTDIR}}")
 	YamlContains(t, f, "$.tasks.build-setup-sim.cmds[0]", "mkdir -p {{.SIMDIR}}/data")
-	YamlContains(t, f, "$.tasks.build-setup-sim.cmds[1]", "cp {{.ENTRYDIR}}/simulation.yaml {{.SIMDIR}}/data/simulation.yaml")
-	YamlContains(t, f, "$.tasks.build-setup-sim.sources[0]", "{{.ENTRYDIR}}/simulation.yaml")
+	YamlContains(t, f, "$.tasks.build-setup-sim.cmds[1]", "mkdir -p {{.SIMDIR}}/trace")
+	YamlContains(t, f, "$.tasks.build-setup-sim.cmds[2]", "cp {{.PROJDIR}}/out/simulation.yaml {{.SIMDIR}}/data/simulation.yaml")
+	YamlContains(t, f, "$.tasks.build-setup-sim.sources[0]", "{{.PROJDIR}}/simulation.yaml")
 	YamlContains(t, f, "$.tasks.build-setup-sim.generates[0]", "{{.SIMDIR}}/data/simulation.yaml")
 	YamlContains(t, f, "$.tasks.stack-default.label", "stack:default")
 	YamlContains(t, f, "$.tasks.stack-default.deps[0].task", "model-FMU")
@@ -133,7 +149,7 @@ func TestGenerateTaskfile_common_elements(t *testing.T) {
 	YamlContains(t, f, "$.tasks.download-file.generates[0]", "{{.FILE}}")
 	YamlContains(t, f, "$.tasks.download-file.status[0]", "test -f {{.FILE}}")
 
-	YamlContains(t, f, "$.tasks.clean.cmds[0]", "find ./out -mindepth 1 -maxdepth 1 ! -name downloads -exec rm -rf {} +")
+	YamlContains(t, f, "$.tasks.clean.cmds[0]", "find ./out -mindepth 1 -maxdepth 1 ! -name downloads ! -name simulation.json ! -name simulation.yaml ! -name Taskfile.yml -exec rm -rf {} +")
 
 	YamlContains(t, f, "$.tasks.cleanall.cmds[0]", "rm -rf ./out")
 }
@@ -177,14 +193,14 @@ func TestGenerateTaskfile_model_modelc(t *testing.T) {
 	YamlContains(t, f, "$.tasks.model-input.cmds[5]", "find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yaml -print0  | xargs -r -0 rm -f")
 	YamlContains(t, f, "$.tasks.model-input.cmds[6]", "find {{.SIMDIR}}/{{.PATH}} -type f -name simulation.yml -print0  | xargs -r -0 rm -f")
 	YamlContains(t, f, "$.tasks.model-input.cmds[7]", "cp downloads/models/{{.MODEL}}/input.csv {{.SIMDIR}}/{{.PATH}}/data/input.csv")
-	YamlContains(t, f, "$.tasks.model-input.cmds[8]", "cp {{.ENTRYDIR}}/signalgroup.yaml {{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml")
-	YamlContains(t, f, "$.tasks.model-input.cmds[9]", "mkdir -p {{.SIMDIR}}/{{.PATH}}/trace/")
+	YamlContains(t, f, "$.tasks.model-input.cmds[8]", "cp {{.PROJDIR}}/signalgroup.yaml {{.SIMDIR}}/{{.PATH}}/data/signalgroup.yaml")
+	YamlContains(t, f, "$.tasks.model-input.cmds[9]", "mkdir -p {{.SIMDIR}}/{{.PATH}}/trace")
 	YamlContains(t, f, "$.tasks.model-input.cmds[10]", "mkdir -p $(dirname downloads/models/{{.MODEL}}/output.csv)")
 	YamlContains(t, f, "$.tasks.model-input.cmds[11]", "cp /volume/output.csv downloads/models/{{.MODEL}}/output.csv")
 	YamlContains(t, f, "$.tasks.model-input.cmds[12]", "cp downloads/models/{{.MODEL}}/output.csv {{.SIMDIR}}/{{.PATH}}/trace/output.bmp")
 
 	YamlContains(t, f, "$.tasks.model-input.sources[0]", "downloads/models/{{.MODEL}}/input.csv")
-	YamlContains(t, f, "$.tasks.model-input.sources[1]", "{{.ENTRYDIR}}/signalgroup.yaml")
+	YamlContains(t, f, "$.tasks.model-input.sources[1]", "{{.PROJDIR}}/signalgroup.yaml")
 	YamlContains(t, f, "$.tasks.model-input.sources[2]", "downloads/models/{{.MODEL}}/output.csv")
 
 	YamlContains(t, f, "$.tasks.model-input.generates[0]", "{{.SIMDIR}}/{{.PATH}}/**")

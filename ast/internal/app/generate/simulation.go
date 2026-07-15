@@ -148,7 +148,12 @@ func (c *GenerateCommand) GenerateSimulation() error {
 				md = *astModel.Metadata
 			}
 			if astModel.External != nil && *astModel.External == true {
-				modelName = astModel.Name
+				// For external models, use `astModel.Model` if specified; otherwise use the declared model name.
+				if astModel.Model != "" { // eg: model <model_name> <Model> external=true
+					modelName = astModel.Model
+				} else { // eg: model <model_name> external=true
+					modelName = astModel.Name
+				}
 			} else {
 				func() {
 					defer func() {

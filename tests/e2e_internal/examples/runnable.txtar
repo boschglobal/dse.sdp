@@ -1,4 +1,3 @@
-skip 'TODO: test with latest DSE_FMI_VERSION'
 exec cp $REPODIR/tests/scripts/workflow.sh $WORKDIR/workflow.sh
 
 env EXAMPLE_DIR=$REPODIR/examples/runnable
@@ -50,15 +49,11 @@ stderr 'Writing to folder: .'
 stderr 'Writing taskfile: out/Taskfile.yml'
 stderr 'Writing simulation: out/simulation.yaml'
 
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-modelcfmu-annotations" finished'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-modelcfmu" started'
-stderr 'Running FMI Toolset command: gen-modelcfmu'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-modelcfmu" finished'
-stderr 'task: "dse.fmi-v[0-9]+\.[0-9]+\.[0-9]+:generate-fmimodelc" finished'
-stderr 'task: "model-runnable" finished'
-stderr 'task: "stack-default" finished'
-stderr 'task: "build" finished'
-stderr 'task: "default" finished'
+stderr 'USING ghcr\.io/boschglobal/dse-fmi:[0-9]+\.[0-9]+\.[0-9]+ CMD dse\.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-modelcfmu-annotations'
+stderr 'running FMI Toolset command: gen-modelcfmu-annotations'
+stderr 'USING ghcr\.io/boschglobal/dse-fmi:[0-9]+\.[0-9]+\.[0-9]+ CMD dse\.fmi-v[0-9]+\.[0-9]+\.[0-9]+:gen-modelcfmu'
+stderr 'running FMI Toolset command: gen-modelcfmu'
+stderr 'Create FMU Package \(/out/runnable\.fmu\) \.\.\.'
 
 # dse-report
 

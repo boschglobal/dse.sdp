@@ -1,30 +1,31 @@
 env
-exec ast resolve -input $WORK/ast.yaml -uses dse.fmi -file $WORK/md_dse.fmi.yaml
+exec mkdir -p out
+exec ast resolve -input ast.yaml -uses dse.fmi -file md_dse.fmi.yaml
 exec ls -R $WORK
-exec cat ast.yaml
+exec cat out/ast.yaml
 
-yamlcontains ast.yaml $.kind Simulation
+yamlcontains out/ast.yaml $.kind Simulation
 
-yamlcontains ast.yaml $.spec.vars[0].name sim_key
-yamlcontains ast.yaml $.spec.vars[0].value sim_value
+yamlcontains out/ast.yaml $.spec.vars[0].name sim_key
+yamlcontains out/ast.yaml $.spec.vars[0].value sim_value
 
-yamlcontains ast.yaml $.spec.stacks[0].models[0].name linear
-yamlcontains ast.yaml $.spec.stacks[0].models[0].uses dse.fmi
-yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].name generate-fmimcl
-yamlcontains ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].name FMU_DIR
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].name linear
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].uses dse.fmi
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].workflows[0].name generate-fmimcl
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].workflows[0].vars[0].name FMU_DIR
 
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.name fmimcl
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.path dse/fmimcl
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.displayName dse.fmi.mcl
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.files[0] fmimcl/lib/libfmimcl.so
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.platforms[0] linux-amd64
-yamlcontains ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.workflows[0] generate-fmimcl
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.name fmimcl
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.path dse/fmimcl
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.displayName dse.fmi.mcl
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.files[0] fmimcl/lib/libfmimcl.so
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.platforms[0] linux-amd64
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].metadata.models.fmimcl.workflows[0] generate-fmimcl
 
-yamlcontains ast.yaml $.spec.uses[0].name dse.fmi
-yamlcontains ast.yaml $.spec.uses[0].url https://github.com/boschglobal/dse.fmi
-yamlcontains ast.yaml $.spec.uses[0].version v1.1.20
+yamlcontains out/ast.yaml $.spec.uses[0].name dse.fmi
+yamlcontains out/ast.yaml $.spec.uses[0].url https://github.com/boschglobal/dse.fmi
+yamlcontains out/ast.yaml $.spec.uses[0].version v1.1.20
 
--- ast.yaml --
+-- out/ast.yaml --
 ---
 kind: Simulation
 spec:

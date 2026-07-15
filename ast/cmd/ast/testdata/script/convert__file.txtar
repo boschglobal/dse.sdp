@@ -1,30 +1,31 @@
 env
-exec ast convert -input $WORK/ast.json -output $WORK/ast.yaml
+exec mkdir -p out
+exec ast convert -input ast.json -output ast.yaml
 exec ls -R $WORK
-exec cat ast.yaml
+exec cat out/ast.yaml
 
-yamlcontains ast.yaml $.kind Simulation
+yamlcontains out/ast.yaml $.kind Simulation
 
-yamlcontains ast.yaml $.spec.vars[0].name key_one
-yamlcontains ast.yaml $.spec.vars[0].value val_one
-yamlcontains ast.yaml $.spec.vars[1].name key_two
-yamlcontains ast.yaml $.spec.vars[1].value val_two
+yamlcontains out/ast.yaml $.spec.vars[0].name key_one
+yamlcontains out/ast.yaml $.spec.vars[0].value val_one
+yamlcontains out/ast.yaml $.spec.vars[1].name key_two
+yamlcontains out/ast.yaml $.spec.vars[1].value val_two
 
-yamlcontains ast.yaml $.spec.stacks[0].models[0].name one
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].name one
 
-yamlcontains ast.yaml $.spec.stacks[0].models[0].files[0].name input.csv
-yamlcontains ast.yaml $.spec.stacks[0].models[0].files[0].reference uses
-yamlcontains ast.yaml $.spec.stacks[0].models[0].files[0].value input_file
-yamlcontains ast.yaml $.spec.stacks[0].models[0].files[1].name signalgroup.yaml
-yamlcontains ast.yaml $.spec.stacks[0].models[0].files[1].value 
-! yamlcontains ast.yaml $.spec.stacks[0].models[0].files[1].reference
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].files[0].name input.csv
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].files[0].reference uses
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].files[0].value input_file
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].files[1].name signalgroup.yaml
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].files[1].value 
+! yamlcontains out/ast.yaml $.spec.stacks[0].models[0].files[1].reference
 
 # Generate AST.JSON:
 #  cd dsl
 #  make
 #  parse2ast ../ast/cmd/ast/testdata/dsl/var.dse ../ast/cmd/ast/testdata/dsl/var.ast.json
 
--- ast.json --
+-- out/ast.json --
 {
   "type": "Simulation",
   "simulation": "simulation arch=linux-x86",

@@ -1,33 +1,34 @@
 env
-exec mkdir project
-exec ast generate -input openloop.yaml -output project
+exec mkdir -p out
+exec ast generate -input openloop.yaml -output .
 stderr 'Running command: generate'
-stderr 'Reading file: openloop.yaml'
-stderr 'Writing to folder: project'
-stderr 'Writing taskfile: project/Taskfile.yml'
-stderr 'Writing simulation: project/simulation.yaml'
+stderr 'Reading file: out/openloop.yaml'
+stderr 'Writing to folder: out'
+stderr 'Writing taskfile: out/Taskfile.yml'
+stderr 'Writing simulation: out/simulation.yaml'
 
 exec ls -R .
-exists project/simulation.yaml
-exists project/Taskfile.yml
-exec cat project/Taskfile.yml
-yamlcontains project/simulation.yaml $.kind Stack
-yamlcontains project/simulation.yaml $.metadata.name default
-yamlcontains project/simulation.yaml $.spec.connection.transport.redis.uri redis://localhost:6379
-yamlcontains project/simulation.yaml $.spec.models[0].name simbus
-yamlcontains project/simulation.yaml $.spec.models[1].name input
-yamlcontains project/simulation.yaml $.spec.models[2].name linear
+exists out/simulation.yaml
+exists out/Taskfile.yml
+exec cat out/Taskfile.yml
+yamlcontains out/simulation.yaml $.kind Stack
+yamlcontains out/simulation.yaml $.metadata.name default
+yamlcontains out/simulation.yaml $.spec.connection.transport.redis.uri redis://localhost:6379
+yamlcontains out/simulation.yaml $.spec.models[0].name simbus
+yamlcontains out/simulation.yaml $.spec.models[1].name input
+yamlcontains out/simulation.yaml $.spec.models[2].name linear
 
-yamlcontains project/Taskfile.yml $.tasks.build.cmds[0].task build-setup-sim
-yamlcontains project/Taskfile.yml $.tasks.build.cmds[1].task stack-default
-yamlcontains project/Taskfile.yml $.tasks.stack-default.label stack:default
-yamlcontains project/Taskfile.yml $.tasks.stack-default.deps[0].task model-input
-yamlcontains project/Taskfile.yml $.tasks.stack-default.deps[1].task model-linear
-yamlcontains project/Taskfile.yml $.tasks.model-input.label sim:model:input
-yamlcontains project/Taskfile.yml $.tasks.model-linear.label sim:model:linear
+yamlcontains out/Taskfile.yml $.tasks.build.cmds[0].task info
+yamlcontains out/Taskfile.yml $.tasks.build.cmds[1].task build-setup-sim
+yamlcontains out/Taskfile.yml $.tasks.build.cmds[2].task stack-default
+yamlcontains out/Taskfile.yml $.tasks.stack-default.label stack:default
+yamlcontains out/Taskfile.yml $.tasks.stack-default.deps[0].task model-input
+yamlcontains out/Taskfile.yml $.tasks.stack-default.deps[1].task model-linear
+yamlcontains out/Taskfile.yml $.tasks.model-input.label sim:model:input
+yamlcontains out/Taskfile.yml $.tasks.model-linear.label sim:model:linear
 
 
--- openloop.yaml --
+-- out/openloop.yaml --
 ---
 kind: Simulation
 spec:

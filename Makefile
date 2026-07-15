@@ -26,7 +26,7 @@ TESTDATA_SUBDIRS = tests/testdata/e2e
 
 ###############
 ## Test Parameters.
-export EXAMPLE_VERSION ?= 0.8.51
+export EXAMPLE_VERSION ?= 0.9.7
 export HOST_ENTRYDIR ?= $(shell pwd -P)
 export HOST_DOCKER_WORKSPACE ?= $(shell pwd -P)
 export TESTSCRIPT_E2E_DIR ?= tests/e2e

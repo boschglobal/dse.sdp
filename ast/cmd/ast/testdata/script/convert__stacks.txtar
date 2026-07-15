@@ -1,47 +1,48 @@
 env
-exec ast convert -input $WORK/ast.json -output $WORK/ast.yaml
+exec mkdir -p out
+exec ast convert -input ast.json -output ast.yaml
 exec ls -R $WORK
-exec cat ast.yaml
+exec cat out/ast.yaml
 
-yamlcontains ast.yaml $.kind Simulation
-yamlcontains ast.yaml $.metadata.labels.generator 'ast convert'
-yamlcontains ast.yaml $.metadata.labels.input_file $WORK/ast.json
+yamlcontains out/ast.yaml $.kind Simulation
+yamlcontains out/ast.yaml $.metadata.labels.generator 'ast convert'
+yamlcontains out/ast.yaml $.metadata.labels.input_file out/ast.json
 
-yamlcontains ast.yaml $.spec.arch linux-x86
+yamlcontains out/ast.yaml $.spec.arch linux-x86
 
-yamlcontains ast.yaml $.spec.channels[0].name physical
+yamlcontains out/ast.yaml $.spec.channels[0].name physical
 
-yamlcontains ast.yaml $.spec.uses[0].name dse.fmi
-yamlcontains ast.yaml $.spec.uses[0].url https://github.com/boschglobal/dse.fmi
-yamlcontains ast.yaml $.spec.uses[0].version v1.1.8
+yamlcontains out/ast.yaml $.spec.uses[0].name dse.fmi
+yamlcontains out/ast.yaml $.spec.uses[0].url https://github.com/boschglobal/dse.fmi
+yamlcontains out/ast.yaml $.spec.uses[0].version v1.1.8
 
-yamlcontains ast.yaml $.spec.stacks[0].name default
-! yamlcontains ast.yaml $.spec.stacks[0].arch
-! yamlcontains ast.yaml $.spec.stacks[0].stacked
-yamlcontains ast.yaml $.spec.stacks[0].models[0].name one
-yamlcontains ast.yaml $.spec.stacks[0].models[0].model dse.fmi.mcl
-yamlcontains ast.yaml $.spec.stacks[0].models[0].arch linux-amd64
+yamlcontains out/ast.yaml $.spec.stacks[0].name default
+! yamlcontains out/ast.yaml $.spec.stacks[0].arch
+! yamlcontains out/ast.yaml $.spec.stacks[0].stacked
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].name one
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].model dse.fmi.mcl
+yamlcontains out/ast.yaml $.spec.stacks[0].models[0].arch linux-amd64
 
-yamlcontains ast.yaml $.spec.stacks[1].name stack-stacked
-yamlcontains ast.yaml $.spec.stacks[1].arch win-x86
-yamlcontains ast.yaml $.spec.stacks[1].stacked true
-yamlcontains ast.yaml $.spec.stacks[1].models[0].name two
-yamlcontains ast.yaml $.spec.stacks[1].models[0].model dse.fmi.mcl
-! yamlcontains ast.yaml $.spec.stacks[1].models[0].arch
+yamlcontains out/ast.yaml $.spec.stacks[1].name stack-stacked
+yamlcontains out/ast.yaml $.spec.stacks[1].arch win-x86
+yamlcontains out/ast.yaml $.spec.stacks[1].stacked true
+yamlcontains out/ast.yaml $.spec.stacks[1].models[0].name two
+yamlcontains out/ast.yaml $.spec.stacks[1].models[0].model dse.fmi.mcl
+! yamlcontains out/ast.yaml $.spec.stacks[1].models[0].arch
 
-yamlcontains ast.yaml $.spec.stacks[2].name model-arch
-! yamlcontains ast.yaml $.spec.stacks[2].arch
-! yamlcontains ast.yaml $.spec.stacks[2].stacked
-yamlcontains ast.yaml $.spec.stacks[2].models[0].name three
-yamlcontains ast.yaml $.spec.stacks[2].models[0].model dse.fmi.mcl
-yamlcontains ast.yaml $.spec.stacks[2].models[0].arch linux-i386
+yamlcontains out/ast.yaml $.spec.stacks[2].name model-arch
+! yamlcontains out/ast.yaml $.spec.stacks[2].arch
+! yamlcontains out/ast.yaml $.spec.stacks[2].stacked
+yamlcontains out/ast.yaml $.spec.stacks[2].models[0].name three
+yamlcontains out/ast.yaml $.spec.stacks[2].models[0].model dse.fmi.mcl
+yamlcontains out/ast.yaml $.spec.stacks[2].models[0].arch linux-i386
 
 
 # Generate AST.JSON:
 #  cd dsl
 #  make
 #  parse2ast ../ast/cmd/ast/testdata/dsl/stacks.dse ../ast/cmd/ast/testdata/dsl/stacks.ast.json
--- ast.json --
+-- out/ast.json --
 {
   "type": "Simulation",
   "simulation": "simulation arch=linux-x86",

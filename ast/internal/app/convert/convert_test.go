@@ -17,36 +17,46 @@ import (
 
 func TestConvert_OriginalDseScriptLabel(t *testing.T) {
 	dir := t.TempDir()
-	jsonFile := filepath.Join(dir, "sim.json")
-	dseFile := filepath.Join(dir, "sim.dse")
-	outFile := filepath.Join(dir, "ast.yaml")
+	t.Chdir(dir)
+	err := os.MkdirAll("out", 0755)
+	require.NoError(t, err)
 
-	err := os.WriteFile(jsonFile, []byte(`{}`), 0644)
+	jsonFile := filepath.Join("out", "sim.json")
+	dseFile := filepath.Join("out", "sim.dse")
+	outFile := filepath.Join("out", "ast.yaml")
+
+	err = os.WriteFile(jsonFile, []byte(`{}`), 0644)
 	assert.NoError(t, err)
 	err = os.WriteFile(dseFile, []byte("simulation\nchannel signal\n"), 0644)
 	assert.NoError(t, err)
 
 	cmd := NewConvertCommand("test_convert")
-	err = cmd.Parse([]string{"-input", jsonFile, "-output", outFile})
+	err = cmd.Parse([]string{"-input", "sim.json", "-output", "ast.yaml"})
 	assert.NoError(t, err)
 	err = cmd.Run()
 	assert.NoError(t, err)
 
 	data, err := os.ReadFile(outFile)
 	assert.NoError(t, err)
-	assert.True(t, strings.Contains(string(data), dseFile))
+	absDseFile, err := filepath.Abs(dseFile)
+	assert.NoError(t, err)
+	assert.True(t, strings.Contains(string(data), absDseFile))
 }
 
 func TestConvert_OriginalDseScriptLabel_AbsentWhenDseFileMissing(t *testing.T) {
 	dir := t.TempDir()
-	jsonFile := filepath.Join(dir, "sim.json")
-	outFile := filepath.Join(dir, "ast.yaml")
+	t.Chdir(dir)
+	err := os.MkdirAll("out", 0755)
+	require.NoError(t, err)
 
-	err := os.WriteFile(jsonFile, []byte(`{}`), 0644)
+	jsonFile := filepath.Join("out", "sim.json")
+	outFile := filepath.Join("out", "ast.yaml")
+
+	err = os.WriteFile(jsonFile, []byte(`{}`), 0644)
 	assert.NoError(t, err)
 
 	cmd := NewConvertCommand("test_convert")
-	err = cmd.Parse([]string{"-input", jsonFile, "-output", outFile})
+	err = cmd.Parse([]string{"-input", "sim.json", "-output", "ast.yaml"})
 	assert.NoError(t, err)
 	err = cmd.Run()
 	assert.NoError(t, err)

@@ -1,4 +1,3 @@
-skip 'TODO: check runtime issue'
 # TEST: verify lua 5.4 is available
 exec sh -c 'docker run --rm --entrypoint sh ${DSE_BUILDER_IMAGE} -c "command -v lua5.4"'
 stdout '/usr/bin/lua5.4'
