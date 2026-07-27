@@ -21,6 +21,7 @@ import {
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as yaml from "js-yaml";
+import { exec } from "child_process";
 
 const isCodespace =
   process.env.CODESPACES === "true" || process.env.GITHUB_CODESPACES === "true";
@@ -43,6 +44,7 @@ let uses_items: { [key: string]: any } = { repos: {}, files: {} };
 let architectures: any[] = [];
 let yamlData: any;
 let workflowNames: any;
+let lastUsesSignature = "";
 
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -50,6 +52,65 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+let ghePat = "";
+let gheTokenPromise: Promise<void> | null = null;
+
+function ensureGheToken(): Promise<void> {
+  if (isCodespace) {
+    ghePat = process.env.GHE_TOKEN || "";  // Store the env var directly
+    console.log("[INFO] ghePat:", ghePat);
+    return Promise.resolve();
+  }
+  if (gheTokenPromise) {
+    return gheTokenPromise;
+  }
+
+  gheTokenPromise = new Promise((resolve) => {
+    exec(
+      `wsl bash -il -c "echo __SEP__; printenv GHE_TOKEN || true"`,
+      (err, stdout) => {
+        if (err) {
+          console.error("Unable to load GHE_TOKEN:", err);
+          ghePat = "";
+          resolve();
+          return;
+        }
+
+        const [, pat = ""] = stdout.split("__SEP__");
+        ghePat = pat.trim();
+
+        console.log("[INFO] ghePat:", ghePat);
+
+        resolve();
+      }
+    );
+  });
+
+  return gheTokenPromise;
+}
+
+function createUsesSignature(usesItems: { [key: string]: any }): string {
+  const repos = Object.entries(usesItems.repos || {})
+    .map(([name, repo]: [string, any]) => ({
+      name,
+      link: repo.link,
+      version: repo.version,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const files = Object.entries(usesItems.files || {})
+    .map(([name, file]: [string, any]) => ({
+      name,
+      link: file.link,
+      version: file.version,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return JSON.stringify({
+    repos,
+    files,
+  });
+}
 
 function fillMissingSuggestionData(suggestion_data: any, taskfile_data: any) {
   try {
@@ -168,24 +229,25 @@ function metadataDataParser(metadata_data: any) {
     return ret_workflows;
   }
 
-  function getChannels(channels: []): String[] {
-    let ret_channels: any = [];
-    for (let obj of channels) {
-      ret_channels.push(obj["alias"]);
+  function getChannels(channels: Array<{ alias?: string }> | undefined): string[] {
+    if (!Array.isArray(channels)) {
+      return [];
     }
-    return ret_channels;
+
+    return channels
+      .map((obj) => obj?.alias)
+      .filter((alias): alias is string => typeof alias === "string");
   }
 
   for (const model in metadata_data["metadata"]["models"]) {
     try {
       const model_obj: any = metadata_data["metadata"]["models"][model];
-      const display_name = model_obj["displayName"];
       const path = model_obj["path"];
       const name = model_obj["name"];
       const workflows = getWorkflowDetails(model_obj["workflows"]);
       const platforms = model_obj["platforms"];
       const channels = getChannels(model_obj["channels"]);
-      suggestion_data[display_name] = {
+      suggestion_data[model] = {
         workflows: workflows,
         path: path,
         name: name,
@@ -248,7 +310,7 @@ function taskFileParser(yamlData: any, model: any) {
 
 function setDiagnostics(repoUrlAndVersion: { [key: string]: any }, textDocument: TextDocument, diagnostics: Diagnostic[], seen: Set<string>, err_type: string) {
   const text = textDocument.getText();
-  const url = repoUrlAndVersion['link'];
+  let url = repoUrlAndVersion['link'];
   let escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "\\s+v\\d.*";
   const regex = new RegExp(escapedUrl, 'g');
   let match: RegExpExecArray | null;
@@ -261,6 +323,7 @@ function setDiagnostics(repoUrlAndVersion: { [key: string]: any }, textDocument:
     if (!seen.has(key)) {
       let message = "";
       let severity;
+      url = url.replace(/\{\{[^}]+\}\}@/g, "");
       if (err_type === "metadata") {
         message = `Repo does not have associated metadata.\nRepo: ${url}\nVersion: ${repoUrlAndVersion['version']}`;
         severity = DiagnosticSeverity.Error;
@@ -296,57 +359,157 @@ function parseTaskfile(yamlData: any, repo: any, repoUrlAndVersion: { [key: stri
 }
 
 function gen_git_raw_url(repo: { [key: string]: any }, file: string): string {
-  const pattern: RegExp =
-    /https\:\/\/github\.com\/(\w+)\/(\w+(?:\.\w+))(\/.*)?/;
-  let git_link = repo["link"];
-  const matchResult = git_link.match(pattern);
-  let owner = "";
-  let repo_name = "";
-  let path = "";
-  if (matchResult) {
-    owner = matchResult[1];
-    repo_name = matchResult[2];
-    try {
-      path = matchResult[3];
-    } catch {
-      path = "";
+  const gitLink = repo["link"];
+  const version = repo["version"];
+
+  // Encode {{ }} before parsing (same idea as Go)
+  let encoded = gitLink
+    .replace(/\{/g, "%7B")
+    .replace(/\}/g, "%7D");
+
+  const url = new URL(encoded);
+
+  const parts = url.pathname.split("/").filter(Boolean);
+  if (parts.length < 2) {
+    throw new Error(`Invalid Git repository URL: ${gitLink}`);
+  }
+
+  const owner = parts[0];
+  const repoName = parts[1];
+
+  let rawUrl = "";
+
+  if (url.hostname === "github.com") {
+    rawUrl =
+      `https://raw.githubusercontent.com/` +
+      `${owner}/${repoName}/refs/tags/${version}/${file}`;
+  } else if (url.hostname === "github.boschdevcloud.com") {
+    if (isCodespace && ghePat.trim() == "") {
+      console.log("[INFO] GHE_TOKEN is not available in Codespace, url : ", gitLink);
+      return "";
+    } else if (ghePat.trim() == "") {
+      rawUrl = rawUrl.replace("{{.GHE_TOKEN}}", "GHE_TOKEN_NOT_SET");
+      return rawUrl;
+    } else {
+      const auth =
+        url.username ? `${url.username}@` : "";
+
+      rawUrl =
+        `https://${auth}raw.github.boschdevcloud.com/` +
+        `${owner}/${repoName}/${version}/${file}`;
     }
-  }
-
-  let raw_url: string = "";
-  if (path != undefined) {
-    raw_url = `https://raw.githubusercontent.com/${owner}/${repo_name}${path.replace("blob", "")}`;
   } else {
-    raw_url = `https://raw.githubusercontent.com/${owner}/${repo_name}/${repo["version"]}/${file}`;
+    throw new Error(`Unsupported Git host: ${url.hostname}`);
   }
-  return raw_url;
+
+  // Restore braces
+  rawUrl = rawUrl
+    .replace(/%7B/g, "{")
+    .replace(/%7D/g, "}");
+  rawUrl = rawUrl.replace("{{.GHE_TOKEN}}", ghePat);
+
+  return rawUrl;
 }
 
-async function fetchGitHubRawFile(url: string): Promise<{ statusCode: number; data: string }> {
+
+
+async function fetchViaCurl(
+  url: string
+): Promise<{ statusCode: number; data: string }> {
+
   return new Promise((resolve, reject) => {
-    https
-      .get(url, { agent }, (res) => {
-        let data = "";
+    const shellCmd = isCodespace ? "bash -il" : "wsl bash -il";
+    const cmd = `${shellCmd} -c "curl -s -L -w '__STATUS__%{http_code}' '${url}'"`;
 
-        res.on("data", (chunk) => {
-          data += chunk;
+    exec(
+      cmd,
+      { maxBuffer: 50 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+
+        const marker = "__STATUS__";
+        const idx = stdout.lastIndexOf(marker);
+
+        if (idx < 0) {
+          reject(new Error("Unable to locate HTTP status marker."));
+          return;
+        }
+
+        // Extract HTTP status
+        const statusCode = Number(
+          stdout.substring(idx + marker.length).trim()
+        );
+
+        // Remove status marker from output
+        let data = stdout.substring(0, idx);
+
+        // Remove everything before the YAML document
+        const yamlMatch = data.match(/(^---[\s\S]*|^version:[\s\S]*)/m);
+
+        if (!yamlMatch) {
+          reject(new Error("Could not locate YAML document."));
+          return;
+        }
+
+        data = yamlMatch[0];
+
+        if (err && statusCode === 0) {
+          console.log("Exec Error:", err);
+        }
+
+        resolve({
+          statusCode,
+          data,
         });
 
-        res.on("end", () => {
-          resolve({ statusCode: res.statusCode || 0, data });
-        });
+      }
+    );
 
-        res.on("error", (error) => {
-          reject(error);
-        });
-      })
-      .on("error", (error) => {
-        reject(error);
-      });
   });
+
 }
 
+async function fetchGitHubRawFile(
+  url: string
+): Promise<{ statusCode: number; data: string }> {
 
+  // Bosch GitHub Enterprise
+  if (url.includes("raw.github.boschdevcloud.com")) {
+    console.log("[FETCH][WSL] " + url);
+    return fetchViaCurl(url);
+  }
+
+  // Public GitHub
+  console.log("[FETCH][HTTPS] " + url);
+  return new Promise((resolve, reject) => {
+
+    https
+      .get(
+        url,
+        { agent },
+        (res) => {
+
+          let data = "";
+
+          res.setEncoding("utf8");
+
+          res.on("data", chunk => {
+            data += chunk;
+          });
+
+          res.on("end", () => {
+            resolve({
+              statusCode: res.statusCode ?? 0,
+              data,
+            });
+          });
+
+        }
+      )
+      .on("error", reject);
+
+  });
+
+}
 connection.onInitialize((params: InitializeParams) => {
   const capabilities = params.capabilities;
 
@@ -455,29 +618,55 @@ connection.languages.diagnostics.on(async (params) => {
   }
 });
 
+
+async function fetchTaskfile(repo: { [key: string]: any }): Promise<{ statusCode: number; data: string; fileName: string } | null> {
+  const taskfileNames = [
+    "Taskfile.yaml",
+    "Taskfile.yml",
+  ];
+  await ensureGheToken();
+
+  for (const taskfileName of taskfileNames) {
+    try {
+      const taskfile_git_raw_url: string = gen_git_raw_url(repo, taskfileName);
+      if (taskfile_git_raw_url == "") { // in codespace GHE_TOKEN is not available, returning "" for such urls (boschdevcloud)
+        continue;
+      }
+      const result = await fetchGitHubRawFile(taskfile_git_raw_url);
+      if (result.statusCode === 200) {
+        return { ...result, fileName: taskfileName };
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+
+  // All attempts failed
+  console.log("Could not fetch any taskfile variant from remote repository, URL : ", repo["link"], ", TAG : ", repo["version"]);
+  return null;
+}
+
 function fetchGitData(uses_items: { [key: string]: any }, textDocument: TextDocument) {
   const diagnostics: Diagnostic[] = [];
   const seen = new Set<string>();
   let remaining = Object.keys(uses_items["repos"] || {}).length;
   for (let repo in uses_items["repos"] || {}) {
-    const taskfile_git_raw_url: string = gen_git_raw_url(
-      uses_items["repos"][repo],
-      "Taskfile.yml",
-    );
-    fetchGitHubRawFile(taskfile_git_raw_url)
-      .then(({ statusCode, data }) => {
-        if (statusCode === 200) {
-          const parsed = yaml.load(data);
+
+    fetchTaskfile(uses_items["repos"][repo])
+      .then((result) => {
+        if (result && result.statusCode === 200) {
+          const parsed = yaml.load(result.data);
           if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
             const yamlData = parsed as { [key: string]: any };
             parseTaskfile(yamlData, repo, uses_items["repos"][repo], textDocument, diagnostics, seen);
           }
-        } else if (statusCode === 404) {
+        } else if (!result) {
+          // None of the taskfile variants were found
           setDiagnostics(uses_items["repos"][repo], textDocument, diagnostics, seen, "404");
         }
       })
       .catch((error) => {
-        console.log("Error in fetching taskfile ", taskfile_git_raw_url);
+        console.log("Error in fetching taskfile for repo", repo);
         console.log(error);
       })
       .finally(() => {
@@ -495,7 +684,6 @@ function fetchGitData(uses_items: { [key: string]: any }, textDocument: TextDocu
 documents.onDidChangeContent((change) => {
   validateTextDocument(change.document);
   getUsesItems(change.document);
-  getSelectedModelName(change.document);
 });
 
 function stripInlineComment(line: string): string {
@@ -506,53 +694,70 @@ function stripInlineComment(line: string): string {
   return line;
 }
 
-async function getSelectedModelName(textDocument: TextDocument) {
+async function getSelectedModelName(
+  textDocument: TextDocument,
+  cursorLine: number
+) {
   try {
+    const lines = textDocument.getText().split("\n");
+
+    selectedModel = undefined;
+    workflowNames = [];
+    architectures = [];
     channels = [];
-    const text = textDocument.getText();
-    let modelMatch: RegExpExecArray | null;
-    let matches: string[] = [];
-    let modelPattern = /\b[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=)(\S+)([ ]+arch=\S+)?([ ]+uid=\d+)?([ ]+external=\S+)?\s*(?:\#.*)?\b/gm;
-    const models = Array.from(text.matchAll(modelPattern));
-    console.log("model count in dse : ", models.length, "\n");
-    for (const match of models) {
-      const modelMatchLine = match[0];
-      if (modelMatchLine.includes("external=")) {
-        console.log("external key found...")
-        modelPattern = /\b^[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)(?!arch=|uid=)([ ]+external=\w+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*(?:\#.*)?\b/gm;
-        modelMatch = modelPattern.exec(stripInlineComment(modelMatchLine));
-        if (modelMatch != null) {
-          matches.push(modelMatch[1]);
-        } else {
-          modelPattern = /\b^[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=)(\S+)([ ]+external=\w+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*(?:\#.*)?\b/gm;
-          modelMatch = modelPattern.exec(stripInlineComment(modelMatchLine));
-          if (modelMatch != null) {
-            matches.push(modelMatch[2]);
-          }
-        }
-      } else {
-        modelPattern = /\b[ \t]*model[ ]+(?!arch=|uid=|external=)(\S+)[ ]+(?!arch=|uid=|external=)(\S+)([ ]+arch=\S+)?([ ]+uid=\d+)?\s*(?:\#.*)?\b/gm;
-        modelMatch = modelPattern.exec(stripInlineComment(modelMatchLine));
-        if (modelMatch != null) {
-          matches.push(modelMatch[2]);
+
+    // Walk upwards from the cursor until a model declaration is found
+    for (let i = cursorLine; i >= 0; i--) {
+      const line = stripInlineComment(lines[i]).trim();
+
+      if (!line) {
+        continue;
+      }
+
+      let modelMatch: RegExpMatchArray | null = null;
+
+      // model input dse.modelc.csv
+      modelMatch = line.match(
+        /^model\s+(?!arch=|uid=|external=)\S+\s+(?!arch=|uid=|external=)(\S+)/
+      );
+
+      // model abc external=true
+      if (!modelMatch) {
+        modelMatch = line.match(
+          /^model\s+(?!arch=|uid=|external=)(\S+)\s+external=\S+/
+        );
+
+        if (modelMatch) {
+          selectedModel = modelMatch[1];
+          break;
         }
       }
-    }
-    if (matches && matches.length > 0) {
-      selectedModel = matches[matches.length - 1];
-      if (selectedModel !== undefined && selectedModel !== "") {
-        if (selectedModel in suggestion_data) {
-          workflowNames = suggestion_data[selectedModel]["workflows"].map(
-            (workflow: {}) => Object.keys(workflow)[0],
-          );
-        } else {
-          workflowNames = [];
-        }
+
+      if (modelMatch) {
+        selectedModel = modelMatch[1];
+        break;
       }
-      console.log("current selectedModel is : ", selectedModel);
+
+      // stop if we reached simulation
+      if (/^simulation\b/.test(line)) {
+        break;
+      }
     }
-  } catch {
-    console.log("exception in function getSelectedModelName")
+
+    if (
+      selectedModel &&
+      suggestion_data &&
+      selectedModel in suggestion_data
+    ) {
+      architectures = suggestion_data[selectedModel]["platforms"];
+      channels = suggestion_data[selectedModel]["channels"];
+
+      workflowNames = suggestion_data[selectedModel]["workflows"].map(
+        (workflow: {}) => Object.keys(workflow)[0]
+      );
+    }
+  } catch (err) {
+    console.log(err);
   }
 }
 
@@ -584,7 +789,7 @@ async function getUsesItems(textDocument: TextDocument) {
         if (uses_items_match[3] !== undefined) {
           version = uses_items_match[3];
         }
-        let link_pattern = /^\s*https\:\/\/github\.com\/(\w+)\/(\w+(?:\.\w+))$/;
+        let link_pattern = /^\s*https\:\/\/(\{\{\.\S+\}\}\@)?github\.(?:boschdevcloud\.)?com\/(\w+)\/(\S+)$/;
         let link_match = link_pattern.exec(git_link);
 
         if (link_match) {
@@ -603,6 +808,12 @@ async function getUsesItems(textDocument: TextDocument) {
       usesFlag = false;
     }
   }
+  const signature = createUsesSignature(uses_items);
+  if (signature === lastUsesSignature) {
+    return;
+  }
+  console.log("[USES] Refreshing Taskfiles.");
+  lastUsesSignature = signature;
   fetchGitData(uses_items, textDocument);
 }
 
@@ -621,15 +832,65 @@ connection.onDidChangeWatchedFiles((_change) => {
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion(
-  (textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
+  async (textDocumentPosition: TextDocumentPositionParams): Promise<CompletionItem[]> => {
     const completionItems: CompletionItem[] = [];
     const document = documents.get(textDocumentPosition.textDocument.uri);
     if (document) {
       try {
         const line = textDocumentPosition.position.line;
+        await getSelectedModelName(document, line);
+
+        console.log("Selected Model :", selectedModel);
         const character = textDocumentPosition.position.character;
         const lines = document.getText().split("\n");
         const currentLine = lines[line];
+        const beforeCursor = stripInlineComment(currentLine.slice(0, character));
+        let completionModel: string | undefined = "";
+
+        let isModelScope = false;
+        for (let i = line; i >= 0; i--) {
+          const scopeLine = stripInlineComment(lines[i]).trim();
+          if (!scopeLine) {
+            continue;
+          }
+          if (/^model\b/.test(scopeLine)) {
+            isModelScope = true;
+            const modelMatch = scopeLine.match(
+              /^model\s+(?!arch=|uid=|external=)\S+\s+(?!arch=|uid=|external=)(\S+)/,
+            );
+            if (modelMatch) {
+              completionModel = modelMatch[1];
+            }
+            break;
+          }
+          if (/^simulation\b/.test(scopeLine)) {
+            isModelScope = false;
+            break;
+          }
+        }
+
+        const simulationChannels: string[] = [];
+        for (const rawLine of lines) {
+          const sourceLine = stripInlineComment(rawLine).trim();
+          if (/^model\b/.test(sourceLine)) {
+            break;
+          }
+          const simChannelMatch = sourceLine.match(/^channel\s+([^\s#]+)\s*$/);
+          if (
+            simChannelMatch &&
+            !simulationChannels.includes(simChannelMatch[1])
+          ) {
+            simulationChannels.push(simChannelMatch[1]);
+          }
+        }
+
+        const modelChannelKeywordOnlyMatch = beforeCursor.match(/^\s*channel\s*$/);
+        const modelChannelNameMatch = beforeCursor.match(/^\s*channel\s+([^\s#]*)$/);
+        const modelChannelAliasMatch = beforeCursor.match(
+          /^\s*channel\s+([^\s#]+)\s+([^\s#]*)$/,
+        );
+        const simulationChannelContext =
+          !isModelScope && /^\s*channel\b/.test(beforeCursor);
         // Extracting the word
         const left =
           currentLine.slice(0, character).match(/[a-zA-Z_\=]+$/)?.[0] ?? "";
@@ -637,19 +898,23 @@ connection.onCompletion(
           currentLine.slice(character).match(/^[a-zA-Z_\=]+/)?.[0] ?? "";
         const word = left + right;
 
-        if (selectedModel !== undefined && selectedModel !== "") {
-          architectures = [];
-          channels = [];
-          if (suggestion_data && suggestion_data.length > 0) {
-            if (selectedModel in suggestion_data) {
-              architectures = suggestion_data[`${selectedModel}`]["platforms"];
-              channels = suggestion_data[`${selectedModel}`]["channels"];
-            }
-          }
+        if (selectedModel && suggestion_data[selectedModel]) {
+          architectures = suggestion_data[selectedModel]["platforms"];
+          channels = suggestion_data[selectedModel]["channels"];
+
+          workflowNames = suggestion_data[selectedModel]["workflows"].map(
+            (workflow: {}) => Object.keys(workflow)[0]
+          );
         } else {
           architectures = [];
           channels = [];
+          workflowNames = [];
         }
+
+        if (simulationChannelContext) {
+          return [];
+        }
+
         if (word.startsWith("s")) {
           completionItems.length = 0;
           const insertText =
@@ -698,7 +963,10 @@ connection.onCompletion(
             stackedCompletionItem,
             sequentialCompletionItem,
           );
-        } else if (word.startsWith("c")) {
+        } else if (
+          word.startsWith("c") &&
+          !(isModelScope && /^\s*channel\b/.test(beforeCursor))
+        ) {
           completionItems.length = 0;
           const completionItem: CompletionItem = {
             label: "channel",
@@ -822,16 +1090,78 @@ connection.onCompletion(
           completionItems.push(completionItem);
         }
 
-        if (word.endsWith("channel")) {
+        if (isModelScope && modelChannelAliasMatch) {
           completionItems.length = 0;
+          const aliasPrefix = modelChannelAliasMatch[2] || "";
+          const replaceStart = character - aliasPrefix.length;
           if (channels && channels.length > 0) {
-            channels.forEach((channel: string) => {
+            channels.forEach((channelAlias: string) => {
               const completionItem: CompletionItem = {
-                label: channel,
+                label: channelAlias,
                 kind: CompletionItemKind.Value,
-                detail: "channel name",
+                detail: "model channel alias",
                 filterText: "channel",
-                data: "channel_suggestion",
+                insertText: channelAlias,
+                insertTextFormat: InsertTextFormat.PlainText,
+                textEdit: {
+                  newText: channelAlias,
+                  range: {
+                    start: {
+                      line,
+                      character: replaceStart,
+                    },
+                    end: {
+                      line,
+                      character,
+                    },
+                  },
+                },
+                data: "model_channel_alias_suggestion",
+              };
+              completionItems.push(completionItem);
+            });
+          }
+        } else if (
+          isModelScope &&
+          (modelChannelNameMatch || modelChannelKeywordOnlyMatch)
+        ) {
+          completionItems.length = 0;
+          const channelPrefix = modelChannelNameMatch
+            ? modelChannelNameMatch[1] || ""
+            : "";
+          const replaceStart = modelChannelNameMatch ? character - channelPrefix.length : 0;
+          const lineIndent = (currentLine.match(/^\s*/) || [""])[0];
+          if (simulationChannels.length > 0) {
+            simulationChannels.forEach((simulationChannel: string) => {
+              const isKeywordOnly = !!modelChannelKeywordOnlyMatch;
+              const newText = isKeywordOnly
+                ? `${lineIndent}channel ${simulationChannel} `
+                : `${simulationChannel} `;
+              const completionItem: CompletionItem = {
+                label: simulationChannel,
+                kind: CompletionItemKind.Value,
+                detail: "simulation channel name",
+                filterText: "channel",
+                insertText: newText,
+                insertTextFormat: InsertTextFormat.PlainText,
+                command: {
+                  title: "channel_aliases",
+                  command: "editor.action.triggerSuggest",
+                },
+                textEdit: {
+                  newText,
+                  range: {
+                    start: {
+                      line,
+                      character: replaceStart,
+                    },
+                    end: {
+                      line,
+                      character,
+                    },
+                  },
+                },
+                data: "model_channel_name_suggestion",
               };
               completionItems.push(completionItem);
             });
@@ -944,6 +1274,18 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
       title: "channels",
       command: "editor.action.triggerSuggest",
     };
+  } else if (item.data == "model_channel_name_suggestion") {
+    item.label = `${item.label}`;
+    item.insertTextFormat = InsertTextFormat.PlainText;
+    item.insertText = `${item.label} `;
+    item.command = {
+      title: "channel_aliases",
+      command: "editor.action.triggerSuggest",
+    };
+  } else if (item.data == "model_channel_alias_suggestion") {
+    item.label = `${item.label}`;
+    item.insertTextFormat = InsertTextFormat.PlainText;
+    item.insertText = `${item.label}`;
   } else if (item.data == "channel_suggestion") {
     item.label = `${item.label}`;
     item.insertTextFormat = InsertTextFormat.Snippet;

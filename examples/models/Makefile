@@ -31,6 +31,10 @@ build:
 .PHONY: test
 test:
 
+.PHONY: install
+install:
+
+
 .PHONY: clean
 clean:
 	rm -rf build

@@ -9,16 +9,43 @@ $ make
 ```
 
 ### Install the Extension
-```bash
-$ make install-extension
-$ code --install-extension <path-to-your-extension>.vsix
-```
+## Install the Extension
 
-### Extension Activation
-Extension gets activated for files with below extensions
+#### WSL VS Code
+
+From within the WSL environment, run:
+
 ```bash
-.dse
+make install
 ```
+This installs the extension into the VS Code instance connected to WSL.
+
+#### Windows VS Code
+
+To install the extension into the native Windows VS Code:
+
+1. Build the extension:
+
+   ```bash
+   cd dse.sdp/lsp
+   make
+   ```
+
+2. Open **Visual Studio Code (Windows)**.
+
+3. Open the **Extensions** view (`Ctrl + Shift + X`).
+
+4. Click the **⋯ (More Actions)** menu in the Extensions view.
+
+5. Select **Install from VSIX...**.
+
+6. Browse to and select:
+
+   ```text
+   dse.sdp/lsp/out/bin/dse.vsix
+   ```
+
+7. Reload VS Code if prompted.
 
 ## Live AST View
 

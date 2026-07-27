@@ -51,6 +51,7 @@ do-test_testscript:
 clean:
 	rm -f package-lock.json
 	rm -rf node_modules
+	rm -rf out
 
 
 .PHONY: cleanall

@@ -5,10 +5,10 @@
         "request": "launch",
         "name": "Launch Client",
         "runtimeExecutable": "${execPath}",
-        "args": ["--extensionDevelopmentPath=${workspaceRoot}"],
+        "args": ["--extensionDevelopmentPath=${workspaceFolder}/lsp"],
         "outFiles": [
-            "${workspaceRoot}/lsp/client/out/**/*.js",
-            "${workspaceRoot}/lsp/server/out/**/*.js"
+            "${workspaceFolder}/lsp/client/out/**/*.js",
+            "${workspaceFolder}/lsp/server/out/**/*.js"
         ],
         "autoAttachChildProcesses": true,
         "preLaunchTask": "npm: compile"

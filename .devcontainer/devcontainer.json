@@ -40,7 +40,7 @@
     ],
     "remoteEnv": {},
     "onCreateCommand": [],
-    "postCreateCommand": "pipx install --force uv && sudo npm install -g http-server && python3 -m pip install --no-cache-dir notebook asammdf",
+    "postCreateCommand": "mkdir -p ~/.local/bin && pipx install --force uv && npm install -g http-server && python3 -m pip install --no-cache-dir notebook asammdf && make && make install || true",
     "forwardPorts": [3001],
     "portsAttributes": {
         "2159": {

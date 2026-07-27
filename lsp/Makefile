@@ -17,22 +17,29 @@ build:
 EXTENSION_NAME := dse.dse-1.0.0
 .PHONY: install
 install: build
-	@if [ "$(CODESPACES)" = "true" ]; then \
-		rm -rf /home/codespace/.vscode-remote/extensions/$(EXTENSION_NAME);	\
-		rm -rf /home/codespace/.vscode-remote/extensions/temp;	\
-		mkdir -p /home/codespace/.vscode-remote/extensions/temp;	\
-		unzip -q ./out/bin/dse.vsix "extension/*" -d /home/codespace/.vscode-remote/extensions/temp;	\
-		mkdir -p /home/codespace/.vscode-remote/extensions/$(EXTENSION_NAME);	\
-		mv /home/codespace/.vscode-remote/extensions/temp/extension/* /home/codespace/.vscode-remote/extensions/$(EXTENSION_NAME)/;	\
-		rm -rf /home/codespace/.vscode-remote/extensions/temp;	\
+	@if ! command -v vsce >/dev/null 2>&1; then \
+		echo "Installing @vscode/vsce..."; \
+		npm install -g @vscode/vsce; \
 	fi
-
+	vsce package --out ./out/bin/dse.vsix
+	$(MAKE) install-extension
+	@pip install matplotlib || true
+	
 .PHONY: install-extension
 install-extension:
-	npm install -g @vscode/vsce
-	vsce package --out ./out/bin/dse.vsix
-	@echo y | code --install-extension ./out/bin/dse.vsix
-	pip install matplotlib
+	@if [ "$(CODESPACES)" = "true" ]; then \
+		echo "Installing extension in Codespaces..."; \
+		rm -rf /home/vscode/.vscode-remote/extensions/$(EXTENSION_NAME); \
+		rm -rf /home/vscode/.vscode-remote/extensions/temp; \
+		mkdir -p /home/vscode/.vscode-remote/extensions/temp; \
+		unzip -q ./out/bin/dse.vsix "extension/*" -d /home/vscode/.vscode-remote/extensions/temp; \
+		mkdir -p /home/vscode/.vscode-remote/extensions/$(EXTENSION_NAME); \
+		mv /home/vscode/.vscode-remote/extensions/temp/extension/* /home/vscode/.vscode-remote/extensions/$(EXTENSION_NAME)/; \
+		rm -rf /home/vscode/.vscode-remote/extensions/temp; \
+	else \
+		echo "Installing extension locally..."; \
+		echo y | code --install-extension ./out/bin/dse.vsix; \
+	fi
 	@exit 0
 
 .PHONY: test
@@ -44,6 +51,7 @@ clean:
 	rm -rf package-lock.json
 	rm -rf client/package-lock.json
 	rm -rf server/package-lock.json
+	rm -rf bin
 
 .PHONY: cleanall
 cleanall: clean
