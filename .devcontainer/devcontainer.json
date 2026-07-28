@@ -40,7 +40,7 @@
     ],
     "remoteEnv": {},
     "onCreateCommand": [],
-    "postCreateCommand": "mkdir -p ~/.local/bin && pipx install --force uv && npm install -g http-server && python3 -m pip install --no-cache-dir notebook asammdf && make && make install || true",
+    "postCreateCommand": "mkdir -p ~/.local/bin && pipx install --force uv && npm install -g http-server && python3 -m pip install --no-cache-dir notebook asammdf && make && make install || true && cd lsp && make install",
     "forwardPorts": [3001],
     "portsAttributes": {
         "2159": {

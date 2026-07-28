@@ -372,6 +372,8 @@ function gen_git_raw_url(repo: { [key: string]: any }, file: string): string {
   const parts = url.pathname.split("/").filter(Boolean);
   if (parts.length < 2) {
     throw new Error(`Invalid Git repository URL: ${gitLink}`);
+  } else if(url.pathname.includes("/releases/download/")){
+    return "";
   }
 
   const owner = parts[0];
@@ -472,14 +474,20 @@ async function fetchGitHubRawFile(
   url: string
 ): Promise<{ statusCode: number; data: string }> {
 
+
+  let parsed: URL;
+
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(`Invalid URL: ${url}`);
+  }
   // Bosch GitHub Enterprise
-  if (url.includes("raw.github.boschdevcloud.com")) {
-    console.log("[FETCH][WSL] " + url);
+  if (parsed.hostname === "raw.github.boschdevcloud.com") {
     return fetchViaCurl(url);
   }
 
   // Public GitHub
-  console.log("[FETCH][HTTPS] " + url);
   return new Promise((resolve, reject) => {
 
     https
@@ -621,6 +629,8 @@ connection.languages.diagnostics.on(async (params) => {
 
 async function fetchTaskfile(repo: { [key: string]: any }): Promise<{ statusCode: number; data: string; fileName: string } | null> {
   const taskfileNames = [
+    "Taskfile.sdp.yaml",
+    "Taskfile.sdp.yml",
     "Taskfile.yaml",
     "Taskfile.yml",
   ];
@@ -629,11 +639,12 @@ async function fetchTaskfile(repo: { [key: string]: any }): Promise<{ statusCode
   for (const taskfileName of taskfileNames) {
     try {
       const taskfile_git_raw_url: string = gen_git_raw_url(repo, taskfileName);
-      if (taskfile_git_raw_url == "") { // in codespace GHE_TOKEN is not available, returning "" for such urls (boschdevcloud)
+      if (taskfile_git_raw_url == "") { //returning "" if GHE_TOKEN not available in codespace(boschdevcloud) or is git release url 
         continue;
       }
       const result = await fetchGitHubRawFile(taskfile_git_raw_url);
       if (result.statusCode === 200) {
+        console.log(`[FETCH][SUCCESS] ${taskfileName} (${result.statusCode}) from ${repo["link"]}`);
         return { ...result, fileName: taskfileName };
       }
     } catch (error) {
@@ -789,7 +800,7 @@ async function getUsesItems(textDocument: TextDocument) {
         if (uses_items_match[3] !== undefined) {
           version = uses_items_match[3];
         }
-        let link_pattern = /^\s*https\:\/\/(\{\{\.\S+\}\}\@)?github\.(?:boschdevcloud\.)?com\/(\w+)\/(\S+)$/;
+        let link_pattern = /^\s*https\:\/\/(\{\{\.\S+\}\}\@)?github\.(?:boschdevcloud\.)?com\/(\S+)\/(\S+)$/;
         let link_match = link_pattern.exec(git_link);
 
         if (link_match) {

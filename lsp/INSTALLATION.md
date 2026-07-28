@@ -9,7 +9,6 @@ $ make
 ```
 
 ### Install the Extension
-## Install the Extension
 
 #### WSL VS Code
 
