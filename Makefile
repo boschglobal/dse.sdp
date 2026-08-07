@@ -20,7 +20,7 @@ DSE_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-builder:latest
 
 ###############
 ## Build parameters.
-SUBDIRS = ast graph dsl lsp doc examples/models
+SUBDIRS = doc examples/models ast graph dsl lsp 
 TESTDATA_SUBDIRS = tests/testdata/e2e
 
 

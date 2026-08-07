@@ -32,7 +32,7 @@ build:
 test:
 
 .PHONY: install
-install:
+install: build
 
 
 .PHONY: clean

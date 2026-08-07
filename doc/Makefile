@@ -24,7 +24,7 @@ generate:
 	@${DOCKER_BUILDER_CMD}
 
 .PHONY: install
-install:
+install: build
 
 .PHONY: test
 test:

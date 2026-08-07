@@ -151,9 +151,9 @@
         "eslint": "^8.57.0",
         "js-yaml": "^4.1.0",
         "mocha": "^10.3.0",
-        "typescript": "^4.9.5"
+        "typescript": "^7.0.2"
     },
     "dependencies": {
-        "chevrotain": "^9.1.0"
+        "chevrotain": "^13.0.0"
     }
 }

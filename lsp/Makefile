@@ -37,7 +37,6 @@ install-extension:
 		mv /home/vscode/.vscode-remote/extensions/temp/extension/* /home/vscode/.vscode-remote/extensions/$(EXTENSION_NAME)/; \
 		rm -rf /home/vscode/.vscode-remote/extensions/temp; \
 	else \
-		echo "Installing extension locally..."; \
 		echo y | code --install-extension ./out/bin/dse.vsix; \
 	fi
 	@exit 0
