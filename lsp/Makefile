@@ -10,8 +10,9 @@ default: build
 build:
 	mkdir -p out/bin
 	mkdir -p bin/graph/yaml
+	mkdir -p $(HOME)/.local/bin
 	chmod +x $(SCRIPTS_DIR)/dse-mdf2csv.sh
-	ln -sf $(SCRIPTS_DIR)/dse-mdf2csv.sh ~/.local/bin/dse-mdf2csv
+	ln -sf $(SCRIPTS_DIR)/dse-mdf2csv.sh $(HOME)/.local/bin/dse-mdf2csv
 	npm install
 
 EXTENSION_NAME := dse.dse-1.0.0
