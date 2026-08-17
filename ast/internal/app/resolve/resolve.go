@@ -38,6 +38,37 @@ type ResolveCommand struct {
 }
 
 var luaModels []string
+var resolveEnvVarRegex = regexp.MustCompile(`\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))`)
+var resolveTemplateVarRegex = regexp.MustCompile(`\{\{\s*\.(\w+)\s*\}\}`)
+
+// expandFilePathVars expands $VAR, ${VAR}, and {{.VAR}} references in a path
+func expandFilePathVars(s string) string {
+	s = resolveEnvVarRegex.ReplaceAllStringFunc(s, func(match string) string {
+		parts := resolveEnvVarRegex.FindStringSubmatch(match)
+		if len(parts) < 3 {
+			return match
+		}
+		varName := parts[1] // ${VAR} form
+		if varName == "" {
+			varName = parts[2] // $VAR form
+		}
+		if value, ok := os.LookupEnv(varName); ok {
+			return value
+		}
+		return match
+	})
+	s = resolveTemplateVarRegex.ReplaceAllStringFunc(s, func(match string) string {
+		parts := resolveTemplateVarRegex.FindStringSubmatch(match)
+		if len(parts) != 2 {
+			return match
+		}
+		if value, ok := os.LookupEnv(parts[1]); ok {
+			return value
+		}
+		return match
+	})
+	return s
+}
 
 func NewResolveCommand(name string) *ResolveCommand {
 	c := &ResolveCommand{
@@ -196,7 +227,8 @@ func isStaticFileReference(useUrl string, useMap map[string]interface{}) bool {
 		return false
 	}
 	if u.Scheme == "file" {
-		info, statErr := os.Stat(u.Path)
+		expandedPath := expandFilePathVars(u.Path)
+		info, statErr := os.Stat(expandedPath)
 		if statErr == nil {
 			return !info.IsDir()
 		}
@@ -214,6 +246,9 @@ func resolvePath(pathOrURL string) (abs string, isDir bool, err error) {
 		}
 		pathOrURL = u.Path
 	}
+
+	// Expand environment variables in the path (e.g. $VAR, {{.VAR}})
+	pathOrURL = expandFilePathVars(pathOrURL)
 
 	// Resolve to absolute path
 	abs, err = filepath.Abs(pathOrURL)

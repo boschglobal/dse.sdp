@@ -26,10 +26,14 @@ var simpleDollarVarRegex = regexp.MustCompile(`^\$[A-Za-z_][A-Za-z0-9_]*$`)
 func expandEnvVars(s string) string {
 	s = envVarRegex.ReplaceAllStringFunc(s, func(match string) string {
 		parts := envVarRegex.FindStringSubmatch(match)
-		if len(parts) != 2 {
+		if len(parts) < 3 {
 			return match
 		}
-		if value, ok := os.LookupEnv(parts[1]); ok {
+		varName := parts[1] // ${VAR} form
+		if varName == "" {
+			varName = parts[2] // $VAR form
+		}
+		if value, ok := os.LookupEnv(varName); ok {
 			return value
 		}
 		return match
@@ -301,6 +305,9 @@ func resolveMclFromUses(u ast.Uses) (MclInfo, bool) {
 			urlPath = parsed.Path
 		}
 	}
+
+	// Expand environment variables in the url (e.g. $VAR, {{.VAR}})
+	urlPath = expandEnvVars(urlPath)
 
 	abs, err := filepath.Abs(urlPath)
 	if err == nil {
@@ -629,7 +636,7 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 						downloadFile = fmt.Sprintf("downloads/models/{{.MODEL}}/%s", filepath.Base(resolvedPath))
 					}
 					usesDownloadFilePaths[fileUses.Name] = downloadFile
-					if strings.EqualFold(filepath.Ext(downloadFile), ".zip") && f.Path != nil && *f.Path != "" { // within zip archive, eg : file file.txt uses use_ref path=data/sample.txt
+					if strings.EqualFold(filepath.Ext(expandEnvVars(downloadFile)), ".zip") && f.Path != nil && *f.Path != "" { // within zip archive, eg : file file.txt uses use_ref path=data/sample.txt
 						resolvedPath := expandEnvVars(*f.Path)
 						*task.Cmds = append(*task.Cmds, Cmd{
 							Cmd: fmt.Sprintf("unzip -p %s '%s' > %s", downloadFile, resolvedPath, filePath),
@@ -681,7 +688,7 @@ func buildModel(model ast.Model, simSpec ast.SimulationSpec) (Task, error) {
 					downloadFile := parseUrl(task, varUses, model.Name)
 					usesDownloadFilePaths[varUses.Name] = downloadFile
 
-					if filepath.Ext(varUses.Url) == ".fmu" {
+					if filepath.Ext(expandEnvVars(varUses.Url)) == ".fmu" {
 						*task.Cmds = append(*task.Cmds, Cmd{
 							Task: "download-file",
 							Vars: &map[string]string{
