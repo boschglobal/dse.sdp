@@ -9,7 +9,7 @@ require (
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/rogpeppe/go-internal v1.16.0
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/tidwall/gjson v1.19.0
 	golang.org/x/tools v0.49.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -21,5 +21,6 @@ require (
 	github.com/oapi-codegen/runtime v1.4.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 )
