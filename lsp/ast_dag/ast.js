@@ -356,68 +356,72 @@ function plotTree(graph) {
 
         if (!start || !end) return "";
 
-        const offset = getRoutingOffset(source.id, target.id);
-        const dx = end.x - start.x;
-        const dy = end.y - start.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        
-        // Generate multiple candidate paths
         const candidates = [];
-        
-        // Strategy 1: Horizontal first (with offset)
-        {
-            const mid1X = start.x + dx * 0.4;
-            const mid1Y = start.y + offset;
-            const path = `M ${start.x} ${start.y} L ${mid1X} ${mid1Y} L ${end.x} ${end.y}`;
-            const points = [{x: start.x, y: start.y}, {x: mid1X, y: mid1Y}, {x: end.x, y: end.y}];
-            const collisions = checkPathCollisions(points, sourceModel, target.id, allNodes);
-            candidates.push({path, collisions, offset: offset});
+
+        // Helper to create and evaluate an orthogonal path
+        function addCandidate(points) {
+            const path = points
+                .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+                .join(" ");
+
+            const collisions = checkPathCollisions(
+                points,
+                sourceModel,
+                target.id,
+                allNodes
+            );
+
+            candidates.push({
+                path,
+                collisions
+            });
         }
-        
-        // Strategy 2: Vertical first (with offset)
-        {
-            const mid2X = start.x + offset;
-            const mid2Y = start.y + dy * 0.4;
-            const path = `M ${start.x} ${start.y} L ${mid2X} ${mid2Y} L ${end.x} ${end.y}`;
-            const points = [{x: start.x, y: start.y}, {x: mid2X, y: mid2Y}, {x: end.x, y: end.y}];
-            const collisions = checkPathCollisions(points, sourceModel, target.id, allNodes);
-            candidates.push({path, collisions, offset: offset});
+
+        // Direct horizontal/vertical path
+        if (start.x === end.x || start.y === end.y) {
+            addCandidate([start, end]);
         }
-        
-        // Strategy 3: Different horizontal split point
-        {
-            const mid3X = start.x + dx * 0.6;
-            const mid3Y = start.y + offset;
-            const path = `M ${start.x} ${start.y} L ${mid3X} ${mid3Y} L ${end.x} ${end.y}`;
-            const points = [{x: start.x, y: start.y}, {x: mid3X, y: mid3Y}, {x: end.x, y: end.y}];
-            const collisions = checkPathCollisions(points, sourceModel, target.id, allNodes);
-            candidates.push({path, collisions, offset: offset});
-        }
-        
-        // Strategy 4: Larger offset horizontal
-        {
-            const largeOffset = offset * 1.5;
-            const mid4X = start.x + dx * 0.5;
-            const mid4Y = start.y + largeOffset;
-            const path = `M ${start.x} ${start.y} L ${mid4X} ${mid4Y} L ${end.x} ${end.y}`;
-            const points = [{x: start.x, y: start.y}, {x: mid4X, y: mid4Y}, {x: end.x, y: end.y}];
-            const collisions = checkPathCollisions(points, sourceModel, target.id, allNodes);
-            candidates.push({path, collisions, offset: largeOffset});
-        }
-        
-        // Strategy 5: Larger offset vertical
-        {
-            const largeOffset = offset * 1.5;
-            const mid5X = start.x + largeOffset;
-            const mid5Y = start.y + dy * 0.5;
-            const path = `M ${start.x} ${start.y} L ${mid5X} ${mid5Y} L ${end.x} ${end.y}`;
-            const points = [{x: start.x, y: start.y}, {x: mid5X, y: mid5Y}, {x: end.x, y: end.y}];
-            const collisions = checkPathCollisions(points, sourceModel, target.id, allNodes);
-            candidates.push({path, collisions, offset: largeOffset});
-        }
-        
-        // Select best path: prefer fewer collisions
+
+        // Strategy 1: Horizontal -> Vertical
+        addCandidate([
+            start,
+            { x: end.x, y: start.y },
+            end
+        ]);
+
+        // Strategy 2: Vertical -> Horizontal
+        addCandidate([
+            start,
+            { x: start.x, y: end.y },
+            end
+        ]);
+
+        // Add offset routing to avoid nodes while keeping all segments 90°
+        const offset = getRoutingOffset(source.id, target.id);
+
+        // Strategy 3: Horizontal -> Vertical -> Horizontal
+        const midX = (start.x + end.x) / 2 + offset;
+
+        addCandidate([
+            start,
+            { x: midX, y: start.y },
+            { x: midX, y: end.y },
+            end
+        ]);
+
+        // Strategy 4: Vertical -> Horizontal -> Vertical
+        const midY = (start.y + end.y) / 2 + offset;
+
+        addCandidate([
+            start,
+            { x: start.x, y: midY },
+            { x: end.x, y: midY },
+            end
+        ]);
+
+        // Prefer paths with fewer collisions
         candidates.sort((a, b) => a.collisions - b.collisions);
+
         return candidates[0].path;
     }
 

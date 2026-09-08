@@ -121,6 +121,7 @@ $ nvm install v22.15.0
 $ sudo npm install -g vsce
 $ sudo npm install -g http-server
 $ sudo npm install -g typescript
+$ sudo apt install golang-go
 
 # Set your path to include ~/.local/bin if necessary. Permanent changes
 # can be made to your '~/.bashrc' or '~/.profile' file.

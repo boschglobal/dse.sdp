@@ -25,9 +25,12 @@ import { exec } from "child_process";
 
 const isCodespace =
   process.env.CODESPACES === "true" || process.env.GITHUB_CODESPACES === "true";
-const proxyUrl = isCodespace
-  ? process.env.HTTPS_PROXY
-  : "http://localhost:3129";
+const isRemoteSSH = !!process.env.SSH_CONNECTION; 
+
+const proxyUrl =
+  isCodespace || isRemoteSSH
+    ? process.env.https_proxy
+    : "http://localhost:3129";
 const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : undefined;
 
 // Create a connection for the server, using Node's IPC as a transport.
@@ -56,7 +59,7 @@ let ghePat = "";
 let gheTokenPromise: Promise<void> | null = null;
 
 function ensureGheToken(): Promise<void> {
-  if (isCodespace) {
+  if (isCodespace || isRemoteSSH) {
     ghePat = process.env.GHE_TOKEN || "";  // Store the env var directly
     console.log("[INFO] ghePat:", ghePat);
     return Promise.resolve();
@@ -386,7 +389,7 @@ function gen_git_raw_url(repo: { [key: string]: any }, file: string): string {
       `https://raw.githubusercontent.com/` +
       `${owner}/${repoName}/refs/tags/${version}/${file}`;
   } else if (url.hostname === "github.boschdevcloud.com") {
-    if (isCodespace && ghePat.trim() == "") {
+    if ((isCodespace || isRemoteSSH) && ghePat.trim() == "") {
       console.log("[INFO] GHE_TOKEN is not available in Codespace, url : ", gitLink);
       return "";
     } else if (ghePat.trim() == "") {
@@ -420,7 +423,7 @@ async function fetchViaCurl(
 ): Promise<{ statusCode: number; data: string }> {
 
   return new Promise((resolve, reject) => {
-    const shellCmd = isCodespace ? "bash -il" : "wsl bash -il";
+    const shellCmd = isCodespace || isRemoteSSH ? "bash -il" : "wsl bash -il";
     const cmd = `${shellCmd} -c "curl -s -L -w '__STATUS__%{http_code}' '${url}'"`;
 
     exec(

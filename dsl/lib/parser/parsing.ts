@@ -73,10 +73,14 @@ class FsilParser extends EmbeddedActionsParser {
     let stack_annotations: string[] = [];
     let model_vars: string[] = [];
     let default_stack_workflows: string[] = [];
+    let simulation_arch = "";
 
     // The main rule that parses the entire simulation statement.
     $.RULE("simulation", () => {
       const simulation = $.CONSUME(Simulation);
+      $.ACTION(() => {
+        simulation_arch = simulation.payload.simulation_arch.value;
+      });
       const children: Record<string, any> = {};
       children.channels = $.SUBRULE($.channels);
 
@@ -418,6 +422,18 @@ class FsilParser extends EmbeddedActionsParser {
             name = stack.payload.stack_name.value;
           } else {
             name = "default";
+            stack = {
+              tokenType: Stack,
+              payload: {
+                stack_name: { value: name, token_type: "stack_name" },
+                stacked: { value: "", token_type: "stacked" },
+                sequential: { value: "", token_type: "sequential" },
+                stack_arch: {
+                  value: simulation_arch,
+                  token_type: "stack_arch",
+                },
+              },
+            };
             stack_workflows = default_stack_workflows;
           }
 
@@ -448,10 +464,17 @@ class FsilParser extends EmbeddedActionsParser {
             });
 
             if (externalModels.length !== 0) {
+              const externalStack = {
+                ...stack,
+                payload: {
+                  ...stack.payload,
+                  stack_name: { value: "external", token_type: "stack_name" },
+                },
+              };
               stacks.push({
                 type: "Stack",
                 name: "external",
-                object: updateTokenObject(stack),
+                object: updateTokenObject(externalStack),
                 //env_vars: env_vars,
                 children: {
                   models: externalModels,

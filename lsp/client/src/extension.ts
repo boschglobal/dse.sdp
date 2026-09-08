@@ -43,6 +43,7 @@ let tmpterminal: vscode.Terminal | undefined;
 let httpServerProcess: any = null;
 const supportedExtensions = new Set<string>([".dse"]);
 const isCodespace = vscode.env.remoteName === "codespaces";
+const isRemoteSSH = !!process.env.SSH_CONNECTION; 
 let astYamlPath: string = "";
 let simulationYamlPath: string = "";
 let cdDirPath: string = "";
@@ -214,7 +215,7 @@ export function activate(context: vscode.ExtensionContext) {
     if (editor) {
       const [filePath, activeFileExt, activeFileName, activeFileDirPath] =
         getActiveFileInfo(editor);
-      cdDirPath = isCodespace
+      cdDirPath = isCodespace || isRemoteSSH
         ? activeFileDirPath
         : convertToMntPath(activeFileDirPath.replace(/\\/g, "/"));
       const genSimulationPath = path.join(activeFileDirPath, "out/simulation.yaml");
@@ -223,7 +224,7 @@ export function activate(context: vscode.ExtensionContext) {
         activeFileDirPath, 'out',
         activeFileName + ".json",
       );
-      const astOutputPath = isCodespace
+      const astOutputPath = isCodespace || isRemoteSSH
         ? astJsonPath
         : convertToMntPath(astJsonPath.replace(/\\/g, "/"));
       if (supportedExtensions.has(activeFileExt)) {
@@ -231,7 +232,7 @@ export function activate(context: vscode.ExtensionContext) {
           terminal?.sendText(`cd ${cdDirPath}`);
           tmpterminal = terminalSetup(tmpterminal);
           astYamlPath = path.join(activeFileDirPath, 'out', activeFileName + ".yaml");
-          astYamlPath = isCodespace
+          astYamlPath = isCodespace || isRemoteSSH
             ? astYamlPath
             : convertToMntPath(astYamlPath.replace(/\\/g, "/"));
           removeFile(astYamlPath);
@@ -241,7 +242,7 @@ export function activate(context: vscode.ExtensionContext) {
           //if 'pre_build.sh' is present it gets executed first.
           const execFile = "pre_build.sh";
           const tmpPath: string = path.join(tmpdir(), tmpPreBuild);
-          const preBuildCompletionStatusFile = isCodespace
+          const preBuildCompletionStatusFile = isCodespace || isRemoteSSH
             ? tmpPath
             : convertToMntPath(tmpPath.replace(/\\/g, "/"));
           const preBuildPath = path.join(activeFileDirPath, execFile);
@@ -296,7 +297,7 @@ export function activate(context: vscode.ExtensionContext) {
       terminal?.sendText(`cd ${cdDirPath}`);
 
       const DSE_REPORT_IMAGE = "ghcr.io/boschglobal/dse-report:latest";
-      const simVolumePath = isCodespace
+      const simVolumePath = isCodespace || isRemoteSSH
         ? `${cdDirPath}/out/sim`
         : `$(pwd)/out/sim`;
 
@@ -328,7 +329,7 @@ export function activate(context: vscode.ExtensionContext) {
         //if 'pre_run.sh' is present it gets executed first.
         const execFile = "pre_run.sh";
         const tmpPath: string = path.join(tmpdir(), tmpPreRun);
-        const preRunCompletionStatusFile = isCodespace
+        const preRunCompletionStatusFile = isCodespace || isRemoteSSH
           ? tmpPath
           : convertToMntPath(tmpPath.replace(/\\/g, "/"));
         const preRunPath = path.join(activeFileDirPath, execFile);
@@ -359,7 +360,7 @@ export function activate(context: vscode.ExtensionContext) {
     terminal?.show();
     const execFile = "pre_clean.sh";
     const tmpPath: string = path.join(tmpdir(), tmpPreClean);
-    const preCleanCompletionStatusFile = isCodespace
+    const preCleanCompletionStatusFile = isCodespace || isRemoteSSH
       ? tmpPath
       : convertToMntPath(tmpPath.replace(/\\/g, "/"));
     const preCleanPath = path.join(dseDirPath, execFile);
@@ -384,7 +385,7 @@ export function activate(context: vscode.ExtensionContext) {
     terminal?.show();
     const execFile = "pre_clean.sh";
     const tmpPath: string = path.join(tmpdir(), tmpPreCleanall);
-    const preCleanCompletionStatusFile = isCodespace
+    const preCleanCompletionStatusFile = isCodespace || isRemoteSSH
       ? tmpPath
       : convertToMntPath(tmpPath.replace(/\\/g, "/"));
     const preCleanPath = path.join(dseDirPath, execFile);
@@ -482,7 +483,7 @@ function build(
   const workdir = activeFileDirPath;
 
   const tmpPathBuild = path.join(tmpdir(), "build_completed");
-  const buildCompletionStatusFile = isCodespace
+  const buildCompletionStatusFile = isCodespace || isRemoteSSH
     ? tmpPathBuild
     : convertToMntPath(tmpPathBuild.replace(/\\/g, "/"));
 
@@ -491,7 +492,7 @@ function build(
   // Get git repo root and project directory (similar to Makefile)
   let repoRoot = workdir;
   let projDir = workdir;
-  if (!isCodespace) {
+  if (!isCodespace || !isRemoteSSH) {
     // Get git repo root: git rev-parse --show-toplevel
     exec("git rev-parse --show-toplevel", { cwd: workdir }, async (err, stdout) => {
       if (!err && stdout) {
@@ -645,12 +646,12 @@ function build(
 
 function run(astYamlPath: string, activeFileDirPath: string) {
   const DSE_SIMER_IMAGE = "ghcr.io/boschglobal/dse-simer:latest";
-  const simPath = isCodespace
+  const simPath = isCodespace || isRemoteSSH
     ? path.join(activeFileDirPath.replace("/workspaces", daemonWorkspace), "out/sim")
     : convertToMntPath(path.join(activeFileDirPath, "out/sim").replace(/\\/g, "/"));
 
   const tmpPath = path.join(tmpdir(), tmpSimRun);
-  const simCompletionStatusFile = isCodespace
+  const simCompletionStatusFile = isCodespace || isRemoteSSH
     ? tmpPath
     : convertToMntPath(tmpPath.replace(/\\/g, "/"));
   // Docker command for running simulation
@@ -671,12 +672,12 @@ function run(astYamlPath: string, activeFileDirPath: string) {
 
 function clean(all: boolean = false) {
   const tmpPathClean = path.join(tmpdir(), "clean_completed");
-  const cleanCompletionStatusFile = isCodespace
+  const cleanCompletionStatusFile = isCodespace || isRemoteSSH
     ? tmpPathClean
     : convertToMntPath(tmpPathClean.replace(/\\/g, "/"));
 
   const tmpPathCleanall = path.join(tmpdir(), "cleanall_completed");
-  const cleanallCompletionStatusFile = isCodespace
+  const cleanallCompletionStatusFile = isCodespace || isRemoteSSH
     ? tmpPathCleanall
     : convertToMntPath(tmpPathCleanall.replace(/\\/g, "/"));
 
@@ -684,7 +685,7 @@ function clean(all: boolean = false) {
   const postCleanPath = path.join(dseDirPath, execFile);
 
   if (all === false) {
-    const cleanCmd = isCodespace
+    const cleanCmd = isCodespace || isRemoteSSH
       ? `sudo sh -c 'if [ -d out/ ]; then find out -mindepth 1 -maxdepth 1 ! -name downloads -exec rm -rf {} +; fi' && touch ${cleanCompletionStatusFile}`
       : `if [ -d out/ ]; then find out -mindepth 1 -maxdepth 1 ! -name downloads -exec rm -rf {} +; fi && touch ${cleanCompletionStatusFile}`;
     terminal?.sendText(cleanCmd);
@@ -696,7 +697,7 @@ function clean(all: boolean = false) {
       });
     }
   } else {
-    const cleanallCmd = isCodespace
+    const cleanallCmd = isCodespace || isRemoteSSH
       ? `sudo rm -rf out && touch ${cleanallCompletionStatusFile}`
       : `rm -rf out && touch ${cleanallCompletionStatusFile}`;
     terminal?.sendText(cleanallCmd);
@@ -769,7 +770,7 @@ function terminalSetup(
   terminal: vscode.Terminal | undefined,
 ): vscode.Terminal | undefined {
   if (!terminal || terminal.exitStatus !== undefined) {
-    if (isCodespace) {
+    if (isCodespace || isRemoteSSH) {
       terminal = vscode.window.createTerminal({
         name: "Codespace Terminal",
         shellPath: "/bin/bash",
