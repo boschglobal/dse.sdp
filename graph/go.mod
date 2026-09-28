@@ -7,7 +7,7 @@ require (
 	github.com/boschglobal/dse.schemas/code/go/dse v1.3.3
 	github.com/gabriel-vasile/mimetype v1.4.15
 	github.com/jedib0t/go-pretty/v6 v6.8.3
-	github.com/neo4j/neo4j-go-driver/v5 v5.28.4
+	github.com/neo4j/neo4j-go-driver/v5 v5.28.5
 	github.com/rogpeppe/go-internal v1.16.0
 	github.com/stretchr/testify v1.12.1
 	gopkg.in/yaml.v3 v3.0.1
