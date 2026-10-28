@@ -7,8 +7,8 @@
 # Go Builder
 # ==========
 FROM golang:bookworm AS golang-builder
-COPY ast /src/ast
 RUN go install github.com/boschglobal/task/v3/cmd/task@latest
+COPY ast /src/ast
 RUN set -eux; \
     mkdir -p /root/.local/bin; \
     cd /src \
@@ -18,14 +18,27 @@ RUN set -eux; \
 # Node Builder
 # ============
 FROM node:22-bookworm AS node-builder
+
+# Manifests first so the install layer is cached until dependencies change.
+COPY dsl/package.json dsl/package-lock.json* /src/dsl/
+COPY lsp/package.json /src/lsp/
+COPY lsp/client/package.json /src/lsp/client/
+COPY lsp/server/package.json /src/lsp/server/
+COPY lsp/ast_dag/package.json /src/lsp/ast_dag/
+RUN --mount=type=cache,target=/root/.npm \
+    set -eux; \
+    cd /src/dsl && npm install --no-audit --no-fund; \
+    cd /src/lsp && npm install --no-audit --no-fund
+
 COPY dsl /src/dsl
 COPY lsp /src/lsp
+RUN cd /src/dsl && npm run compile
 RUN set -eux; \
+    mkdir -p /src/lsp/out/bin; \
+    mkdir -p /src/lsp/bin/graph/yaml; \
     mkdir -p /root/.local/bin; \
-    cd /src \
-        && npm install -g typescript \
-        && make -C dsl build install \
-        && make -C lsp build
+    chmod +x /src/lsp/scripts/dse-mdf2csv.sh; \
+    ln -sf /src/lsp/scripts/dse-mdf2csv.sh /root/.local/bin/dse-mdf2csv
 
 
 
@@ -91,7 +104,7 @@ COPY --from=node-builder /src/dsl/package.json /opt/dse-dsl/
 
 # DSL Launch Wrapper
 # ==================
-RUN echo '#!/bin/sh\nexec node /opt/dse-dsl/out/bin/parse2ast.js "$@"' > /usr/local/bin/dse-parse2ast \
+RUN echo '#!/bin/sh\nexec node /opt/dse-dsl/out/parse2ast.js "$@"' > /usr/local/bin/dse-parse2ast \
     && chmod +x /usr/local/bin/dse-parse2ast
 
 

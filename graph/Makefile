@@ -86,6 +86,11 @@ lint:
 .PHONY: clean
 clean:
 	@rm -rf $(BIN_DIR)
+	for d in $(DOCKER_TOOLS) ;\
+	do \
+		docker images -q dse-$$d | xargs -r docker rmi -f ;\
+	done;
+
 
 .PHONY: cleanall
 cleanall:

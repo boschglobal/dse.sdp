@@ -4,6 +4,8 @@
 
 SCRIPTS_DIR	:= $(CURDIR)/scripts
 
+export npm_config_update_notifier := false
+
 default: build
 
 .PHONY: build
@@ -13,7 +15,13 @@ build:
 	mkdir -p $(HOME)/.local/bin
 	chmod +x $(SCRIPTS_DIR)/dse-mdf2csv.sh
 	ln -sf $(SCRIPTS_DIR)/dse-mdf2csv.sh $(HOME)/.local/bin/dse-mdf2csv
-	npm install
+	$(MAKE) node_modules/.stamp
+
+NPM_DEPS := package.json client/package.json server/package.json ast_dag/package.json
+
+node_modules/.stamp: $(NPM_DEPS)
+	npm install --no-audit --no-fund --prefer-offline
+	touch $@
 
 EXTENSION_NAME := dse.dse-1.0.0
 .PHONY: install
@@ -25,7 +33,7 @@ install: build
 	vsce package --out ./out/bin/dse.vsix
 	$(MAKE) install-extension
 	@pip install matplotlib || true
-	
+
 .PHONY: install-extension
 install-extension:
 	@if [ "$(CODESPACES)" = "true" ]; then \
@@ -48,13 +56,12 @@ test:
 .PHONY: clean
 clean:
 	rm -rf out client/out server/out
-	rm -rf package-lock.json
-	rm -rf client/package-lock.json
-	rm -rf server/package-lock.json
 	rm -rf bin
+	rm -f node_modules/.stamp
 
 .PHONY: cleanall
 cleanall: clean
 	rm -rf node_modules
 	rm -rf client/node_modules
 	rm -rf server/node_modules
+	rm -rf ast_dag/node_modules

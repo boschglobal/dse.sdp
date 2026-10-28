@@ -5,11 +5,12 @@
     "homepage": "https://github.com/boschglobal/dse.sdp.git",
     "license": "Apache-2.0",
     "author": "Robert Bosch GmbH",
-    "main": "out/bin/parse2ast.js",
+    "main": "out/parse2ast.js",
     "preferGlobal": true,
     "bin": {
-        "dse-parse2ast": "out/bin/parse2ast.js",
-        "parse2ast": "out/bin/parse2ast.js"
+        "dse-lang-compile": "out/validate.cjs",
+        "dse-parse2ast": "out/parse2ast.js",
+        "parse2ast": "out/parse2ast.js"
     },
     "directories": {
         "lib": "./lib"
@@ -24,6 +25,7 @@
         "typescript": "^7.0.2"
     },
     "scripts": {
-        "compile": "npx tsc -b"
+        "compile": "npx tsc -b && npm run build:validator",
+        "build:validator": "esbuild validate.ts --bundle --platform=node --format=cjs --outfile=out/validate.cjs"
     }
 }

@@ -139,19 +139,20 @@
         "vscode:prepublish": "npm run create-grammer-folder &&  npm run copy-lexer-file &&  npm run copy-parser-file && npm run compile && npm run copy-ast-exec-file && npm run copy-graph-exec-file && npm run copy-graph-report-yaml-file",
         "compile": "tsc -b",
         "watch": "tsc -b -w",
-        "lint": "eslint ./client/src ./client/src/grammar ./server/src --ext .ts,.tsx",
-        "postinstall": "cd client && npm install && cd ../server && npm install && cd ../ast_dag && npm install"
+        "lint": "eslint ./client/src ./server/src",
+        "postinstall": "cd client && npm install --no-audit --no-fund && cd ../server && npm install --no-audit --no-fund && cd ../ast_dag && npm install --no-audit --no-fund"
     },
     "devDependencies": {
+        "@eslint/js": "^10.0.1",
         "@types/js-yaml": "^4.0.9",
         "@types/mocha": "^10.0.6",
         "@types/node": "^18.14.6",
-        "@typescript-eslint/eslint-plugin": "^7.18.0",
-        "@typescript-eslint/parser": "^7.18.0",
-        "eslint": "^8.57.0",
+        "@typescript/native": "npm:typescript@^7.0.2",
+        "eslint": "^10.13.0",
         "js-yaml": "^4.1.0",
-        "mocha": "^10.3.0",
-        "typescript": "^7.0.2"
+        "mocha": "^12.0.3",
+        "typescript": "npm:@typescript/typescript6@^6.0.2",
+        "typescript-eslint": "^8.72.1"
     },
     "dependencies": {
         "chevrotain": "^13.0.0"

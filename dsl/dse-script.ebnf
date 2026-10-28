@@ -1,0 +1,207 @@
+(* DSE Script Grammar
+ *
+ * Source basis:
+ *   - DSE Builder documentation (DSE Script section).
+ *   - DSE script example(s).
+ *
+ * EBNF notation: [ X ] optional; { X } zero or more; A | B alternative.
+ *)
+
+script =
+    simulation,
+    { simulation_channel },
+    [ uses_section ],
+    { simulation_scope_item },
+    ( explicit_stacks | implicit_default_stack );
+
+(* Simulation-level vars and envars may be declared after the uses block
+ * and its entries. They are not included in simulation_item before uses.
+ *)
+simulation_scope_item =
+    simulation_var
+    | simulation_envar;
+
+simulation =
+    "simulation",
+    [ "arch=", ARCH ],
+    [ "stepsize=", STEP_SIZE ],
+    [ "endtime=", END_TIME ];
+
+(* Simulation-level vars and envars are represented as sibling
+ * collections on the Simulation node in the generated JSON. Their
+ * declaration position is constrained by script/simulation_scope_item:
+ * after the optional uses section and before stack declarations.
+ *)
+simulation_var = "var", VAR_NAME, VALUE;
+simulation_envar = "envar", ENVAR_NAME, VALUE;
+
+(* Simulation-level channel declaration. A channel may be followed by
+ * zero or more network declarations. Each network declaration associates
+ * a network name with a MIME-type value.
+ *)
+simulation_channel =
+    "channel", CHANNEL_NAME,
+    { network_mime_group };
+
+network_mime_group =
+    "network", NETWORK_NAME, MIME_TYPE;
+
+uses_section =
+    "uses",
+    uses_entry,
+    { uses_entry };
+
+uses_entry =
+    USES_NAME, URI,
+    [ VERSION ],
+    [ "path=", PATH ],
+    [ "user=", USER ],
+    [ "token=", TOKEN ];
+
+explicit_stacks = stack, { stack };
+
+stack =
+    "stack", STACK_NAME,
+    [ "stacked=", STACKED ],
+    [ "sequential=", SEQUENTIAL ],
+    [ "arch=", ARCH ],
+    { stack_item };
+
+stack_item = model_section | stack_annotation | stack_workflow;
+
+implicit_default_stack = { default_stack_item };
+default_stack_item = model_section | stack_annotation | stack_workflow;
+
+model_section =
+    model,
+    { model_item };
+
+model_item =
+    model_channel
+    | model_var
+    | envar
+    | file
+    | annotation
+    | workflow;
+
+model =
+    "model", MODEL_NAME,
+    ( MODEL, [ "external=", EXTERNAL ]
+    | "external=", EXTERNAL ),
+    [ "arch=", ARCH ],
+    [ "uid=", UID ];
+
+model_channel = "channel", CHANNEL_NAME, CHANNEL_ALIAS;
+
+(* Model-level vars use the same declaration structure as workflow-level
+ * vars. The direct VALUE alternative supports values such as "1" and
+ * templated or multi-word values; the other alternatives represent uses,
+ * variable, and network references.
+ *)
+model_var =
+    "var", VAR_NAME,
+    ( VALUE
+    | "uses", USES_NAME
+    | "var", GLOBAL_VAR_NAME
+    | "network", NETWORK_NAME );
+
+envar = "envar", ENVAR_NAME, VALUE;
+
+file =
+    "file", MODEL_FILE,
+    ( FILE_SOURCE
+    | "uses", USES_NAME, [ "path=", ZIP_ENTRY_PATH ] );
+
+(* Annotation values are unquoted single tokens: they must not contain
+ * spaces or quote characters.
+ *)
+annotation = "annotation", ANNOTATION_NAME, ANNOTATION_VALUE;
+ANNOTATION_VALUE = ? non-empty token containing no whitespace or quote characters ?;
+stack_annotation = annotation;
+
+workflow =
+    "workflow", WORKFLOW_NAME,
+    [ "uses", USES_NAME ],
+    { workflow_var };
+
+stack_workflow =
+    "workflow", WORKFLOW_NAME,
+    [ "uses", USES_NAME ],
+    { workflow_var };
+
+workflow_var =
+    "var", VAR_NAME,
+    ( VALUE
+    | "uses", USES_NAME
+    | "var", GLOBAL_VAR_NAME
+    | "network", NETWORK_NAME );
+
+(* ------------------------- Comments ------------------------------------ *)
+
+(* A comment begins with # either at the start of a line (allowing leading
+ * whitespace) or after a declaration on that line. The # and all following
+ * characters are ignored through the end of that line.
+ *)
+comment = "#", { ? any character except a line break ? };
+
+(* ------------------------- Terminal definitions ------------------------ *)
+
+(* Names/identifiers. The documentation describes the meaning of these
+ * fields but does not define a character set or quoting/escaping rules.
+ *)
+STACK_NAME = ? stack name; string ?;
+STACKED = BOOLEAN; (* whether models in a stack are layered *)
+SEQUENTIAL = BOOLEAN; (* whether models execute one after another in order *)
+ARCH = ? supported architecture identifier: linux-amd64, linux-x86,
+        linux-i386, windows-x64, or windows-x86 ?;
+STEP_SIZE = ? numeric simulation time-step value; documented default 0.0005 ?;
+END_TIME = ? numeric simulation duration; documented default 0.005 ?;
+CHANNEL_NAME = ? simulation channel identifier ?;
+NETWORK_NAME = ? network identifier ?;
+
+(* MIME types must be enclosed in single quotes and contain no spaces.
+ * Semicolons, equals signs, punctuation, and template expressions are
+ * allowed inside the quoted value, e.g.
+ * 'application/json;schema=vehicle-state;version=1'.
+ *)
+MIME_TYPE = "'", MIME_TYPE_CONTENT, "'";
+MIME_TYPE_CONTENT = ? non-empty sequence containing no whitespace or single quote ?;
+
+USES_NAME = ? name of a uses/dependency item ?;
+URI = ? URL or file URI; may contain template expressions ?;
+VERSION = ? dependency version string ?;
+PATH = ? uses-item sub-path, possibly with a template expression ?;
+USER = ? authentication user value, possibly templated ?;
+TOKEN = ? authentication token/password value, possibly templated ?;
+BOOLEAN = "false" | "true";
+MODEL_NAME = ? model instance name used within the simulation ?;
+MODEL = ? model name referenced by a uses item ?;
+EXTERNAL = BOOLEAN;
+UID = ? unique model identifier; integer number; no decimal or fractional part ?;
+CHANNEL_ALIAS = ? model-local alias for a simulation channel ?;
+ENVAR_NAME = ? environment variable name ?;
+MODEL_FILE = ? name by which the model refers to a file ?;
+FILE_SOURCE = ? source file path ?;
+ZIP_ENTRY_PATH = ? path to a file inside a ZIP archive ?;
+ANNOTATION_NAME = ? annotation key/name ?;
+WORKFLOW_NAME = ? workflow name ?;
+VAR_NAME = ? variable name ?;
+GLOBAL_VAR_NAME = ? global variable identifier ?;
+
+(* VALUE is a line-oriented lexical value used by variables, environment
+ * variables, and other declarations that accept general values: a quoted
+ * string is read through its closing quote; an unquoted value extends to
+ * the end of the line. Annotation values and
+ * MIME types have their own stricter rules above.
+ *)
+VALUE = QUOTED_STRING | ? non-empty remainder of the current line ?;
+QUOTED_STRING = "'" , { ? any character except an unescaped single quote ? } , "'"
+              | '"' , { ? any character except an unescaped double quote ? } , '"';
+
+(* ------------------------- Template expressions ------------------------ *)
+(* Documented template forms:
+ * {{.MODEL}} - The model instance name in whose model context the
+ *              variable or workflow is used.
+ * {{.PATH}}  - The model folder path under the simulation output
+ *              directory, e.g. model/input relative to out/sim.
+ *)

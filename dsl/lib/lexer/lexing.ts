@@ -444,22 +444,24 @@ export const Annotation = createToken({
 });
 
 function matchWorkflow(text: string) {
-  const workflowPattern = /^[ \t]*workflow([ ]+\S+)(?:([ ]+uses)([ ]+\S+))?\s*(?:\#.*)?$/;
+  const workflowPattern = /^[ \t]*workflow([ ]+\S+)(?:([ ]+)(\S+)(?:([ ]+)(\S+))?)?\s*(?:\#.*)?$/;
   const execResult = workflowPattern.exec(text) as CustomRegExpExecArray;
   let workflowReferenceType = "";
   let workflowValue = "";
   if (execResult !== null) {
     const workflowName = execResult[1];
-
-    workflowReferenceType = "";
-    if (execResult[2] !== undefined) {
-      workflowReferenceType = execResult[2];
-    }
-
-    workflowValue = "";
-    if (execResult[3] !== undefined) {
-      workflowValue = execResult[3];
-    }
+    const referenceSeparator = execResult[2] ?? "";
+    workflowReferenceType = execResult[3] ?? "";
+    const valueSeparator = execResult[4] ?? "";
+    workflowValue = execResult[5] ?? "";
+    const leadingWhitespace = text.match(/^[ \t]*/)?.[0].length ?? 0;
+    const referenceTypeStart = leadingWhitespace + "workflow".length + workflowName.length + referenceSeparator.length;
+    const workflowValueStart = referenceTypeStart + workflowReferenceType.length + valueSeparator.length;
+    const syntaxError = workflowReferenceType && workflowReferenceType !== "uses"
+      ? { start: referenceTypeStart, end: referenceTypeStart + workflowReferenceType.length }
+      : workflowReferenceType === "uses" && !workflowValue
+        ? { start: workflowValueStart, end: workflowValueStart }
+        : undefined;
     execResult.payload = {
       workflow_name: {
         value: workflowName.trim(),
@@ -473,6 +475,17 @@ function matchWorkflow(text: string) {
         value: workflowValue.trim(),
         token_type: "workflow_value",
       },
+      source_ranges: {
+        workflow_reference_type: {
+          start: referenceTypeStart,
+          end: referenceTypeStart + workflowReferenceType.length,
+        },
+        workflow_value: {
+          start: workflowValueStart,
+          end: workflowValueStart + workflowValue.length,
+        },
+      },
+      syntax_error: syntaxError,
     };
   }
   return execResult;
@@ -573,6 +586,46 @@ export const FileDelimiter = createToken({
   line_breaks: false,
 });
 
+const statementKeywords = new Set([
+  "simulation",
+  "channel",
+  "network",
+  "uses",
+  "var",
+  "model",
+  "envar",
+  "file",
+  "annotation",
+  "workflow",
+  "stack",
+]);
+
+function matchUnknownStatementKeyword(text: string) {
+  const execResult = /^([ \t]*)([A-Za-z][\w-]*).*$/.exec(text) as CustomRegExpExecArray;
+  if (execResult === null || statementKeywords.has(execResult[2])) {
+    return null;
+  }
+
+  const keywordStart = execResult[1].length;
+  execResult.payload = {
+    unknown_statement_keyword: {
+      value: execResult[2],
+      token_type: "unknown_statement_keyword",
+    },
+    source_range: {
+      start: keywordStart,
+      end: keywordStart + execResult[2].length,
+    },
+  };
+  return execResult;
+}
+
+export const UnknownStatementKeyword = createToken({
+  name: "UnknownStatementKeyword",
+  pattern: matchUnknownStatementKeyword,
+  line_breaks: false,
+});
+
 function matchFileContent(text: string) {
   const contentPattern = /^(.*)\s*(?:\#.*)?$/;
   const execResult = contentPattern.exec(text) as CustomRegExpExecArray;
@@ -611,6 +664,7 @@ export const allTokens = [
   Annotation,
   Workflow,
   FileDelimiter,
+  UnknownStatementKeyword,
   FileContent,
 ];
 

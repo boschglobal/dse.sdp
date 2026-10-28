@@ -74,6 +74,9 @@ jobs:
           - name: builder
             dockerfile: .devcontainer/Dockerfile-builder
             context: .
+          - name: lang
+            dockerfile: dsl/Dockerfile
+            context: dsl/
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -164,11 +167,17 @@ jobs:
         with:
           name: image_report
           path: /tmp
+      - name: Download artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: image_lang
+          path: /tmp
 
       - name: Load images
         run: |
           docker load --input /tmp/builder.tar
           docker load --input /tmp/report.tar
+          docker load --input /tmp/lang.tar
           docker image ls -a
 
       - name: Download build artifacts
@@ -182,6 +191,7 @@ jobs:
           echo "HOST_DOCKER_WORKSPACE=${{ github.workspace }}" >> $GITHUB_ENV
           echo "DSE_BUILDER_IMAGE=builder:test" >> $GITHUB_ENV
           echo "DSE_REPORT_IMAGE=report:test" >> $GITHUB_ENV
+          echo "DSE_LANG_IMAGE=lang:test" >> $GITHUB_ENV
 
       - name: Test
         run: |
@@ -261,6 +271,7 @@ jobs:
         container:
           - report
           - builder
+          - lang
     steps:
       - name: Log in to the Container registry
         uses: docker/login-action@v4

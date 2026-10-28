@@ -288,7 +288,7 @@ function taskFileParser(yamlData: any, model: any) {
     let internal = false;
     let required: any[] = [];
     if ("vars" in yamlData.tasks[task]) {
-      let vars = Object.keys(yamlData.tasks[task]?.["vars"] || {})
+      let vars = Object.keys(yamlData.tasks[task]?.["vars"] || {});
       if (vars && vars.length > 0) {
 
         if ("internal" in yamlData.tasks[task]) {

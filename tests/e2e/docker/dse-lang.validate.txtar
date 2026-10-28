@@ -1,0 +1,51 @@
+
+# TEST: DSE script with no errors
+exec sh -c 'cat noerror.dse | docker run --rm -i "$DSE_LANG_IMAGE" validate -'
+stdout 'Validation passed: stdin'
+stderr ''
+
+
+# TEST: DSE script with 3 errors
+! exec sh -c 'cat runnable.dse | docker run --rm -i "$DSE_LANG_IMAGE" validate -'
+cmp stderr runnable.expect.stderr
+
+-- noerror.dse --
+simulation
+
+
+-- runnable.dse --
+simulation arch=linux-amd64
+channel signal
+chanel network
+
+uses
+fsil.runnable https://{{.GHE_TOKEN}}@github.boschdevcloud.com/fsil/fsil.runnable v1.2.4 user={{.AR_USER}} token={{.AR_TOKEN}}
+dse.fmi https://github.com/boschglobal/dse.fmi v1.2.12
+example https://github.boschdevcloud.com/fsil/fsil.runnable/releases/download/v1.2.4/example.zip token={{.GHE_PAT}}
+
+model runnable fsil.runnable
+channel signal signal_channel
+chanel network network_channel
+
+workflow generate-fmimodelc use dse.fmi
+    var FMU_NAME runnable
+    var SIGNAL_GROUPS signal
+
+
+-- runnable.expect.stderr --
+stdin:3:1-7: error[DSE1002]: Unexpected or malformed statement
+  | chanel network
+  | ^^^^^^
+  = expected: channel <name> [alias]
+
+stdin:12:1-7: error[DSE1002]: Unexpected or malformed statement
+  | chanel network network_channel
+  | ^^^^^^
+  = expected: channel <name> [alias]
+
+stdin:14:29-32: error[DSE1002]: Unexpected or malformed statement
+  | workflow generate-fmimodelc use dse.fmi
+  |                             ^^^
+  = expected: workflow <name> [uses <workflow-reference>]
+
+Found 3 errors.
