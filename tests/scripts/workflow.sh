@@ -62,6 +62,7 @@ run_simer() {
     echo "[INFO] Running simer..."
     docker run --name simer -i --rm \
         --network=host \
+        --security-opt seccomp=unconfined \
         --user "$(id -u):$(id -g)" \
         -v $ENTRYWORKDIR/out/sim:/sim \
         -p 6379:6379 \
