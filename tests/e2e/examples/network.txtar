@@ -79,6 +79,7 @@ DSE_SIMER_IMAGE="${DSE_SIMER_IMAGE:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm \
     -v $ENTRYWORKDIR/out/sim:/sim \
     --network=host \
+    --security-opt seccomp=unconfined \
     "${DSE_SIMER_IMAGE}" -valgrind $NAME_CAN \
         -env $NAME_CAN:SIMBUS_LOGLEVEL=4 \
         -env $NAME_CAN:NCODEC_TRACE_CAN_1=* \
@@ -90,6 +91,7 @@ DSE_SIMER_IMAGE="${DSE_SIMER_IMAGE:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm \
     -v $ENTRYWORKDIR/out/sim:/sim \
     --network=host \
+    --security-opt seccomp=unconfined \
     "${DSE_SIMER_IMAGE}" -valgrind $NAME_CAN \
         -env $NAME_CAN:SIMBUS_LOGLEVEL=4 \
         -env $NAME_CAN:NCODEC_TRACE_CAN_1=0x3ea,0x3eb

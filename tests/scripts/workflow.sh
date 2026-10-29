@@ -67,7 +67,7 @@ run_simer() {
         -v $ENTRYWORKDIR/out/sim:/sim \
         -p 6379:6379 \
         $DSE_SIMER_IMAGE \
-            -logger 1 \
+            -logger 2 \
             -env SIMBUS_LOGLEVEL=2
 }
 

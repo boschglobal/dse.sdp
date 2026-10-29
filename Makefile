@@ -163,7 +163,7 @@ do-test_testscript-e2e:
 			-v $(HOST_DOCKER_WORKSPACE):/repo \
 			-v $${ENTRYWORKDIR}:/workdir \
 			-v $${ENTRYWORKDIR}:$${ENTRYWORKDIR} \
-			$(TESTSCRIPT_IMAGE) -v \
+			$(TESTSCRIPT_IMAGE) \
 				-e ENTRYHOSTDIR=$(HOST_DOCKER_WORKSPACE) \
 				-e ENTRYWORKDIR=$${ENTRYWORKDIR} \
 				-e REPODIR=/repo \

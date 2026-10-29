@@ -103,6 +103,7 @@ DSE_SIMER_IMAGE="${DSE_SIMER_IMAGE:-ghcr.io/boschglobal/dse-simer:latest}"
 docker run --name simer -i --rm \
     -v $ENTRYWORKDIR/out/sim:/sim \
     --network=host \
+    --security-opt seccomp=unconfined \
     "${DSE_SIMER_IMAGE}" \
         -env simbus:SIMBUS_LOGLEVEL=4 \
         -stack model \

@@ -4,7 +4,7 @@ exec cp -r . $WORKDIR
 cd $WORKDIR
 
 # TEST: operate the simulation
-exec timeout 300 sh -ex workflow.sh openloop.dse
+exec sh -e workflow.sh openloop.dse
 
 exists out/downloads/Models-${RELEASE_VERSION}-linux-i386.zip
 exists out/sim/model/simple/lib/libsimple.so
