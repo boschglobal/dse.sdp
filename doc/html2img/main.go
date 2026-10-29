@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -50,20 +49,33 @@ func main() {
 
 	var buf []byte
 	var height int64
-	err = chromedp.Run(ctx,
+	_, err = chromedp.Run(ctx, chromedp.Steps(
 		chromedp.Navigate("file://"+tmpHtmlfile.Name()),
-		chromedp.Sleep(1*time.Second),
-		chromedp.Evaluate(`Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)`, &height),
-		chromedp.EmulateViewport(int64(1000), height),
-		chromedp.Evaluate(`window.devicePixelRatio = 2.0;`, nil),
-		chromedp.Sleep(1*time.Second),
-		chromedp.FullScreenshot(&buf, 100),
-	)
+		chromedp.Sleep(time.Second),
+	))
 	if err != nil {
 		log.Fatalf("Failed to capture screenshot: %v", err)
 	}
 
-	err = ioutil.WriteFile(outputImg, buf, 0644)
+	height, err = chromedp.Run(ctx, chromedp.Evaluate[int64](`Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)`))
+	if err != nil {
+		log.Fatalf("Failed to capture screenshot: %v", err)
+	}
+
+	_, err = chromedp.Run(ctx, chromedp.Steps(
+		chromedp.EmulateViewport(1000, height, chromedp.EmulateScale(2)),
+		chromedp.Sleep(1*time.Second),
+	))
+	if err != nil {
+		log.Fatalf("Failed to capture screenshot: %v", err)
+	}
+
+	buf, err = chromedp.Run(ctx, chromedp.FullScreenshot(100))
+	if err != nil {
+		log.Fatalf("Failed to capture screenshot: %v", err)
+	}
+
+	err = os.WriteFile(outputImg, buf, 0644)
 	if err != nil {
 		log.Fatalf("Failed to save screenshot: %v", err)
 	}

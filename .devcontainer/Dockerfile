@@ -66,5 +66,5 @@ COPY --from=dse-builder-pruned /opt/dse-dsl/package.json /opt/dse-dsl/package.js
 
 # DSL Launch Wrapper
 # ==================
-RUN echo '#!/bin/sh\nexec node /opt/dse-dsl/out/bin/parse2ast.js "$@"' > /usr/local/bin/dse-parse2ast \
+RUN echo '#!/bin/sh\nexec node /opt/dse-dsl/out/parse2ast.js "$@"' > /usr/local/bin/dse-parse2ast \
     && chmod +x /usr/local/bin/dse-parse2ast

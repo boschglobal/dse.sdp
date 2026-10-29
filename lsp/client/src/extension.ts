@@ -70,7 +70,22 @@ export function activate(context: vscode.ExtensionContext) {
       const diagnostics = parse(text);
       diagnosticCollection.clear();
       if (Array.isArray(diagnostics)) {
-        diagnosticCollection.set(document.uri, diagnostics);
+        diagnosticCollection.set(document.uri, diagnostics.map(diagnostic => {
+          const message = [
+            diagnostic.message,
+            ...(diagnostic.expectedSyntax ?? []).map((syntax: string) => `Expected syntax: ${syntax}`),
+          ].join("\n");
+          const range = new vscode.Range(
+            diagnostic.range.start.line,
+            diagnostic.range.start.character,
+            diagnostic.range.end.line,
+            diagnostic.range.end.character,
+          );
+          const editorDiagnostic = new vscode.Diagnostic(range, message, diagnostic.severity);
+          editorDiagnostic.code = diagnostic.code;
+          editorDiagnostic.source = diagnostic.source;
+          return editorDiagnostic;
+        }));
       }
     }
   });

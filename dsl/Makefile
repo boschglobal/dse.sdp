@@ -9,6 +9,11 @@ TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 
 
 ###############
+## Docker Containers.
+DSE_LANG_IMAGE = dse-lang
+
+
+###############
 ## Test Parameters.
 export HOST_DOCKER_WORKSPACE ?= $(shell pwd -P)
 export HOST_ENTRYDIR ?= $(shell pwd -P)
@@ -20,9 +25,12 @@ default: build
 
 
 .PHONY: build
-build:
-	npm install
+build: node_modules/.stamp
 	npm run compile
+
+node_modules/.stamp: package.json
+	npm install --no-audit --no-fund --prefer-offline
+	touch $@
 
 .PHONY: install
 install: build
@@ -46,11 +54,17 @@ do-test_testscript:
 	done;
 
 
+.PHONY: docker
+docker:
+	docker build -f Dockerfile -t $(DSE_LANG_IMAGE):test .
+
+
 .PHONY: clean
 clean:
 	rm -f package-lock.json
 	rm -rf node_modules
 	rm -rf out
+	docker images -q $(DSE_LANG_IMAGE) | xargs -r docker rmi -f
 
 
 .PHONY: cleanall

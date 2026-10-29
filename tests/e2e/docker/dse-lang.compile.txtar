@@ -1,0 +1,53 @@
+
+# TEST: Compile command removes the output format option
+exec sh -c 'cat openloop.dse | docker run --rm -i "$DSE_LANG_IMAGE" compile -'
+stdout '"type": "Simulation"'
+stderr ''
+
+
+# TEST: Compile command writes AST to the requested file
+exec sh -c 'mkdir -p "$ENTRYWORKDIR/out" && chmod 777 "$ENTRYWORKDIR/out" && ls -ld "$ENTRYWORKDIR/out"'
+exec sh -c 'docker run --rm -i --volume "$ENTRYWORKDIR/out:/work" --workdir /work "$DSE_LANG_IMAGE" compile --out /work/ast.json -< openloop.dse'
+stdout ''
+stderr ''
+exec sh -c 'test -f "$ENTRYWORKDIR/out/ast.json"'
+exec sh -c 'grep Simulation "$ENTRYWORKDIR/out/ast.json"'
+stdout '"type": "Simulation"'
+
+
+# TEST: Compile fails
+! exec sh -c 'cat fault.dse | docker run --rm -i "$DSE_LANG_IMAGE" compile -'
+stdout ''
+stderr 'stdin:2:1-7: error\[DSE1002\]: Unexpected or malformed statement'
+stderr 'chanel physical'
+stderr 'expected: channel <name>'
+
+-- openloop.dse --
+simulation arch=linux-amd64
+channel physical
+
+uses
+dse.modelc https://github.com/boschglobal/dse.modelc v2.3.7
+dse.fmi https://github.com/boschglobal/dse.fmi v1.2.0
+linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.48/Fmi-1.1.48-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
+
+model input dse.modelc.csv
+channel physical signal_channel
+envar CSV_FILE model/input/data/input.csv
+envar SIMBUS_LOGLEVEL 5
+file input.csv data/input.csv
+file signalgroup.yaml data/input_sg.yaml
+
+model linear dse.fmi.mcl
+channel physical signal_channel
+envar MEASUREMENT_FILE /sim/measurement.mf4
+envar SIMBUS_LOGLEVEL 2
+workflow generate-fmimcl
+ var FMU_DIR uses linear_fmu
+ var OUT_DIR {{.PATH}}/data
+ var MCL_PATH {{.PATH}}/lib/libfmimcl.so
+
+
+-- fault.dse --
+simulation arch=linux-amd64
+chanel physical

@@ -6,9 +6,9 @@
 ################
 ## DSE Projects.
 export DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
-export DSE_MODELC_VERSION ?= 2.3.39
+export DSE_MODELC_VERSION ?= 2.4.1
 export DSE_MODELC_PKG_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
-export DSE_FMI_VERSION ?= 1.2.14
+export DSE_FMI_VERSION ?= 1.2.19
 
 
 ###############
@@ -19,8 +19,13 @@ DSE_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-builder:latest
 
 
 ###############
+## Docker Containers.
+DSE_BUILDER_IMAGE_NAME = dse-builder
+
+
+###############
 ## Build parameters.
-SUBDIRS = doc examples/models ast graph dsl lsp 
+SUBDIRS = examples/models ast dsl lsp
 TESTDATA_SUBDIRS = tests/testdata/e2e
 
 
@@ -58,8 +63,10 @@ help:
 	@echo "  super-linter  Run super-linter against the repository."
 	@echo "Local development commands:"
 	@echo "  export DSE_BUILDER_IMAGE=dse-builder:test"
+	@echo "  export DSE_LANG_IMAGE=dse-lang:test"
 	@echo "  export DSE_SIMER_IMAGE=dse-simer:test"
 	@echo "  export DSE_SIMER_IMAGE=simer:test  (alternate)"
+	@echo "  make build docker examples"
 	@echo "  make test_e2e CI=true"
 	@echo "  make test_e2e TEST=tests/e2e/dsl/uses.file.txtar"
 
@@ -71,7 +78,8 @@ build:
 .PHONY: docker
 docker: build
 	$(MAKE) -C graph docker
-	docker build -f .devcontainer/Dockerfile-builder --tag dse-builder:test .
+	$(MAKE) -C dsl docker
+	docker build -f .devcontainer/Dockerfile-builder --tag $(DSE_BUILDER_IMAGE_NAME):test .
 
 .PHONY: devcontainer
 devcontainer: docker
@@ -82,8 +90,14 @@ downloads:
 	mkdir -p build/downloads
 	cd build/downloads; test -s ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip || ( curl -fSLO $(DSE_MODELC_PKG_URL) && unzip -q ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip )
 
+bump_example_versions:
+	find examples -type f -name '*.dse' ! -path '*/build/*' ! -path '*/out/*' -exec sed -i -E \
+			-e '/^[[:space:]]*dse\.modelc[[:space:]]/s/v[0-9]+(\.[0-9]+)*/v$(DSE_MODELC_VERSION)/' \
+			-e '/^[[:space:]]*dse\.fmi[[:space:]]/s/v[0-9]+(\.[0-9]+)*/v$(DSE_FMI_VERSION)/' \
+		{} +
+
 .PHONY: examples
-examples: downloads build
+examples: build downloads bump_example_versions
 	mkdir -p out/examples
 	test -d out/examples/modelc || ( cp -R build/downloads/ModelC-$(DSE_MODELC_VERSION)-linux-amd64/examples out/examples/modelc )
 	$(MAKE) -C examples/models build
@@ -120,6 +134,8 @@ install:
 clean:
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d clean ); done
 	rm -rf out
+	docker images -q $(DSE_BUILDER_IMAGE_NAME) | xargs -r docker rmi -f
+	docker images -qf dangling=true | xargs -r docker rmi
 
 .PHONY: cleanall
 cleanall: clean
@@ -146,6 +162,7 @@ do-test_testscript-e2e:
 			-v /var/run/docker.sock:/var/run/docker.sock \
 			-v $(HOST_DOCKER_WORKSPACE):/repo \
 			-v $${ENTRYWORKDIR}:/workdir \
+			-v $${ENTRYWORKDIR}:$${ENTRYWORKDIR} \
 			$(TESTSCRIPT_IMAGE) \
 				-e ENTRYHOSTDIR=$(HOST_DOCKER_WORKSPACE) \
 				-e ENTRYWORKDIR=$${ENTRYWORKDIR} \
@@ -154,6 +171,7 @@ do-test_testscript-e2e:
 				-e DSE_BUILDER_IMAGE=$(DSE_BUILDER_IMAGE) \
 				-e DSE_REPORT_IMAGE=$(DSE_REPORT_IMAGE) \
 				-e DSE_SIMER_IMAGE=$(DSE_SIMER_IMAGE) \
+				-e DSE_LANG_IMAGE=$(DSE_LANG_IMAGE) \
 				-e http_proxy=$(http_proxy) \
 				-e https_proxy=$(https_proxy) \
 				-e GHE_USER=$(GHE_USER) \

@@ -1,0 +1,6 @@
+
+# TEST: EBNF command prints the grammar
+exec sh -c 'docker run --rm -i "$DSE_LANG_IMAGE" ebnf'
+stdout 'script ='
+stdout 'DSE Script Grammar'
+stderr ''

@@ -18,9 +18,16 @@ import {
   Workflow,
   Stack,
   FileDelimiter,
+  UnknownStatementKeyword,
   FileContent,
 } from "../lexer/lexing";
 import { EmbeddedActionsParser, IToken, ILexingError } from "chevrotain";
+class ScriptSyntaxError extends Error {
+  constructor(message: string, public token: IToken) {
+    super(message);
+  }
+}
+
 class FsilParser extends EmbeddedActionsParser {
   public simulation!: () => any;
   public channels!: () => any;
@@ -44,6 +51,11 @@ class FsilParser extends EmbeddedActionsParser {
 
     function updateTokenObject(tokenObject: IToken): Omit<IToken, "tokenType"> {
       const { tokenType, ...rest } = tokenObject;
+      if (rest.payload?.source_ranges) {
+        const payload = { ...rest.payload };
+        delete payload.source_ranges;
+        rest.payload = payload;
+      }
       return rest;
     }
 
@@ -280,7 +292,7 @@ class FsilParser extends EmbeddedActionsParser {
           if (this.RECORDING_PHASE !== true) {
             const payload = global_workflow.payload;
             if (!payload.workflow_reference_type.value || payload.workflow_reference_type.value !== "uses") {
-              throw new Error("stack workflows must have 'uses'");
+              throw new ScriptSyntaxError("Stack workflows must have 'uses'.", global_workflow);
             }
           }
 
@@ -506,9 +518,12 @@ class FsilParser extends EmbeddedActionsParser {
 
 // Initialize the parser instance.
 export const parserInstance = new FsilParser();
-type DiagnosticLike = {
+export type DiagnosticLike = {
   severity: number; // you can define 0 = Error, 1 = Warning, etc.
+  code?: string;
   message: string;
+  expected?: string[][];
+  expectedSyntax: string[];
   range: {
     start: { line: number; character: number };
     end: { line: number; character: number };
@@ -516,6 +531,85 @@ type DiagnosticLike = {
   source: string;
 };
 
+function expectedSyntax(error: { name?: string; message: string }): string[][] | undefined {
+  if (error.name === "NotAllInputParsedException" || error.message.startsWith("Redundant input, expecting EOF")) {
+    return [["EOF"]];
+  }
+
+  const mismatch = error.message.match(/token of type --> (.+?) <--/);
+  if (mismatch) {
+    return [[mismatch[1]]];
+  }
+
+  const alternatives = [...error.message.matchAll(/\[([^\]]*)\]/g)]
+    .map((match) => match[1].split(/,\s*/).filter(Boolean));
+  return alternatives.length > 0 ? alternatives : undefined;
+}
+
+const syntaxByKeyword: Record<string, string[]> = {
+  simulation: ["simulation [arch=<arch>] [stepsize=<number>] [endtime=<number>]"],
+  channel: ["channel <name> [alias]"],
+  network: ["network <name> '<mime-type>'"],
+  uses: ["uses", "<name> <repository-or-url> [v<version>] [path=<path>] [user=<user>] [token=<token>]"],
+  var: ["var <name> [uses|network|var] <value> [mimetype|signal]"],
+  model: ["model <name> <repository> [arch=<arch>] [uid=<number>] [external=<bool>]"],
+  envar: ["envar <name> <value>"],
+  file: ["file <name> [uses] <value> [path=<path>]"],
+  annotation: ["annotation <name> <value>"],
+  workflow: ["workflow <name> [uses <workflow-reference>]"],
+  stack: ["stack <name> [stacked=true|false] [sequential=true|false] [arch=<arch>]"],
+};
+
+const generalSyntax = [
+  "simulation [arch=<arch>] [stepsize=<number>] [endtime=<number>]",
+  "channel <name> [alias]",
+  "uses, followed by <name> <repository-or-url> [v<version>] [path=<path>]",
+  "var <name> [uses|network|var] <value> [mimetype|signal]",
+  "model <name> <repository> [arch=<arch>] [uid=<number>] [external=<bool>]",
+  "envar <name> <value>",
+  "file <name> [uses] <value> [path=<path>]",
+  "annotation <name> <value>",
+  "workflow <name> [uses <workflow-reference>]",
+  "stack <name> [stacked=true|false] [sequential=true|false] [arch=<arch>]",
+];
+
+function editDistance(left: string, right: string): number {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1] + 1,
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length];
+}
+
+function likelyKeywordTypo(keyword: string): string | undefined {
+  const candidates = Object.keys(syntaxByKeyword)
+    .map((candidate) => ({ candidate, distance: editDistance(keyword, candidate) }))
+    .sort((left, right) => left.distance - right.distance);
+  const maximumDistance = Math.min(2, Math.max(1, Math.floor(keyword.length / 4)));
+  if (candidates[0].distance > maximumDistance || candidates[0].distance === candidates[1]?.distance) {
+    return undefined;
+  }
+  return candidates[0].candidate;
+}
+
+function expectedStatementSyntax(text: string, code?: string): string[] {
+  if (code === "DSE1003") {
+    return ["workflow <name> uses <workflow-reference>"];
+  }
+  const keyword = text.trimStart().match(/^([a-z]+)/i)?.[1].toLowerCase();
+  if (!keyword) {
+    return generalSyntax;
+  }
+  return syntaxByKeyword[keyword] || syntaxByKeyword[likelyKeywordTypo(keyword) || ""] || generalSyntax;
+}
 
 export function parse(inputText: string): DiagnosticLike[] | any {
   const lines = inputText.split(/\r?\n/).map(line => line.replace(/\s*#.*$/, ""));
@@ -525,6 +619,8 @@ export function parse(inputText: string): DiagnosticLike[] | any {
     groups: {} as Record<string, IToken[]>,
     errors: [] as ILexingError[],
   };
+  let insideFileContent = false;
+  let insideUsesSection = false;
   let lineIdx = 0;
   lines.forEach((line) => {
     if (line.trim() !== "") {
@@ -534,44 +630,186 @@ export function parse(inputText: string): DiagnosticLike[] | any {
         token.startLine = lineIdx - 1;
         token.startColumn = token.startOffset ?? 0;
       });
-      lexingResult.tokens.push(...res.tokens);
       lexingResult.errors.push(...res.errors);
-      if (res.errors.length > 0) {
+      const isFileDelimiter = res.tokens.some(token => token.tokenType === FileDelimiter);
+      const isFileContent = res.tokens.length === 1 && res.tokens[0].tokenType === FileContent;
+      const isUnknownStatementKeyword = res.tokens.length === 1 && res.tokens[0].tokenType === UnknownStatementKeyword;
+      const isWorkflow = res.tokens.length === 1 && res.tokens[0].tokenType === Workflow;
+      const hasLexingErrors = res.errors.length > 0;
+
+      for (const error of res.errors) {
         diagnostics.push({
           severity: 0,
-          message: "Syntax error: Unexpected token or malformed statement.",
+          code: "DSE1001",
+          message: `Unexpected text ${JSON.stringify(line.slice(error.offset, error.offset + error.length))}. Check the statement syntax.`,
+          expectedSyntax: expectedStatementSyntax(line),
           range: {
-            start: { line: lineIdx - 1, character: 0 },
-            end: { line: lineIdx - 1, character: lines[lineIdx - 1].length },
+            start: { line: lineIdx - 1, character: error.offset },
+            end: { line: lineIdx - 1, character: error.offset + error.length },
           },
           source: "parser",
         });
       }
+
+      if (isFileDelimiter) {
+        insideFileContent = true;
+      } else if (insideFileContent && !isFileContent && !isUnknownStatementKeyword) {
+        insideFileContent = false;
+      }
+
+      if (hasLexingErrors) {
+        return;
+      }
+      if (isUnknownStatementKeyword) {
+        const token = res.tokens[0];
+        if (insideFileContent) {
+          lexingResult.tokens.push({
+            ...token,
+            tokenType: FileContent,
+            tokenTypeIdx: FileContent.tokenTypeIdx,
+            payload: {
+              file_content: {
+                value: token.image.trim(),
+                token_type: "file_content",
+              },
+            },
+          } as IToken);
+        } else {
+          const keywordRange = token.payload.source_range;
+          const line = token.startLine ?? lineIdx - 1;
+          const baseColumn = token.startColumn ?? 0;
+          diagnostics.push({
+            severity: 0,
+            code: "DSE1002",
+            message: `Unexpected or malformed statement: ${token.image.trim()}`,
+            expectedSyntax: expectedStatementSyntax(token.image),
+            range: {
+              start: { line, character: baseColumn + keywordRange.start },
+              end: { line, character: baseColumn + keywordRange.end },
+            },
+            source: "parser",
+          });
+        }
+        return;
+      }
+
+      const isUsesHeader = res.tokens.some(token => token.tokenType === Uses);
+      const isUsesEntry = res.tokens.some(token => token.tokenType === UseItem);
+      if (isUsesHeader) {
+        insideUsesSection = true;
+      } else if (insideUsesSection && !isUsesEntry && !isFileContent) {
+        insideUsesSection = false;
+      }
+
+      if (isWorkflow && res.tokens[0].payload.syntax_error && !insideFileContent) {
+        const token = res.tokens[0];
+        const syntaxError = token.payload.syntax_error;
+        const line = token.startLine ?? lineIdx - 1;
+        const baseColumn = token.startColumn ?? 0;
+        diagnostics.push({
+          severity: 0,
+          code: "DSE1002",
+          message: `Unexpected or malformed statement: ${token.image.trim()}`,
+          expectedSyntax: expectedStatementSyntax(token.image),
+          range: {
+            start: { line, character: baseColumn + syntaxError.start },
+            end: { line, character: baseColumn + syntaxError.end },
+          },
+          source: "parser",
+        });
+        return;
+      }
+
+      if (isFileContent && !insideFileContent) {
+        const token = res.tokens[0];
+        const startLine = token.startLine ?? lineIdx - 1;
+        const startColumn = token.startColumn ?? 0;
+        const endColumn = token.endColumn ?? startColumn + token.image.length;
+        diagnostics.push({
+          severity: 0,
+          code: "DSE1002",
+          message: `Unexpected or malformed statement: ${token.image.trim()}`,
+          expectedSyntax: expectedStatementSyntax(token.image),
+          range: {
+            start: { line: startLine, character: startColumn },
+            end: { line: lineIdx - 1, character: endColumn },
+          },
+          source: "parser",
+        });
+        return;
+      }
+      lexingResult.tokens.push(...res.tokens);
     } else {
       lineIdx += 1;
     }
   });
 
+  if (lexingResult.errors.length > 0) {
+    return diagnostics;
+  }
+
   parserInstance.input = lexingResult.tokens;
-  const astOutput = parserInstance.simulation();
+  let astOutput: any;
+  try {
+    astOutput = parserInstance.simulation();
+  } catch (error) {
+    if (!(error instanceof ScriptSyntaxError)) {
+      throw error;
+    }
+    const line = error.token.startLine ?? 0;
+    const character = error.token.startColumn ?? 0;
+    diagnostics.push({
+      severity: 0,
+      code: "DSE1003",
+      message: error.message,
+      expectedSyntax: expectedStatementSyntax(error.token.image, "DSE1003"),
+      range: {
+        start: { line, character },
+        end: { line, character: character + error.token.image.length },
+      },
+      source: "parser",
+    });
+  }
   if (parserInstance.errors.length > 0) {
-    console.log("\nParsing errors detected!\n");
-    parserInstance.errors.forEach((err, idx) => {
+    parserInstance.errors.forEach((err) => {
       const token = err.token;
-      const line = token?.startLine ?? 0;
-      const col = err.message?.split(":").pop()?.length ?? 0;
+      const hasEarlierSimulationTypo = diagnostics.some(diagnostic =>
+        diagnostic.code === "DSE1002" &&
+        diagnostic.expectedSyntax.some(syntax => syntax.startsWith("simulation ")) &&
+        diagnostic.range.start.line < (token.startLine ?? lines.length)
+      );
+      if (hasEarlierSimulationTypo && err.message.includes("Simulation")) {
+        return;
+      }
+      if (diagnostics.some(diagnostic => diagnostic.code === "DSE1002") && err.message.startsWith("Redundant input, expecting EOF")) {
+        return;
+      }
+      const line = Number.isFinite(token.startLine) && token.startLine! >= 0
+        ? token.startLine! : lines.length - 1;
+      const character = Number.isFinite(token.startColumn) && token.startColumn! >= 0
+        ? token.startColumn! : lines[line].length;
 
       diagnostics.push({
         severity: 0,
-        message: "Syntax error: Token declaration out of scope.",
+        code: "DSE1002",
+        message: err.message.startsWith("Redundant input, expecting EOF")
+          ? `Unexpected or malformed statement: ${token.image.trim()}`
+          : err.message,
+        expected: expectedSyntax(err),
+        expectedSyntax: expectedStatementSyntax(token.image),
         range: {
-          start: { line: line, character: 0 },
-          end: { line: line, character: col + 1 },
+          start: { line, character },
+          end: { line, character: Math.min(lines[line].length, character + token.image.length) },
         },
         source: "parser",
       });
     });
   }
+
+  diagnostics.sort((left, right) =>
+    left.range.start.line - right.range.start.line ||
+    left.range.start.character - right.range.start.character
+  );
 
   if (diagnostics.length > 0) {
     return diagnostics;

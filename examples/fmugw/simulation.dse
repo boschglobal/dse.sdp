@@ -2,9 +2,9 @@ simulation arch=windows-x64
 channel signal
 
 uses
-dse.fmi https://github.com/boschglobal/dse.fmi v1.2.4
-dse.modelc https://github.com/boschglobal/dse.modelc v2.3.12
-linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.2.4/Fmi-1.2.4-windows-x64.zip path=examples/fmu/linear/fmi2/linear.fmu
+dse.fmi https://github.com/boschglobal/dse.fmi v1.2.19
+dse.modelc https://github.com/boschglobal/dse.modelc v2.4.1
+linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.2.19/Fmi-1.2.19-windows-x64.zip path=examples/fmu/linear/fmi2/linear.fmu
 
 envar SIMBUS_LOGLEVEL 4
 

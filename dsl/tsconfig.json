@@ -8,13 +8,17 @@
     "rootDir": ".",
     "paths": {
       "lib/*": ["./lib/*"],
-      "bin/*": ["./bin/*"],
     },
     "sourceMap": true,
     "strict": true,
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["lib/**/*", "bin/**/*", "examples/scripts/*"],
+  "include": [
+    "lib/**/*",
+    "examples/scripts/*",
+    "validate.ts",
+    "parse2ast.ts"
+  ],
   "exclude": ["node_modules", "out"]
 }

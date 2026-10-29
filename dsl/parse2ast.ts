@@ -7,7 +7,7 @@
 import path from "path";
 import {
     parse
-} from "../lib/parser/parsing";
+} from "./lib/parser/parsing";
 import {
     readFileSync,
     createWriteStream,
