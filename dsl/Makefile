@@ -10,7 +10,7 @@ TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 
 ###############
 ## Docker Containers.
-DSE_LANG_IMAGE ?= dse-lang
+DSE_LANG_IMAGE = dse-lang
 
 
 ###############

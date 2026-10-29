@@ -6,9 +6,9 @@
 ################
 ## DSE Projects.
 export DSE_MODELC_REPO ?= https://github.com/boschglobal/dse.modelc
-export DSE_MODELC_VERSION ?= 2.3.39
+export DSE_MODELC_VERSION ?= 2.4.1
 export DSE_MODELC_PKG_URL ?= $(DSE_MODELC_REPO)/releases/download/v$(DSE_MODELC_VERSION)/ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip
-export DSE_FMI_VERSION ?= 1.2.14
+export DSE_FMI_VERSION ?= 1.2.19
 
 
 ###############
@@ -20,12 +20,12 @@ DSE_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-builder:latest
 
 ###############
 ## Docker Containers.
-DSE_BUILDER_IMAGE_NAME ?= dse-builder
+DSE_BUILDER_IMAGE_NAME = dse-builder
 
 
 ###############
 ## Build parameters.
-SUBDIRS = examples/models ast graph dsl lsp
+SUBDIRS = examples/models ast dsl lsp
 TESTDATA_SUBDIRS = tests/testdata/e2e
 
 
@@ -90,8 +90,14 @@ downloads:
 	mkdir -p build/downloads
 	cd build/downloads; test -s ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip || ( curl -fSLO $(DSE_MODELC_PKG_URL) && unzip -q ModelC-$(DSE_MODELC_VERSION)-linux-amd64.zip )
 
+bump_example_versions:
+	find examples -type f -name '*.dse' ! -path '*/build/*' ! -path '*/out/*' -exec sed -i -E \
+			-e '/^[[:space:]]*dse\.modelc[[:space:]]/s/v[0-9]+(\.[0-9]+)*/v$(DSE_MODELC_VERSION)/' \
+			-e '/^[[:space:]]*dse\.fmi[[:space:]]/s/v[0-9]+(\.[0-9]+)*/v$(DSE_FMI_VERSION)/' \
+		{} +
+
 .PHONY: examples
-examples: downloads build
+examples: build downloads bump_example_versions
 	mkdir -p out/examples
 	test -d out/examples/modelc || ( cp -R build/downloads/ModelC-$(DSE_MODELC_VERSION)-linux-amd64/examples out/examples/modelc )
 	$(MAKE) -C examples/models build

@@ -2,9 +2,9 @@ simulation
 channel signal
 
 uses
-dse.modelc https://github.com/boschglobal/dse.modelc v2.3.7
-dse.fmi https://github.com/boschglobal/dse.fmi v1.2.0
-linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.1.43/Fmi-1.1.43-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
+dse.modelc https://github.com/boschglobal/dse.modelc v2.4.1
+dse.fmi https://github.com/boschglobal/dse.fmi v1.2.19
+linear_fmu https://github.com/boschglobal/dse.fmi/releases/download/v1.2.19/Fmi-1.2.19-linux-amd64.zip path=examples/fmu/linear/fmi2/linear.fmu
 
 model gateway external=true
 channel signal data
