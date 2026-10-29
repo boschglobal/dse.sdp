@@ -662,7 +662,7 @@ export function parse(inputText: string): DiagnosticLike[] | any {
       }
       if (isUnknownStatementKeyword) {
         const token = res.tokens[0];
-        if (insideFileContent || insideUsesSection) {
+        if (insideFileContent) {
           lexingResult.tokens.push({
             ...token,
             tokenType: FileContent,

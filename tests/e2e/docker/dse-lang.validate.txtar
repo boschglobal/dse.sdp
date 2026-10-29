@@ -5,7 +5,7 @@ stdout 'Validation passed: stdin'
 stderr ''
 
 
-# TEST: DSE script with 3 errors
+# TEST: DSE script with 4 errors
 ! exec sh -c 'cat runnable.dse | docker run --rm -i "$DSE_LANG_IMAGE" validate -'
 cmp stderr runnable.expect.stderr
 
@@ -23,7 +23,7 @@ fsil.runnable https://{{.GHE_TOKEN}}@github.boschdevcloud.com/fsil/fsil.runnable
 dse.fmi https://github.com/boschglobal/dse.fmi v1.2.12
 example https://github.boschdevcloud.com/fsil/fsil.runnable/releases/download/v1.2.4/example.zip token={{.GHE_PAT}}
 
-model runnable fsil.runnable
+moel runnable fsil.runnable
 channel signal signal_channel
 chanel network network_channel
 
@@ -38,6 +38,11 @@ stdin:3:1-7: error[DSE1002]: Unexpected or malformed statement
   | ^^^^^^
   = expected: channel <name> [alias]
 
+stdin:10:1-5: error[DSE1002]: Unexpected or malformed statement
+  | moel runnable fsil.runnable
+  | ^^^^
+  = expected: model <name> <repository> [arch=<arch>] [uid=<number>] [external=<bool>]
+
 stdin:12:1-7: error[DSE1002]: Unexpected or malformed statement
   | chanel network network_channel
   | ^^^^^^
@@ -48,4 +53,4 @@ stdin:14:29-32: error[DSE1002]: Unexpected or malformed statement
   |                             ^^^
   = expected: workflow <name> [uses <workflow-reference>]
 
-Found 3 errors.
+Found 4 errors.
