@@ -29,7 +29,11 @@ Graph Tools for importing files to database and reporting.
 Usage:
 
   graph <command> [command options,]
-  graph report [--tag=name --db=db_uri] <report file>
+  graph import [--db=db_uri] <file or folder>
+  graph export [--db=db_uri] <file>
+  graph drop [--db=db_uri] <ast|sim|--all>
+  graph report [--tag=name --name=name --reports=path --db=db_uri] <simulation path>
+  graph report --list | --list-tags | --list-all
   graph ping [--retry=count --db=db_uri]
 
 `

@@ -2,7 +2,7 @@ package graph
 
 import (
 	"context"
-	"flag"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,171 +11,33 @@ import (
 
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 
-	"github.com/boschglobal/dse.clib/extra/go/command"
-	"github.com/boschglobal/dse.clib/extra/go/command/log"
-
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/file/kind"
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
-type GraphImportCommand struct {
-	command.Command
-	logLevel  int
-	optImport string
-	optDb     string
-}
-
-func NewGraphImportCommand(name string) *GraphImportCommand {
-	c := &GraphImportCommand{
-		Command: command.Command{
-			Name:    name,
-			FlagSet: flag.NewFlagSet(name, flag.ExitOnError),
-		},
-	}
-	c.FlagSet().IntVar(&c.logLevel, "log", 4, "Loglevel")
-	c.FlagSet().StringVar(&c.optImport, "import", "", "import files to the database")
-	c.FlagSet().StringVar(&c.optDb, "db", "bolt://localhost:7687", "database connection string")
-	return c
-}
-
-// CommandRunner interface functions.
-func (c GraphImportCommand) Name() string {
-	return c.Command.Name
-}
-
-func (c GraphImportCommand) FlagSet() *flag.FlagSet {
-	return c.Command.FlagSet
-}
-
-func (c *GraphImportCommand) Parse(args []string) error {
-	return c.FlagSet().Parse(args)
-}
-
-func (c *GraphImportCommand) Run() error {
-	slog.SetDefault(log.NewLogger(c.logLevel))
-	slog.Info("Connect to graph", "db", c.optDb)
-	ctx := context.Background()
-	driver, err := graph.Driver(c.optDb)
-	if err != nil {
-		slog.Info("Graph driver error", "error", err)
-		return err
-	}
-	ctx = context.WithValue(ctx, "driver", driver)
-	defer graph.Close(ctx)
-
-	session, err := graph.Session(ctx)
-	if err != nil {
-		slog.Info("Graph session error", "err", err)
-		return err
-	}
-	defer session.Close(ctx)
-
-	args := c.FlagSet().Args() // Get positional arguments
-	if len(args) == 0 {
-		slog.Error("Usage: graph import <yaml-file>")
-		return nil
-	}
-	file := args[0]
-	c.importFiles(ctx, file, session)
-
-	return nil
-}
-
-func (c *GraphImportCommand) matchNode(ctx context.Context, session neo4j.SessionWithContext) {
-	match_instance := `
-	MATCH (ast_mi:Ast:ModelInst), (sim_mi:Sim:ModelInst)
-    WHERE ast_mi.model_name = sim_mi.name
-    MERGE (sim_mi)-[:Represents]->(ast_mi)
-    `
-	_, err := graph.Query(ctx, session, match_instance, nil)
-	if err != nil {
-		slog.Info("Failed to create relationship", "error", err)
-	}
-
-	match_channel := `
-	MATCH (ast_ch:Ast:SimulationChannel), (sim_ch:Sim:Channel)
-	WHERE ast_ch.channel_name = sim_ch.name
-	MERGE (sim_ch)-[:Represents]->(ast_ch)
-	`
-	_, err = graph.Query(ctx, session, match_channel, nil)
-	if err != nil {
-		slog.Info("Failed to create relationship", "error", err)
-	}
-}
-
-func (c *GraphImportCommand) importFiles(ctx context.Context, path string, session neo4j.SessionWithContext) {
-	if path == "" {
-		slog.Error("Usage: import <yaml-path-or-file>")
-		return
-	}
-
-	// Detect all YAML files in the path recursively.
-	var yamlFiles []string
-	err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && (strings.HasSuffix(p, ".yaml") || strings.HasSuffix(p, ".yml")) {
-			yamlFiles = append(yamlFiles, p)
-		}
-		return nil
-	})
-	if err != nil {
-		slog.Error("Error walking the path", "error", err)
-		return
-	}
-
-	if len(yamlFiles) == 0 {
-		slog.Error("No YAML files found in path", "path", path)
-		return
-	}
-
-	// Initialize the YAML handler and graph driver.
-	handler := &kind.YamlKindHandler{}
-	driver, err := graph.Driver(c.optDb)
-	if err != nil {
-		slog.Info("Failed to connect to graph database", "error", err)
-		return
-	}
-	ctx = context.WithValue(ctx, "driver", driver)
-	defer graph.Close(ctx)
-
-	// Import each YAML file
-	for _, yamlFile := range yamlFiles {
-		slog.Info("Importing file", "file", yamlFile)
-		data := handler.Detect(yamlFile)
-		handler.Import(ctx, yamlFile, data)
-	}
-
-	// Create additional relations after all files are imported
-	c.createRelationships(ctx, session)
-
-}
-
-func (c *GraphImportCommand) createRelationships(ctx context.Context, session neo4j.SessionWithContext) {
-	query_InstanceOf := `
+const (
+	queryInstanceOf = `
 	MATCH (inst:ModelInst), (m:Model)
 	WHERE inst.model = m.name
 	MERGE (inst)-[:InstanceOf]->(m)`
-	_, _ = graph.Query(ctx, session, query_InstanceOf, nil)
 
-	query_Belongs := `
+	queryBelongs = `
 	MATCH (sc:SimbusChannel)
 	MATCH (c:Channel)
 	WHERE sc.name = c.name
 	MERGE (c)-[:Belongs]->(sc)`
-	_, _ = graph.Query(ctx, session, query_Belongs, nil)
 
-	query_Selects := `
+	querySelects = `
 	MATCH (sg:SignalGroup)-[sgHas:Has]->(l:Label)
 	MATCH (mi:ModelInst)-[miHas:Has]->(sl:Selector)
 	WHERE sl.selectorName = l.label_name AND sl.selectorValue = l.label_value
 	WITH sg, sl, l, mi, COUNT(miHas) AS miCount, COUNT(sgHas) AS sgCount
 	WHERE miCount = sgCount
 	MERGE (sl)-[:Selects]->(l)`
-	_, _ = graph.Query(ctx, session, query_Selects, nil)
 
-	query_SelectorCount := `
+	queryModelInstNames = `MATCH (mi:ModelInst) RETURN mi.name AS mi_name`
+
+	querySelectorCount = `
 	CALL {
 		MATCH (c:Channel)<-[id:Identifies]-(s:Selector)<-[has:Has]-(m:Model)<-[i:InstanceOf]-(mi:ModelInst{name:$mi_name})
 		RETURN s, c, id
@@ -184,10 +46,10 @@ func (c *GraphImportCommand) createRelationships(ctx context.Context, session ne
 		RETURN s, c, id
 	}
 	WITH c as channel, s as selector
-	RETURN channel, count(selector) AS selectorCount
+	RETURN id(channel) AS channel_id, count(selector) AS selectorCount
 	`
 
-	query_LabelCount := `
+	queryLabelCount = `
 	CALL {
 		MATCH (c:Channel)<-[id:Identifies]-(s:Selector)<-[has:Has]-(m:Model)<-[i:InstanceOf]-(mi:ModelInst{name:$mi_name})
 		RETURN s, c, id
@@ -197,77 +59,189 @@ func (c *GraphImportCommand) createRelationships(ctx context.Context, session ne
 	}
 	WITH c as channel, s as selector
 	MATCH (channel)<-[:Identifies]-(selector)-[selects:Selects]->(l:Label)<-[h:Has]-(sig:SignalGroup)
-	RETURN channel, sig, count(l) AS labelCount
+	RETURN id(channel) AS channel_id, id(sig) AS sig_id, count(l) AS labelCount
 	`
 
-	// Get all model instance names.
-	result, err := session.Run(ctx, `MATCH (mi:ModelInst) RETURN mi.name AS mi_name`, nil)
-	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to get model instance names: %v", err))
+	queryRepresents = `
+	MATCH (c:Channel) WHERE ID(c) = $channelID
+	MATCH (sg:SignalGroup) WHERE ID(sg) = $signalGroupID
+	MERGE (c)-[:Represents]->(sg)`
+)
+
+type GraphImportCommand struct {
+	base
+}
+
+func NewGraphImportCommand(name string) *GraphImportCommand {
+	c := &GraphImportCommand{}
+	c.init(name)
+	return c
+}
+
+func (c *GraphImportCommand) Run() error {
+	c.setupLogging()
+
+	args := c.FlagSet().Args()
+	if len(args) == 0 {
+		return errors.New("usage: graph import <yaml-path-or-file>")
 	}
 
-	for result.Next(ctx) {
-		miNameVal, _ := result.Record().Get("mi_name")
-		miName, ok := miNameVal.(string)
-		if !ok {
+	ctx, session, closeFn, err := c.connect()
+	if err != nil {
+		return err
+	}
+	defer closeFn()
+
+	return importFiles(ctx, args[0], session)
+}
+
+func findYAMLFiles(path string) ([]string, error) {
+	var files []string
+	err := filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && isYAMLFile(p) {
+			files = append(files, p)
+		}
+		return nil
+	})
+	return files, err
+}
+
+func isYAMLFile(name string) bool {
+	return strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml")
+}
+
+func importKindFiles(ctx context.Context, handler *kind.YamlKindHandler, files []string) error {
+	var errs []error
+	for _, file := range files {
+		slog.Info("Importing file", "file", file)
+		data := handler.Detect(file)
+		if data == nil {
+			slog.Warn("No kind documents found", "file", file)
 			continue
 		}
-
-		mi_properties := map[string]any{"mi_name": miName}
-
-		selectorCounts := make(map[int64]int64)
-		channelNodeIDs := make(map[int64]int64)
-
-		result1, _ := session.Run(ctx, query_SelectorCount, mi_properties)
-		for result1.Next(ctx) {
-			record := result1.Record()
-			if selectorCount, _ := record.Get("selectorCount"); selectorCount != nil {
-				if count, ok := selectorCount.(int64); ok {
-					if channelValue, exists := record.Get("channel"); exists {
-						if channelNode, ok := channelValue.(neo4j.Node); ok {
-							channelID := channelNode.Id
-							selectorCounts[channelID] = count
-							channelNodeIDs[channelID] = channelID
-						}
-					}
-				}
-			}
-		}
-
-		result2, _ := session.Run(ctx, query_LabelCount, mi_properties)
-		for result2.Next(ctx) {
-			record := result2.Record()
-			labelCount, _ := record.Get("labelCount")
-			sgValue, _ := record.Get("sig")
-			channelValue, _ := record.Get("channel")
-
-			if labelCount, ok := labelCount.(int64); ok {
-				if sgNode, ok := sgValue.(neo4j.Node); ok {
-					if chNode, ok := channelValue.(neo4j.Node); ok {
-						channelID, signalGroupID := chNode.Id, sgNode.Id
-						if selectorCount, found := selectorCounts[channelID]; found {
-							if labelCount >= selectorCount {
-								relationshipQuery := `
-								MATCH (c:Channel) WHERE ID(c) = $channelID
-								MATCH (sg:SignalGroup) WHERE ID(sg) = $signalGroupID
-								MERGE (c)-[:Represents]->(sg)`
-								params := map[string]any{
-									"channelID":     channelID,
-									"signalGroupID": signalGroupID,
-								}
-								_, err := session.Run(ctx, relationshipQuery, params)
-								if err != nil {
-									slog.Info(fmt.Sprintf("Failed to create relationship: %v", err))
-								} else {
-									slog.Info(fmt.Sprintf("Relationship created: Channel(ID: %d) -> Represents -> SignalGroup(ID: %d)", channelID, signalGroupID))
-								}
-							} else {
-								slog.Info(fmt.Sprintf("Skipping channel ID %d (labelCount: %d, selectorCount: %d)", channelID, labelCount, selectorCount))
-							}
-						}
-					}
-				}
-			}
+		if err := handler.Import(ctx, file, data); err != nil {
+			errs = append(errs, err)
 		}
 	}
+	return errors.Join(errs...)
+}
+
+func importFiles(ctx context.Context, path string, session neo4j.SessionWithContext) error {
+	yamlFiles, err := findYAMLFiles(path)
+	if err != nil {
+		return fmt.Errorf("walk path %q: %w", path, err)
+	}
+	if len(yamlFiles) == 0 {
+		return fmt.Errorf("no YAML files found in path %q", path)
+	}
+
+	importErr := importKindFiles(ctx, &kind.YamlKindHandler{}, yamlFiles)
+
+	// Create additional relations after all files are imported.
+	createRelationships(ctx, session)
+	return importErr
+}
+
+func createRelationships(ctx context.Context, session neo4j.SessionWithContext) {
+	for _, query := range []string{queryInstanceOf, queryBelongs, querySelects} {
+		if _, err := graph.Query(ctx, session, query, nil); err != nil {
+			slog.Error("Failed to create relationships", "error", err)
+		}
+	}
+
+	names, err := modelInstanceNames(ctx, session)
+	if err != nil {
+		slog.Error("Failed to get model instance names", "error", err)
+		return
+	}
+	for _, name := range names {
+		if err := representChannels(ctx, session, name); err != nil {
+			slog.Error("Failed to create Represents relationships", "model_inst", name, "error", err)
+		}
+	}
+}
+
+func modelInstanceNames(ctx context.Context, session neo4j.SessionWithContext) ([]string, error) {
+	result, err := session.Run(ctx, queryModelInstNames, nil)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for result.Next(ctx) {
+		if name, ok := recordValue[string](result.Record(), "mi_name"); ok {
+			names = append(names, name)
+		}
+	}
+	return names, result.Err()
+}
+
+func representChannels(ctx context.Context, session neo4j.SessionWithContext, miName string) error {
+	params := map[string]any{"mi_name": miName}
+
+	selectorCounts, err := selectorCountsByChannel(ctx, session, params)
+	if err != nil {
+		return err
+	}
+
+	result, err := session.Run(ctx, queryLabelCount, params)
+	if err != nil {
+		return err
+	}
+	for result.Next(ctx) {
+		record := result.Record()
+		labelCount, ok1 := recordValue[int64](record, "labelCount")
+		signalGroupID, ok2 := recordValue[int64](record, "sig_id")
+		channelID, ok3 := recordValue[int64](record, "channel_id")
+		if !ok1 || !ok2 || !ok3 {
+			continue
+		}
+		selectorCount, found := selectorCounts[channelID]
+		if !found {
+			continue
+		}
+		if labelCount < selectorCount {
+			slog.Info(fmt.Sprintf("Skipping channel ID %d (labelCount: %d, selectorCount: %d)", channelID, labelCount, selectorCount))
+			continue
+		}
+		_, err := session.Run(ctx, queryRepresents, map[string]any{
+			"channelID":     channelID,
+			"signalGroupID": signalGroupID,
+		})
+		if err != nil {
+			slog.Info(fmt.Sprintf("Failed to create relationship: %v", err))
+			continue
+		}
+		slog.Info(fmt.Sprintf("Relationship created: Channel(ID: %d) -> Represents -> SignalGroup(ID: %d)", channelID, signalGroupID))
+	}
+	return result.Err()
+}
+
+func selectorCountsByChannel(ctx context.Context, session neo4j.SessionWithContext, params map[string]any) (map[int64]int64, error) {
+	result, err := session.Run(ctx, querySelectorCount, params)
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[int64]int64)
+	for result.Next(ctx) {
+		record := result.Record()
+		count, ok1 := recordValue[int64](record, "selectorCount")
+		channelID, ok2 := recordValue[int64](record, "channel_id")
+		if ok1 && ok2 {
+			counts[channelID] = count
+		}
+	}
+	return counts, result.Err()
+}
+
+func recordValue[T any](record *neo4j.Record, key string) (T, bool) {
+	v, ok := record.Get(key)
+	if !ok {
+		var zero T
+		return zero, false
+	}
+	t, ok := v.(T)
+	return t, ok
 }

@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
@@ -17,15 +18,25 @@ import (
 	"github.com/rogpeppe/go-internal/testscript"
 )
 
+// Scripts share one database, so they run one at a time.
+var dbMutex sync.Mutex
+
+func serialise(env *testscript.Env) error {
+	dbMutex.Lock()
+	env.Defer(dbMutex.Unlock)
+	return nil
+}
+
 func TestMain(m *testing.M) {
-	os.Exit(testscript.RunMain(m, map[string]func() int{
-		"graph": main_,
-	}))
+	testscript.Main(m, map[string]func(){
+		"graph": main,
+	})
 }
 
 func TestE2E(t *testing.T) {
 	testscript.Run(t, testscript.Params{
-		Dir: "testdata/reports",
+		Dir:   "testdata/reports",
+		Setup: serialise,
 		Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
 			"fubar": func(ts *testscript.TestScript, neg bool, args []string) {
 				fmt.Fprint(ts.Stdout(), "hello world")
@@ -55,7 +66,7 @@ func TestE2E(t *testing.T) {
 				if err != nil {
 					ts.Fatalf("Graph driver error: %+v", err)
 				}
-				ctx := context.WithValue(context.Background(), "driver", driver)
+				ctx := graph.WithDriver(context.Background(), driver)
 				defer graph.Close(ctx)
 				session, err := graph.Session(ctx)
 				if err != nil {
@@ -74,7 +85,7 @@ func TestE2E(t *testing.T) {
 
 				var queryFile, jsonParams string
 				var expectedCount int
-				
+
 				if len(args) == 2 {
 					queryFile = args[0]
 					jsonParams = args[1]
@@ -106,7 +117,7 @@ func TestE2E(t *testing.T) {
 				if err != nil {
 					ts.Fatalf("Graph driver error: %+v", err)
 				}
-				ctx := context.WithValue(context.Background(), "driver", driver)
+				ctx := graph.WithDriver(context.Background(), driver)
 				defer graph.Close(ctx)
 
 				session, err := graph.Session(ctx)

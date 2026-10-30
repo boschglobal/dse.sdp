@@ -1,0 +1,28 @@
+version: "2"
+
+run:
+  build-tags:
+    - test_e2e
+
+linters:
+  default: standard
+  enable:
+    - errorlint
+    - misspell
+    - unconvert
+  settings:
+    errcheck:
+      exclude-functions:
+        - (*os.File).Close
+        - (github.com/neo4j/neo4j-go-driver/v5/neo4j.SessionWithContext).Close
+        - (github.com/neo4j/neo4j-go-driver/v5/neo4j.DriverWithContext).Close
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

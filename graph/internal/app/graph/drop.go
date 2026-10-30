@@ -1,90 +1,53 @@
 package graph
 
 import (
-	"context"
-	"flag"
-	"log/slog"
+	"errors"
+	"fmt"
 	"strings"
-
-	"github.com/boschglobal/dse.clib/extra/go/command"
-	"github.com/boschglobal/dse.clib/extra/go/command/log"
 
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 )
 
 type GraphDropCommand struct {
-	command.Command
-	logLevel int
-	optDb    string
-	optAll   bool
+	base
+	optAll bool
 }
 
+var dropTargets = map[string]string{"ast": "Ast", "sim": "Sim", "--all": "all"}
+
 func NewGraphDropCommand(name string) *GraphDropCommand {
-	c := &GraphDropCommand{
-		Command: command.Command{
-			Name:    name,
-			FlagSet: flag.NewFlagSet(name, flag.ExitOnError),
-		},
-	}
-	c.FlagSet().IntVar(&c.logLevel, "log", 4, "Loglevel")
+	c := &GraphDropCommand{}
+	c.init(name)
 	c.FlagSet().BoolVar(&c.optAll, "all", false, "drop nodes based on label from the database (Usage: drop ast, drop sim, drop --all)")
-	c.FlagSet().StringVar(&c.optDb, "db", "bolt://localhost:7687", "database connection string")
 	return c
 }
 
-// CommandRunner interface functions.
-func (c GraphDropCommand) Name() string {
-	return c.Command.Name
-}
-
-func (c GraphDropCommand) FlagSet() *flag.FlagSet {
-	return c.Command.FlagSet
-}
-
-func (c *GraphDropCommand) Parse(args []string) error {
-	return c.FlagSet().Parse(args)
-}
-
 func (c *GraphDropCommand) Run() error {
-	slog.SetDefault(log.NewLogger(c.logLevel))
-	slog.Info("Connect to graph", "db", c.optDb)
-	ctx := context.Background()
-	driver, err := graph.Driver(c.optDb)
+	c.setupLogging()
+	option, err := c.dropOption()
 	if err != nil {
-		slog.Info("Graph driver error", "error", err)
 		return err
 	}
-	ctx = context.WithValue(ctx, "driver", driver)
-	defer graph.Close(ctx)
 
-	session, err := graph.Session(ctx)
+	ctx, _, closeFn, err := c.connect()
 	if err != nil {
-		slog.Info("Graph session error", "err", err)
 		return err
 	}
-	defer session.Close(ctx)
+	defer closeFn()
 
-	args := c.FlagSet().Args()
-
-	if c.optAll {
-		c.runDrop(ctx, "--all")
-	} else if len(args) > 0 {
-		option := strings.ToLower(args[0]) // Handle ast/sim as case-insensitive
-		if option == "ast" || option == "sim" {
-			c.runDrop(ctx, option)
-		} else {
-			slog.Error("Invalid usage. Use 'graph drop ast', 'graph drop sim', or 'graph drop --all'")
-			return nil
-		}
-	} else {
-		slog.Error("Invalid usage. Use 'graph drop ast', 'graph drop sim', or 'graph drop --all'")
-		return nil
-	}
-
-	return nil
+	fmt.Printf("Graph query: MATCH DETACH DELETE %s nodes\n", dropTargets[option])
+	return graph.Drop(ctx, option)
 }
 
-// Internal implementation.
-func (c *GraphDropCommand) runDrop(ctx context.Context, option string) {
-	graph.Drop(ctx, option)
+func (c *GraphDropCommand) dropOption() (string, error) {
+	if c.optAll {
+		return "--all", nil
+	}
+	if args := c.FlagSet().Args(); len(args) > 0 {
+		// ast/sim are case-insensitive.
+		if option := strings.ToLower(args[0]); option == "ast" || option == "sim" {
+			return option, nil
+		}
+	}
+	return "", errors.New("invalid usage, use 'graph drop ast', 'graph drop sim', or 'graph drop --all'")
 }

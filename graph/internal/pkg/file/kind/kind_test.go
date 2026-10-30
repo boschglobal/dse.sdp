@@ -5,12 +5,13 @@ package kind
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
-	"testing"
-	"encoding/json"
-	"strconv"
 	"path/filepath"
+	"strconv"
+	"sync"
+	"testing"
 
 	"github.com/boschglobal/dse.sdp/graph/internal/pkg/graph"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
@@ -21,182 +22,192 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// Scripts share one database, so they run one at a time.
+var dbMutex sync.Mutex
+
+func serialise(env *testscript.Env) error {
+	dbMutex.Lock()
+	env.Defer(dbMutex.Unlock)
+	return nil
+}
+
 func TestKindE2E(t *testing.T) {
-    dirs := []string{"testdata"}
-    
-    for _, dir := range dirs {
-        t.Run(filepath.Base(dir), func(t *testing.T) {
-            testscript.Run(t, testscript.Params{
-                Dir: dir,
-                Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
-                    "graphq": func(ts *testscript.TestScript, neg bool, args []string) {
-                        if len(args) < 2 || len(args) > 3 {
-                            ts.Fatalf("Usage: graphq <optional-count> <query-file> <json-params>")
-                        }
+	dirs := []string{"testdata"}
 
-                        var queryFile, jsonParams string
-                        var expectedCount int
-                        
-                        if len(args) == 2 {
-                            queryFile = args[0]
-                            jsonParams = args[1]
-                        } else if len(args) == 3 {
-                            queryFile = args[0]
-                            jsonParams = args[2]
-                            var err error
-                            expectedCount, err = strconv.Atoi(args[1])
-                            if err != nil {
-                                ts.Fatalf("Failed to read count value: %v", err)
-                            }
-                        }
+	for _, dir := range dirs {
+		t.Run(filepath.Base(dir), func(t *testing.T) {
+			testscript.Run(t, testscript.Params{
+				Dir:   dir,
+				Setup: serialise,
+				Cmds: map[string]func(ts *testscript.TestScript, neg bool, args []string){
+					"graphq": func(ts *testscript.TestScript, neg bool, args []string) {
+						if len(args) < 2 || len(args) > 3 {
+							ts.Fatalf("Usage: graphq <optional-count> <query-file> <json-params>")
+						}
 
-                        // Read the query from the .cyp file.
-                        query, err := os.ReadFile(queryFile)
-                        if err != nil {
-                            ts.Fatalf("Failed to read query file %s: %v", queryFile, err)
-                        }
+						var queryFile, jsonParams string
+						var expectedCount int
 
-                        // Parse the JSON string into a map.
-                        var params map[string]interface{}
-                        err = json.Unmarshal([]byte(jsonParams), &params)
-                        if err != nil {
-                            ts.Fatalf("Failed to parse JSON params: %v", err)
-                        }
+						if len(args) == 2 {
+							queryFile = args[0]
+							jsonParams = args[1]
+						} else if len(args) == 3 {
+							queryFile = args[0]
+							jsonParams = args[2]
+							var err error
+							expectedCount, err = strconv.Atoi(args[1])
+							if err != nil {
+								ts.Fatalf("Failed to read count value: %v", err)
+							}
+						}
 
-                        // Connect to the database.
-                        driver, err := graph.Driver("bolt://localhost:7687")
-                        if err != nil {
-                            ts.Fatalf("Graph driver error: %+v", err)
-                        }
-                        ctx := context.WithValue(context.Background(), "driver", driver)
-                        defer graph.Close(ctx)
+						// Read the query from the .cyp file.
+						query, err := os.ReadFile(queryFile)
+						if err != nil {
+							ts.Fatalf("Failed to read query file %s: %v", queryFile, err)
+						}
 
-                        session, err := graph.Session(ctx)
-                        if err != nil {
-                            ts.Fatalf("Graph session error: %+v", err)
-                        }
-                        defer session.Close(ctx)
+						// Parse the JSON string into a map.
+						var params map[string]interface{}
+						err = json.Unmarshal([]byte(jsonParams), &params)
+						if err != nil {
+							ts.Fatalf("Failed to parse JSON params: %v", err)
+						}
 
-                        // Execute the query with parameters.
-                        records, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-                            result, err := tx.Run(ctx, string(query), params)
-                            if err != nil {
-                                return nil, err
-                            }
-                            return result.Collect(ctx)
-                        })
-                        if err != nil {
-                            ts.Fatalf("Failed to execute query: %+v", err)
-                        }
+						// Connect to the database.
+						driver, err := graph.Driver("bolt://localhost:7687")
+						if err != nil {
+							ts.Fatalf("Graph driver error: %+v", err)
+						}
+						ctx := graph.WithDriver(context.Background(), driver)
+						defer graph.Close(ctx)
 
-                        // Count the number of matches.
-                        matchCount := len(records.([]*neo4j.Record))
-                        fmt.Printf("Graph query '%s' returned %d matches with params %+v.\n", query, matchCount, params)
+						session, err := graph.Session(ctx)
+						if err != nil {
+							ts.Fatalf("Graph session error: %+v", err)
+						}
+						defer session.Close(ctx)
 
-                        if len(args) == 3 && matchCount != expectedCount {
-                            ts.Fatalf("Expected %d match but got %d", expectedCount, matchCount)
-                        }
-                    },
+						// Execute the query with parameters.
+						records, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+							result, err := tx.Run(ctx, string(query), params)
+							if err != nil {
+								return nil, err
+							}
+							return result.Collect(ctx)
+						})
+						if err != nil {
+							ts.Fatalf("Failed to execute query: %+v", err)
+						}
 
-                    "graphdrop": func(ts *testscript.TestScript, neg bool, args []string) {
-                        option := args[0]
-                        if option != "--all" && option != "ast" && option != "sim" {
-                            ts.Fatalf("Invalid option: %s. Valid options are '--all', 'ast', or 'sim'", option)
-                        }
-                        ctx := context.Background()
+						// Count the number of matches.
+						matchCount := len(records.([]*neo4j.Record))
+						fmt.Printf("Graph query '%s' returned %d matches with params %+v.\n", query, matchCount, params)
 
-                        // Connect to the database.
-                        driver, err := graph.Driver("bolt://localhost:7687")
-                        if err != nil {
-                            ts.Fatalf("Failed to connect to graph database: %+v", err)
-                        }
-                        ctx = context.WithValue(ctx, "driver", driver)
-                        defer graph.Close(ctx)
+						if len(args) == 3 && matchCount != expectedCount {
+							ts.Fatalf("Expected %d match but got %d", expectedCount, matchCount)
+						}
+					},
 
-                        // Call the DropAll function.
-                        graph.Drop(ctx, option)
-                        fmt.Fprint(ts.Stdout(), "All nodes dropped successfully")
-                    },
+					"graphdrop": func(ts *testscript.TestScript, neg bool, args []string) {
+						option := args[0]
+						if option != "--all" && option != "ast" && option != "sim" {
+							ts.Fatalf("Invalid option: %s. Valid options are '--all', 'ast', or 'sim'", option)
+						}
+						ctx := context.Background()
 
-                    "import": func(ts *testscript.TestScript, neg bool, args []string) {
-                        if len(args) != 1 {
-                            ts.Fatalf("Usage: import <yaml-file>")
-                        }
-                        file := args[0]
+						// Connect to the database.
+						driver, err := graph.Driver("bolt://localhost:7687")
+						if err != nil {
+							ts.Fatalf("Failed to connect to graph database: %+v", err)
+						}
+						ctx = graph.WithDriver(ctx, driver)
+						defer graph.Close(ctx)
 
-                        handler := &YamlKindHandler{}
-                        data := handler.Detect(file)
-                        if data == nil {
-                            ts.Fatalf("Failed to detect YAML data from file: %s", file)
-                        }
+						// Call the DropAll function.
+						graph.Drop(ctx, option)
+						fmt.Fprint(ts.Stdout(), "All nodes dropped successfully")
+					},
 
-                        ctx := context.Background()
+					"import": func(ts *testscript.TestScript, neg bool, args []string) {
+						if len(args) != 1 {
+							ts.Fatalf("Usage: import <yaml-file>")
+						}
+						file := args[0]
 
-                        // Connect to the database.
-                        driver, err := graph.Driver("bolt://localhost:7687")
-                        if err != nil {
-                            ts.Fatalf("Failed to connect to graph database: %+v", err)
-                        }
-                        ctx = context.WithValue(ctx, "driver", driver)
-                        defer graph.Close(ctx)
+						handler := &YamlKindHandler{}
+						data := handler.Detect(file)
+						if data == nil {
+							ts.Fatalf("Failed to detect YAML data from file: %s", file)
+						}
 
-                        // Call the Import function.
-                        handler.Import(ctx, file, data)
-                        fmt.Fprint(ts.Stdout(), "Import successful")
-                    },
+						ctx := context.Background()
 
-                    "report": func(ts *testscript.TestScript, neg bool, args []string) {
-                        // Connect to the database.
-                        driver, err := graph.Driver("bolt://localhost:7687")
-                        if err != nil {
-                            ts.Fatalf("Graph driver error: %+v", err)
-                        }
-                        ctx := context.WithValue(context.Background(), "driver", driver)
-                        defer graph.Close(ctx)
+						// Connect to the database.
+						driver, err := graph.Driver("bolt://localhost:7687")
+						if err != nil {
+							ts.Fatalf("Failed to connect to graph database: %+v", err)
+						}
+						ctx = graph.WithDriver(ctx, driver)
+						defer graph.Close(ctx)
 
-                        session, err := graph.Session(ctx)
-                        if err != nil {
-                            ts.Fatalf("Graph session error: %+v", err)
-                        }
-                        defer session.Close(ctx)
+						// Call the Import function.
+						handler.Import(ctx, file, data)
+						fmt.Fprint(ts.Stdout(), "Import successful")
+					},
 
-                        // Query to count each node type.
-                        query := `
+					"report": func(ts *testscript.TestScript, neg bool, args []string) {
+						// Connect to the database.
+						driver, err := graph.Driver("bolt://localhost:7687")
+						if err != nil {
+							ts.Fatalf("Graph driver error: %+v", err)
+						}
+						ctx := graph.WithDriver(context.Background(), driver)
+						defer graph.Close(ctx)
+
+						session, err := graph.Session(ctx)
+						if err != nil {
+							ts.Fatalf("Graph session error: %+v", err)
+						}
+						defer session.Close(ctx)
+
+						// Query to count each node type.
+						query := `
                             MATCH (n)
                             RETURN DISTINCT labels(n) AS labels, count(n) AS count
                         `
 
-                        // Execute the count query.
-                        records, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
-                            result, err := tx.Run(ctx, query, nil)
-                            if err != nil {
-                                return nil, err
-                            }
-                            return result.Collect(ctx)
-                        })
-                        if err != nil {
-                            ts.Fatalf("Failed to execute count query: %+v", err)
-                        }
+						// Execute the count query.
+						records, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+							result, err := tx.Run(ctx, query, nil)
+							if err != nil {
+								return nil, err
+							}
+							return result.Collect(ctx)
+						})
+						if err != nil {
+							ts.Fatalf("Failed to execute count query: %+v", err)
+						}
 
-                        // Print the counts for each node type.
-                        for _, record := range records.([]*neo4j.Record) {
-                            labelsValue, ok := record.Get("labels")
-                            if !ok {
-                                ts.Fatalf("Missing labels in record")
-                            }
-                            labels := labelsValue.([]interface{})
+						// Print the counts for each node type.
+						for _, record := range records.([]*neo4j.Record) {
+							labelsValue, ok := record.Get("labels")
+							if !ok {
+								ts.Fatalf("Missing labels in record")
+							}
+							labels := labelsValue.([]interface{})
 
-                            countValue, ok := record.Get("count")
-                            if !ok {
-                                ts.Fatalf("Missing count in record")
-                            }
-                            count := countValue.(int64)
+							countValue, ok := record.Get("count")
+							if !ok {
+								ts.Fatalf("Missing count in record")
+							}
+							count := countValue.(int64)
 
-                            fmt.Printf("Node type: %v, Count: %d\n", labels, count)
-                        }
-                    },
-                },
-            })
-        })
-    }
+							fmt.Printf("Node type: %v, Count: %d\n", labels, count)
+						}
+					},
+				},
+			})
+		})
+	}
 }
