@@ -54,7 +54,12 @@ docker:
 	@for d in $(DOCKER_TOOLS); do \
 		docker build -f build/package/$$d/Dockerfile \
 			--build-arg MEMGRAPH_IMAGE=memgraph \
+			--target full \
 			--tag dse-$$d:test . || exit 1; \
+		docker build -f build/package/$$d/Dockerfile \
+			--build-arg MEMGRAPH_IMAGE=memgraph \
+			--target slim \
+			--tag dse-$$d:test-slim . || exit 1; \
 	done
 
 .PHONY: docker-mage

@@ -32,7 +32,8 @@ RUN --mount=type=cache,target=/root/.npm \
 
 COPY dsl /src/dsl
 COPY lsp /src/lsp
-RUN cd /src/dsl && npm run compile
+RUN cd /src/dsl && npm run compile && npm prune --omit=dev \
+    && rm -rf node_modules/esbuild node_modules/@esbuild
 RUN set -eux; \
     mkdir -p /src/lsp/out/bin; \
     mkdir -p /src/lsp/bin/graph/yaml; \
@@ -50,17 +51,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN set -eux; \
 	apt-get -y update; \
-	apt-get -y upgrade; \
     apt-get -y install --no-install-recommends \
         bash \
-        build-essential \
         ca-certificates \
         curl \
         git \
         jq \
         less \
-        liblua5.4-dev \
-        lua5.4 \
         make \
         rsync \
         tar \
@@ -69,10 +66,7 @@ RUN set -eux; \
         vim \
         wget \
     && \
-    apt-get clean; \
-    rm -rf /var/lib/apt/lists/*;
-
-RUN install -m 0755 -d /etc/apt/keyrings && \
+    install -m 0755 -d /etc/apt/keyrings && \
     curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
     chmod a+r /etc/apt/keyrings/docker.asc && \
     echo \
@@ -80,20 +74,17 @@ RUN install -m 0755 -d /etc/apt/keyrings && \
       https://download.docker.com/linux/debian \
       bookworm stable" | \
       tee /etc/apt/sources.list.d/docker.list > /dev/null && \
-    apt-get update && \
-    apt-get install -y docker-ce-cli
-
-RUN wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq \
-    && chmod +x /usr/bin/yq
-
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get update \
-    && apt-get -y install \
-        nodejs
+    apt-get -y update && \
+    apt-get -y install --no-install-recommends docker-ce-cli && \
+    wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && \
+    chmod +x /usr/bin/yq && \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*;
 
 
 # Install Builder Binaries
 # ========================
+COPY --from=node-builder /usr/local/bin/node /usr/local/bin/node
 COPY --from=golang-builder /go/bin/task /usr/local/bin/task
 COPY --from=golang-builder /src/ast/bin/ast /usr/local/bin/dse-ast
 COPY --from=node-builder /src/lsp/out /usr/local/bin/dse-lsp

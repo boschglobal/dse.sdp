@@ -16,6 +16,8 @@ export DSE_FMI_VERSION ?= 1.2.19
 TESTSCRIPT_IMAGE ?= ghcr.io/boschglobal/dse-testscript:latest
 DSE_SIMER_IMAGE ?= ghcr.io/boschglobal/dse-simer:$(DSE_MODELC_VERSION)
 DSE_BUILDER_IMAGE ?= ghcr.io/boschglobal/dse-builder:latest
+DSE_LANG_IMAGE ?= ghcr.io/boschglobal/dse-lang:latest
+DSE_REPORT_IMAGE ?= ghcr.io/boschglobal/dse-report:latest
 
 
 ###############
@@ -25,7 +27,7 @@ DSE_BUILDER_IMAGE_NAME = dse-builder
 
 ###############
 ## Build parameters.
-SUBDIRS = examples/models ast dsl lsp
+SUBDIRS = examples/models ast dsl lsp graph
 TESTDATA_SUBDIRS = tests/testdata/e2e
 
 
@@ -64,6 +66,7 @@ help:
 	@echo "Local development commands:"
 	@echo "  export DSE_BUILDER_IMAGE=dse-builder:test"
 	@echo "  export DSE_LANG_IMAGE=dse-lang:test"
+	@echo "  export DSE_REPORT_IMAGE=dse-report:test"
 	@echo "  export DSE_SIMER_IMAGE=dse-simer:test"
 	@echo "  export DSE_SIMER_IMAGE=simer:test  (alternate)"
 	@echo "  make build docker examples"
@@ -141,6 +144,12 @@ clean:
 cleanall: clean
 	@for d in $(SUBDIRS); do ($(MAKE) -C $$d cleanall ); done
 	rm -rf build
+
+.PHONY: prune_dockercache
+prune_dockercache: cleanall
+	@for d in $(SUBDIRS); do ($(MAKE) -C $$d cleanall ); done
+	rm -rf build
+	docker buildx prune --all --force --filter 'type!=exec.cachemount'
 
 
 do-test_testscript-e2e:

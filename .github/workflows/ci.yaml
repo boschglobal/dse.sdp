@@ -73,6 +73,10 @@ jobs:
           - name: report
             dockerfile: graph/build/package/report/Dockerfile
             context: graph/
+          - name: report
+            dockerfile: graph/build/package/report/Dockerfile
+            context: graph/
+            slim: true
           - name: builder
             dockerfile: .devcontainer/Dockerfile-builder
             context: .
@@ -106,6 +110,24 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=test
 
+      - name: Extract metadata (tags, labels) for Docker slim targets
+        if: matrix.slim
+        id: meta-slim
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            name=${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.name }},enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            name=${{ matrix.name }},enable=${{ !startsWith(github.ref, 'refs/tags/') }}
+            name=${{ matrix.name }},enable=true
+          flavor: |
+            latest=false
+            suffix=-slim
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=test
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+
       - name: Version
         if: startsWith(github.ref, 'refs/tags/')
         id: package
@@ -113,6 +135,7 @@ jobs:
           echo "PACKAGE_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}" >> $GITHUB_ENV
 
       - name: Build and push
+        if: ${{ !matrix.slim }}
         uses: docker/build-push-action@v7
         with:
           push: false
@@ -124,11 +147,34 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=docker,dest=/tmp/${{ matrix.name }}.tar
 
+      - name: Build and push slim
+        if: matrix.slim
+        uses: docker/build-push-action@v7
+        with:
+          push: false
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: slim
+          build-args: |
+             PACKAGE_VERSION=${{ env.PACKAGE_VERSION }}
+          tags: ${{ steps.meta-slim.outputs.tags }}
+          labels: ${{ steps.meta-slim.outputs.labels }}
+          outputs: type=docker,dest=/tmp/${{ matrix.name }}-slim.tar
+
       - name: Upload image artifact
+        if: ${{ !matrix.slim }}
         uses: actions/upload-artifact@v7
         with:
           name: image_${{ matrix.name }}
           path: /tmp/${{ matrix.name }}.tar
+          retention-days: 1
+
+      - name: Upload slim image artifact
+        if: matrix.slim
+        uses: actions/upload-artifact@v7
+        with:
+          name: image_${{ matrix.name }}-slim
+          path: /tmp/${{ matrix.name }}-slim.tar
           retention-days: 1
 
 
@@ -274,10 +320,12 @@ jobs:
       packages: write
     strategy:
       matrix:
-        container:
-          - report
-          - builder
-          - lang
+        include:
+          - container: report
+          - container: report
+            slim: true
+          - container: builder
+          - container: lang
     steps:
       - name: Log in to the Container registry
         uses: docker/login-action@v4
@@ -299,12 +347,14 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v8
         with:
-          name: image_${{ matrix.container }}
+          name: image_${{ matrix.container }}${{ matrix.slim && '-slim' || '' }}
           path: /tmp
 
       - name: Load and Push Image
+        env:
+          SUFFIX: ${{ matrix.slim && '-slim' || '' }}
         run: |
-          docker load --input /tmp/${{ matrix.container }}.tar
+          docker load --input /tmp/${{ matrix.container }}${SUFFIX}.tar
           docker image ls -a
-          docker image push ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.container }}:latest
-          docker image push ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.container }}:${{ steps.meta.outputs.version }}
+          docker image push ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.container }}:latest${SUFFIX}
+          docker image push ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-${{ matrix.container }}:${{ steps.meta.outputs.version }}${SUFFIX}
