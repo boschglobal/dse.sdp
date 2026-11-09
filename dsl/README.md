@@ -74,23 +74,25 @@ dse-lang-compile --help
 
 ## Docker Image
 
-Run the default example. `DOCKER_SCRIPT` is relative to the repository root:
+Run these commands from the repository root:
 
 ```bash
-# Run the image directly. Mount the repository so the script path exists in the container.
-docker run --rm --volume "$PWD:/workspace:ro" --workdir /workspace dse-lang-compile:latest --format json examples/openloop/openloop.dse
+# Display the grammar bundled with the image.
+docker run --rm --volume "$PWD:/work" --workdir /work ghcr.io/boschglobal/dse-lang:latest ebnf
 
-# JSON diagnostics from stdin.
-cat generated.dse | docker run --rm -i dse-lang-compile:latest --format json -
+# Validate a script and print JSON diagnostics.
+docker run --rm --volume "$PWD:/work" --workdir /work ghcr.io/boschglobal/dse-lang:latest validate --format json examples/openloop/openloop.dse
+
+# Validate a script piped through stdin, using the default text output.
+cat examples/openloop/openloop.dse | docker run --rm -i ghcr.io/boschglobal/dse-lang:latest validate
+
+# Compile a script read from stdin and write its AST to output.json.
+docker run --rm --volume "$PWD:/work" --workdir /work ghcr.io/boschglobal/dse-lang:latest compile --out output.json - < examples/openloop/openloop.dse
 ```
 
-`docker-run` mounts the repository read-only by default. Override
-`DOCKER_MOUNT_MODE=rw` when using `--ast` to write an output file. The image runs
-as a non-root user and contains only Node.js and the bundled compiler.
-
-The container's `compile` command writes the AST to stdout by default. Pass
-`--out output.json` to write it to a file instead. `--ast` remains accepted as
-an alias.
+The image runs as a non-root user and includes Node.js, the compiler, and the
+bundled EBNF grammar. The `--volume "$PWD:/work"` mounts above are read-write by
+default.
 
 Text diagnostics show one-based start and exclusive-end positions, followed by
 the source line and a caret range. Same-line spans use `file:line:start-end`;

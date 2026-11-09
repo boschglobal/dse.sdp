@@ -78,6 +78,7 @@ generate-fmu:
 	printf '%s\n' \
 '<?xml version="1.0" encoding="UTF-8"?>' \
 '<fmiModelDescription fmiVersion="2.0" modelName="hello" guid="{12345678-1234-1234-1234-123456789abc}">' \
+'<CoSimulation modelIdentifier="fmi2gateway" canHandleVariableCommunicationStepSize="true" canInterpolateInputs="true"/>' \
 '<ModelExchange modelIdentifier="hello"/>' \
 '<ModelVariables/>' \
 '<ModelStructure/>' \
